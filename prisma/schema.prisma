@@ -38,6 +38,9 @@ model User {
   receivedFriendRequests  Friendship[]              @relation("FriendAddressee")
   conversationMemberships ConversationParticipant[]
   messages                Message[]
+
+  createdBattles       Battle[]            @relation("BattleCreator")
+  battleParticipations BattleParticipant[]
 }
 
 model Account {
@@ -377,4 +380,35 @@ model Message {
   sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, createdAt])
+}
+
+/// A timed friend challenge over one metric (study_time/todo_count/
+/// goal_progress). No stored status or score — both are computed at read
+/// time (isActive from endAt vs now; each participant's score from their
+/// StudySession/Todo/Goal rows in [startAt, endAt)), the same
+/// don't-cache-what-you-can-derive call as Statistics and Ranking.
+model Battle {
+  id           String   @id @default(cuid())
+  creatorId    String
+  metric       String // "study_time" | "todo_count" | "goal_progress"
+  durationDays Int
+  startAt      DateTime @default(now())
+  endAt        DateTime
+  createdAt    DateTime @default(now())
+
+  creator      User                @relation("BattleCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  participants BattleParticipant[]
+}
+
+model BattleParticipant {
+  id        String   @id @default(cuid())
+  battleId  String
+  userId    String
+  status    String   @default("invited") // "invited" | "accepted" | "declined"
+  createdAt DateTime @default(now())
+
+  battle Battle @relation(fields: [battleId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([battleId, userId])
 }
