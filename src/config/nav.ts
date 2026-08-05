@@ -6,6 +6,7 @@ import {
   ListTodo,
   NotebookPen,
   Sparkles,
+  Users,
 } from "lucide-react";
 
 export const navItems = [
@@ -16,4 +17,5 @@ export const navItems = [
   { title: "문제", href: "/problems", icon: Sparkles },
   { title: "오답노트", href: "/review", icon: NotebookPen },
   { title: "모의고사", href: "/mock-exam", icon: ClipboardList },
+  { title: "친구", href: "/social", icon: Users },
 ] as const;
