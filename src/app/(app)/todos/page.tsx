@@ -1,6 +1,7 @@
 import { TodoList } from "@/features/todos/components/todo-list";
 import { getAllTodos } from "@/features/todos/queries";
 import { getSubjects } from "@/features/subjects/queries";
+import { formatDateOnly, getZonedDateOnly } from "@/lib/date";
 import { requireCurrentUser } from "@/lib/session";
 
 export default async function TodosPage() {
@@ -14,7 +15,11 @@ export default async function TodosPage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold tracking-tight">Todo</h1>
-      <TodoList todos={todos} subjects={subjects} />
+      <TodoList
+        todos={todos}
+        subjects={subjects}
+        defaultDueDate={formatDateOnly(getZonedDateOnly(user.timezone))}
+      />
     </div>
   );
 }

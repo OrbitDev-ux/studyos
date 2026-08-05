@@ -16,19 +16,27 @@ export function TakeExamView({
   const router = useRouter();
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [startedAt] = useState(() => Date.now());
+  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, startTransition] = useTransition();
 
   const handleSubmit = useCallback(() => {
+    setError(null);
     startTransition(async () => {
-      const durationSec = Math.round((Date.now() - startedAt) / 1000);
-      const result = await submitExam(exam.id, {
-        durationSec,
-        answers: exam.questions.map((question) => ({
-          problemId: question.problem.id,
-          choiceId: answers[question.problem.id],
-        })),
-      });
-      router.push(`/mock-exam/${exam.id}/result?resultId=${result.examResultId}`);
+      try {
+        const durationSec = Math.round((Date.now() - startedAt) / 1000);
+        const result = await submitExam(exam.id, {
+          durationSec,
+          answers: exam.questions.map((question) => ({
+            problemId: question.problem.id,
+            choiceId: answers[question.problem.id],
+          })),
+        });
+        router.push(`/mock-exam/${exam.id}/result?resultId=${result.examResultId}`);
+      } catch {
+        // Keep the in-progress answers so a network blip doesn't lose the
+        // exam attempt — the user can just press submit again.
+        setError("제출에 실패했습니다. 답안은 유지되어 있으니 다시 제출해주세요.");
+      }
     });
   }, [answers, exam.id, exam.questions, router, startedAt]);
 
@@ -53,6 +61,8 @@ export function TakeExamView({
           setAnswers((prev) => ({ ...prev, [problemId]: choiceId }))
         }
       />
+
+      {error && <p className="text-destructive self-end text-xs">{error}</p>}
 
       <Button
         type="button"

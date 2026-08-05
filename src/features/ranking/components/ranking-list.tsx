@@ -59,9 +59,9 @@ function RankingRow({ entry, isMe }: { entry: RankingEntry; isMe: boolean }) {
         </span>
         <Avatar className="size-6 shrink-0">
           <AvatarImage src={entry.image ?? undefined} alt={entry.name ?? ""} />
-          <AvatarFallback>{(entry.name ?? entry.email).at(0)}</AvatarFallback>
+          <AvatarFallback>{(entry.name ?? "?").at(0)}</AvatarFallback>
         </Avatar>
-        <span className="truncate">{entry.name ?? entry.email}</span>
+        <span className="truncate">{entry.name ?? "이름 없음"}</span>
       </span>
       <span className="text-muted-foreground shrink-0 tabular-nums">
         {formatDurationKorean(entry.totalSeconds)}

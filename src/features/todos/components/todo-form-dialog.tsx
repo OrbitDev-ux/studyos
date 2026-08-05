@@ -25,17 +25,17 @@ import type { Subject } from "@/generated/prisma/client";
 import { createTodo, updateTodo } from "@/features/todos/actions";
 import { todoFormSchema, type TodoFormValues } from "@/features/todos/schema";
 
-function getBrowserToday(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-}
-
 type TodoFormDialogProps = {
   subjects: Subject[];
   trigger: ReactNode;
+  /**
+   * "YYYY-MM-DD" for the new-todo default, computed server-side from the
+   * user's timezone (getZonedDateOnly) — deriving "today" from the browser's
+   * local clock instead would silently disagree with the server-rendered
+   * default whenever the visitor's local date differs from UTC, the same
+   * class of bug the @db.Date helpers in lib/date.ts exist to prevent.
+   */
+  defaultDueDate: string;
   todo?: {
     id: string;
     title: string;
@@ -44,8 +44,14 @@ type TodoFormDialogProps = {
   };
 };
 
-export function TodoFormDialog({ subjects, trigger, todo }: TodoFormDialogProps) {
+export function TodoFormDialog({
+  subjects,
+  trigger,
+  defaultDueDate,
+  todo,
+}: TodoFormDialogProps) {
   const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const isEdit = !!todo;
 
   const {
@@ -59,18 +65,23 @@ export function TodoFormDialog({ subjects, trigger, todo }: TodoFormDialogProps)
     defaultValues: {
       title: todo?.title ?? "",
       subjectId: todo?.subjectId ?? undefined,
-      dueDate: todo?.dueDate ?? getBrowserToday(),
+      dueDate: todo?.dueDate ?? defaultDueDate,
     },
   });
 
   async function onSubmit(values: TodoFormValues) {
-    if (isEdit) {
-      await updateTodo(todo.id, values);
-    } else {
-      await createTodo(values);
+    setError(null);
+    try {
+      if (isEdit) {
+        await updateTodo(todo.id, values);
+      } else {
+        await createTodo(values);
+      }
+      reset();
+      setOpen(false);
+    } catch {
+      setError("저장에 실패했습니다. 잠시 후 다시 시도해주세요.");
     }
-    reset();
-    setOpen(false);
   }
 
   return (
@@ -78,7 +89,10 @@ export function TodoFormDialog({ subjects, trigger, todo }: TodoFormDialogProps)
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) reset();
+        if (!next) {
+          reset();
+          setError(null);
+        }
       }}
     >
       <DialogTrigger asChild>{trigger}</DialogTrigger>
@@ -130,6 +144,7 @@ export function TodoFormDialog({ subjects, trigger, todo }: TodoFormDialogProps)
               </div>
             )}
           </div>
+          {error && <p className="text-destructive text-xs">{error}</p>}
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting}>
               {isEdit ? "저장" : "추가"}

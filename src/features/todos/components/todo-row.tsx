@@ -11,9 +11,11 @@ import { cn } from "@/lib/utils";
 export function TodoRow({
   todo,
   subjects,
+  defaultDueDate,
 }: {
   todo: Awaited<ReturnType<typeof getAllTodos>>[number];
   subjects: Subject[];
+  defaultDueDate: string;
 }) {
   return (
     <li className="flex items-center gap-3 rounded-lg border px-3 py-2.5">
@@ -44,6 +46,7 @@ export function TodoRow({
       )}
       <TodoFormDialog
         subjects={subjects}
+        defaultDueDate={defaultDueDate}
         todo={{
           id: todo.id,
           title: todo.title,

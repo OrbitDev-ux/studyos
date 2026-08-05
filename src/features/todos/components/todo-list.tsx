@@ -14,9 +14,11 @@ type Filter = "all" | "active" | "completed";
 export function TodoList({
   todos,
   subjects,
+  defaultDueDate,
 }: {
   todos: Awaited<ReturnType<typeof getAllTodos>>;
   subjects: Subject[];
+  defaultDueDate: string;
 }) {
   const [filter, setFilter] = useState<Filter>("all");
 
@@ -38,6 +40,7 @@ export function TodoList({
         </Tabs>
         <TodoFormDialog
           subjects={subjects}
+          defaultDueDate={defaultDueDate}
           trigger={
             <Button type="button" size="sm" className="gap-1.5">
               <Plus className="size-4" />할 일 추가
@@ -50,7 +53,12 @@ export function TodoList({
       ) : (
         <ul className="flex flex-col gap-2">
           {filteredTodos.map((todo) => (
-            <TodoRow key={todo.id} todo={todo} subjects={subjects} />
+            <TodoRow
+              key={todo.id}
+              todo={todo}
+              subjects={subjects}
+              defaultDueDate={defaultDueDate}
+            />
           ))}
         </ul>
       )}

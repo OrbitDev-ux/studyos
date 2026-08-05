@@ -32,6 +32,7 @@ import {
 
 export function CreateGoalDialog({ subjects }: { subjects: Subject[] }) {
   const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -44,9 +45,14 @@ export function CreateGoalDialog({ subjects }: { subjects: Subject[] }) {
   });
 
   async function onSubmit(values: GoalFormValues) {
-    await createGoal(values);
-    reset();
-    setOpen(false);
+    setError(null);
+    try {
+      await createGoal(values);
+      reset();
+      setOpen(false);
+    } catch {
+      setError("목표 추가에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    }
   }
 
   return (
@@ -54,7 +60,10 @@ export function CreateGoalDialog({ subjects }: { subjects: Subject[] }) {
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) reset();
+        if (!next) {
+          reset();
+          setError(null);
+        }
       }}
     >
       <DialogTrigger asChild>
@@ -127,6 +136,7 @@ export function CreateGoalDialog({ subjects }: { subjects: Subject[] }) {
               />
             </div>
           )}
+          {error && <p className="text-destructive text-xs">{error}</p>}
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting}>
               추가

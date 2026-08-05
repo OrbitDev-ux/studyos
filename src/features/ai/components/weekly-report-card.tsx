@@ -7,12 +7,18 @@ import { generateWeeklyReport } from "@/features/ai/actions";
 
 export function WeeklyReportCard({ initialContent }: { initialContent: string | null }) {
   const [content, setContent] = useState(initialContent);
+  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function handleGenerate() {
+    setError(null);
     startTransition(async () => {
-      const result = await generateWeeklyReport();
-      setContent(result.content);
+      try {
+        const result = await generateWeeklyReport();
+        setContent(result.content);
+      } catch {
+        setError("리포트 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      }
     });
   }
 
@@ -31,6 +37,7 @@ export function WeeklyReportCard({ initialContent }: { initialContent: string | 
         </Button>
       </CardHeader>
       <CardContent>
+        {error && <p className="text-destructive mb-2 text-xs">{error}</p>}
         {content ? (
           <p className="text-muted-foreground text-sm whitespace-pre-wrap">{content}</p>
         ) : (

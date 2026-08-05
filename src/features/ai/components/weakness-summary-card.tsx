@@ -11,12 +11,18 @@ export function WeaknessSummaryCard({
   initialContent: string | null;
 }) {
   const [content, setContent] = useState(initialContent);
+  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function handleGenerate() {
+    setError(null);
     startTransition(async () => {
-      const result = await generateWeaknessAnalysis();
-      setContent(result.content);
+      try {
+        const result = await generateWeaknessAnalysis();
+        setContent(result.content);
+      } catch {
+        setError("분석에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      }
     });
   }
 
@@ -35,6 +41,7 @@ export function WeaknessSummaryCard({
         </Button>
       </CardHeader>
       <CardContent>
+        {error && <p className="text-destructive mb-2 text-xs">{error}</p>}
         {content ? (
           <p className="text-muted-foreground text-sm whitespace-pre-wrap">{content}</p>
         ) : (

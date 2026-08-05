@@ -10,13 +10,18 @@ export async function createGoal(values: GoalFormValues) {
   const user = await requireCurrentUser();
   const parsed = goalFormSchema.parse(values);
 
+  const subjectId = parsed.subjectId
+    ? ((await prisma.subject.findFirst({ where: { id: parsed.subjectId, userId: user.id } }))
+        ?.id ?? null)
+    : null;
+
   await prisma.goal.create({
     data: {
       userId: user.id,
       title: parsed.title,
       targetValue: parsed.targetValue,
       unit: parsed.unit,
-      subjectId: parsed.subjectId || null,
+      subjectId,
       date: getZonedDateOnly(user.timezone),
     },
   });
@@ -30,11 +35,5 @@ export async function incrementGoalProgress(goalId: string, delta: number) {
 
   const currentValue = Math.min(goal.targetValue, Math.max(0, goal.currentValue + delta));
   await prisma.goal.update({ where: { id: goalId }, data: { currentValue } });
-  revalidatePath("/dashboard");
-}
-
-export async function deleteGoal(goalId: string) {
-  const user = await requireCurrentUser();
-  await prisma.goal.deleteMany({ where: { id: goalId, userId: user.id } });
   revalidatePath("/dashboard");
 }

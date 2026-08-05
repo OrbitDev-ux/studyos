@@ -44,17 +44,21 @@ export function SubjectFormDialog({ trigger, subject }: SubjectFormDialogProps) 
   });
 
   async function onSubmit(values: SubjectFormValues) {
-    const result = isEdit
-      ? await updateSubject(subject.id, values)
-      : await createSubject(values);
+    try {
+      const result = isEdit
+        ? await updateSubject(subject.id, values)
+        : await createSubject(values);
 
-    if (result.error) {
-      setError("name", { message: result.error });
-      return;
+      if (result.error) {
+        setError("name", { message: result.error });
+        return;
+      }
+
+      reset();
+      setOpen(false);
+    } catch {
+      setError("name", { message: "저장에 실패했습니다. 잠시 후 다시 시도해주세요." });
     }
-
-    reset();
-    setOpen(false);
   }
 
   return (

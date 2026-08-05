@@ -21,6 +21,7 @@ export function WrongAnswerActions({
     explanation: string | null;
   } | null>(null);
   const [explanation, setExplanation] = useState(wrongAnswer.aiExplanation);
+  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, startSubmitting] = useTransition();
   const [isExplaining, startExplaining] = useTransition();
   const [isResolving, startResolving] = useTransition();
@@ -30,19 +31,29 @@ export function WrongAnswerActions({
   }
 
   function handleRetry() {
+    setError(null);
     startSubmitting(async () => {
-      const res = await submitProblemAnswer(problem.id, {
-        choiceId: selectedChoiceId ?? undefined,
-        text: answerText || undefined,
-      });
-      setResult(res);
+      try {
+        const res = await submitProblemAnswer(problem.id, {
+          choiceId: selectedChoiceId ?? undefined,
+          text: answerText || undefined,
+        });
+        setResult(res);
+      } catch {
+        setError("채점에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      }
     });
   }
 
   function handleExplain() {
+    setError(null);
     startExplaining(async () => {
-      const res = await requestAiExplanation(wrongAnswer.id);
-      setExplanation(res.explanation);
+      try {
+        const res = await requestAiExplanation(wrongAnswer.id);
+        setExplanation(res.explanation);
+      } catch {
+        setError("AI 해설 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      }
     });
   }
 
@@ -154,6 +165,8 @@ export function WrongAnswerActions({
           {explanation}
         </p>
       )}
+
+      {error && <p className="text-destructive text-xs">{error}</p>}
     </div>
   );
 }

@@ -18,15 +18,21 @@ export function SolveProblemPanel({
     correct: boolean;
     explanation: string | null;
   } | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function handleSubmit() {
+    setError(null);
     startTransition(async () => {
-      const res = await submitProblemAnswer(problem.id, {
-        choiceId: selectedChoiceId ?? undefined,
-        text: answerText || undefined,
-      });
-      setResult(res);
+      try {
+        const res = await submitProblemAnswer(problem.id, {
+          choiceId: selectedChoiceId ?? undefined,
+          text: answerText || undefined,
+        });
+        setResult(res);
+      } catch {
+        setError("채점에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      }
     });
   }
 
@@ -99,6 +105,8 @@ export function SolveProblemPanel({
           )}
         </div>
       )}
+
+      {error && <p className="text-destructive text-xs">{error}</p>}
     </div>
   );
 }

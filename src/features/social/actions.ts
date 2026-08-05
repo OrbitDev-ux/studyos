@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { addFriendFormSchema } from "@/features/social/schema";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/session";
 
@@ -32,9 +33,19 @@ export async function sendFriendRequest(email: string) {
     );
   }
 
-  await prisma.friendship.create({
-    data: { requesterId: user.id, addresseeId: target.id, status: "pending" },
-  });
+  try {
+    await prisma.friendship.create({
+      data: { requesterId: user.id, addresseeId: target.id, status: "pending" },
+    });
+  } catch (err) {
+    // Concurrent double-submit can race past the findFirst check above and
+    // hit the @@unique([requesterId, addresseeId]) constraint — treat it the
+    // same as the pre-check duplicate instead of leaking a raw Prisma error.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      throw new Error("이미 요청을 주고받았습니다.");
+    }
+    throw err;
+  }
 
   revalidatePath("/social");
 }

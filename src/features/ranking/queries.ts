@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 export type RankingEntry = {
   userId: string;
   name: string | null;
-  email: string;
   image: string | null;
   totalSeconds: number;
   rank: number;
@@ -30,7 +29,7 @@ async function buildRanking(
 
   const users = await prisma.user.findMany({
     where: { id: { in: grouped.map((g) => g.userId) } },
-    select: { id: true, name: true, email: true, image: true },
+    select: { id: true, name: true, image: true },
   });
   const userById = new Map(users.map((u) => [u.id, u]));
 
@@ -41,7 +40,6 @@ async function buildRanking(
     entries.push({
       userId: user.id,
       name: user.name,
-      email: user.email,
       image: user.image,
       totalSeconds: group._sum.durationSec ?? 0,
       rank: index + 1,

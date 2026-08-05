@@ -40,15 +40,22 @@ export async function quickAddTodo(formData: FormData) {
   revalidatePath("/todos");
 }
 
+async function resolveOwnedSubjectId(userId: string, subjectId: string | undefined) {
+  if (!subjectId) return null;
+  const subject = await prisma.subject.findFirst({ where: { id: subjectId, userId } });
+  return subject?.id ?? null;
+}
+
 export async function createTodo(values: TodoFormValues) {
   const user = await requireCurrentUser();
   const parsed = todoFormSchema.parse(values);
+  const subjectId = await resolveOwnedSubjectId(user.id, parsed.subjectId);
 
   await prisma.todo.create({
     data: {
       userId: user.id,
       title: parsed.title,
-      subjectId: parsed.subjectId || null,
+      subjectId,
       dueDate: parseDateOnly(parsed.dueDate),
     },
   });
@@ -59,12 +66,13 @@ export async function createTodo(values: TodoFormValues) {
 export async function updateTodo(todoId: string, values: TodoFormValues) {
   const user = await requireCurrentUser();
   const parsed = todoFormSchema.parse(values);
+  const subjectId = await resolveOwnedSubjectId(user.id, parsed.subjectId);
 
   await prisma.todo.updateMany({
     where: { id: todoId, userId: user.id },
     data: {
       title: parsed.title,
-      subjectId: parsed.subjectId || null,
+      subjectId,
       dueDate: parseDateOnly(parsed.dueDate),
     },
   });
