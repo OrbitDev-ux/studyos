@@ -31,6 +31,7 @@ model User {
   wrongAnswers  WrongAnswer[]
   mockExams     MockExam[]
   examResults   ExamResult[]
+  aiAnalyses    AiAnalysis[]
 }
 
 model Account {
@@ -300,4 +301,20 @@ model ExamAnswer {
   selectedChoice Choice?    @relation(fields: [selectedChoiceId], references: [id], onDelete: SetNull)
 
   @@index([examResultId])
+}
+
+/// AI-generated analysis, cached rather than recomputed on every dashboard
+/// load — unlike other stats in this app, this one costs a real API call.
+model AiAnalysis {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String // "weakness" | "weekly-report"
+  content     String   @db.Text
+  periodStart DateTime @db.Date
+  periodEnd   DateTime @db.Date
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
 }
