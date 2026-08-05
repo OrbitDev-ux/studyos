@@ -399,8 +399,14 @@ model BattleParticipant {
 
 ## 6. AI 호출 구조
 
-**SDK**: 공식 `@anthropic-ai/sdk` (TypeScript 프로젝트이므로 이 SDK가 기본).
-**모델**: `claude-opus-5` (2026-08 기준 Anthropic 기본 권장 모델).
+> **2026-08 업데이트**: 아래는 1단계 설계 당시(Anthropic 기준) 스케치였고, 이후 **Google
+> Gemini로 교체**했다. `features/ai/client.ts` 한 곳만 고치면 됐다는 게 이 절 마지막 항목의
+> 요점이었는데, 실제로 정확히 그랬다 — 이 파일을 부르는 problems/mock-exam/review/ai 쪽
+> Server Actions는 한 줄도 바뀌지 않았다.
+
+**SDK**: 공식 `@google/genai` (TypeScript/Node.js SDK).
+**모델**: `gemini-3.6-flash` (2026-08 기준 Google 공식 GA/기본 권장 모델 — `gemini-2.5-*`
+계열은 2026-10 종료 예정이라 배제).
 
 ```
 features/ai/
@@ -409,44 +415,50 @@ features/ai/
   schema.ts     — AI 출력 형태를 검증하는 zod 스키마
 ```
 
-**구조화된 출력**은 `client.messages.parse()` + `zodOutputFormat(schema)` 조합을 쓴다
-(옛날처럼 tool-use를 강제로 우회시키는 방식보다 안정적 — Anthropic이 스키마 검증까지
-자동으로 해준다).
+**구조화된 출력**은 `responseMimeType: "application/json"` + `responseJsonSchema`(zod v4
+내장 `z.toJSONSchema()`로 변환) 조합을 쓴다. Gemini의 `responseSchema` 필드는 OpenAPI 3.0의
+제한된 서브셋만 받아 일부 zod 구조에서 변환 버그가 있어, 표준 JSON Schema를 그대로 받는
+`responseJsonSchema`를 택했다. 응답은 항상 `schema.parse(JSON.parse(response.text))`로 한 번
+더 zod 검증을 거친다 — Gemini의 스키마 강제가 완벽하지 않을 가능성에 대한 방어.
 
 ```ts
-// features/ai/client.ts (스케치 — 2단계에서 실제 구현)
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import type { ZodType } from "zod";
+// features/ai/client.ts (실제 구현, phase 1)
+import { GoogleGenAI } from "@google/genai";
+import { z, type ZodType } from "zod";
 
-const anthropic = new Anthropic(); // ANTHROPIC_API_KEY 환경변수 사용
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export async function generateStructured<T>(params: {
   system: string;
   prompt: string;
   schema: ZodType<T>;
+  useThinking?: boolean;
 }): Promise<T> {
-  const response = await anthropic.messages.parse({
-    model: "claude-opus-5",
-    max_tokens: 16000,
-    system: params.system,
-    messages: [{ role: "user", content: params.prompt }],
-    output_config: { format: zodOutputFormat(params.schema) },
+  const response = await ai.models.generateContent({
+    model: "gemini-3.6-flash",
+    contents: params.prompt,
+    config: {
+      systemInstruction: params.system,
+      responseMimeType: "application/json",
+      responseJsonSchema: z.toJSONSchema(params.schema),
+      thinkingConfig: params.useThinking ? { thinkingBudget: -1 } : undefined,
+    },
   });
-  if (!response.parsed_output) throw new Error("AI 응답 파싱 실패");
-  return response.parsed_output;
+  if (!response.text) throw new Error("AI 응답이 비어 있습니다.");
+  return params.schema.parse(JSON.parse(response.text));
 }
 ```
 
 - **문제/모의고사 생성**: `generateStructured`로 문제 배열(JSON) 생성 → `Problem`/`Choice`
-  레코드로 저장. 45문항처럼 큰 생성은 Route Handler에서 `client.messages.stream()`으로 진행
-  상황을 SSE로 흘려보낸다.
-- **오답 해설/취약 단원 분석**: 추론 비중이 높으므로 `thinking: { type: "adaptive" }`(적응형
-  사고)를 켠다.
-- **Server Actions는 Anthropic SDK를 직접 호출하지 않고 항상 `features/ai/client.ts`를
-  거친다** — 나중에 모델을 바꾸거나 재시도/로깅 정책을 추가할 때 한 파일만 고치면 되게 하기
-  위함.
-- `.env.example`에 `ANTHROPIC_API_KEY` 추가 필요.
+  레코드로 저장. 45문항처럼 큰 생성은 Route Handler에서 스트리밍으로 진행 상황을 흘려보내는
+  방식을 쓸 수 있다(아직 필요할 만큼 문항 수가 커지지 않아 미도입 — 실제 구현 단계의 판단
+  기록 참고).
+- **오답 해설/취약 단원 분석**: 추론 비중이 높으므로 `thinkingConfig: { thinkingBudget: -1 }`
+  (자동 사고 예산)을 켠다.
+- **Server Actions는 SDK를 직접 호출하지 않고 항상 `features/ai/client.ts`를 거친다** —
+  나중에 모델/제공자를 바꾸거나 재시도·로깅 정책을 추가할 때 한 파일만 고치면 되게 하기
+  위함. Anthropic → Gemini 전환이 실제로 이 파일 하나만 건드리고 끝난 것이 그 증거.
+- `.env.example`에 `GEMINI_API_KEY` 추가 필요.
 
 ---
 

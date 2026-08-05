@@ -15,8 +15,8 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.115.0",
     "@auth/prisma-adapter": "^2.11.3",
+    "@google/genai": "^2.15.0",
     "@hookform/resolvers": "^5.7.1",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",

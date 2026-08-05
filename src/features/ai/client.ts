@@ -1,11 +1,9 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import type { ZodType } from "zod";
+import { GoogleGenAI } from "@google/genai";
+import { z, type ZodType } from "zod";
 
-const anthropic = new Anthropic();
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-const MODEL = "claude-opus-5";
-const DEFAULT_MAX_TOKENS = 16000;
+const MODEL = "gemini-3.6-flash";
 
 /**
  * All AI-backed features call through here instead of the SDK directly, so a
@@ -20,21 +18,28 @@ export async function generateStructured<T>({
   system: string;
   prompt: string;
   schema: ZodType<T>;
-  /** Enable adaptive thinking for reasoning-heavy tasks (analysis, explanations). */
+  /** Enable thinking for reasoning-heavy tasks (analysis, explanations). */
   useThinking?: boolean;
 }): Promise<T> {
-  const response = await anthropic.messages.parse({
+  const response = await ai.models.generateContent({
     model: MODEL,
-    max_tokens: DEFAULT_MAX_TOKENS,
-    system,
-    thinking: useThinking ? { type: "adaptive" } : undefined,
-    messages: [{ role: "user", content: prompt }],
-    output_config: { format: zodOutputFormat(schema) },
+    contents: prompt,
+    config: {
+      systemInstruction: system,
+      responseMimeType: "application/json",
+      // Zod's own JSON Schema output (draft 2020-12, no target override) —
+      // Gemini's `responseSchema` field only accepts a restricted
+      // OpenAPI-3.0-like subset that has known conversion bugs for some Zod
+      // constructs; `responseJsonSchema` accepts standard JSON Schema instead.
+      responseJsonSchema: z.toJSONSchema(schema),
+      thinkingConfig: useThinking ? { thinkingBudget: -1 } : undefined,
+    },
   });
 
-  if (!response.parsed_output) {
-    throw new Error("AI 응답을 스키마에 맞게 파싱하지 못했습니다.");
+  const text = response.text;
+  if (!text) {
+    throw new Error("AI 응답이 비어 있습니다.");
   }
 
-  return response.parsed_output;
+  return schema.parse(JSON.parse(text));
 }
