@@ -8,3 +8,11 @@ export function getTodayTodos(userId: string, timezone: string) {
     orderBy: [{ completed: "asc" }, { order: "asc" }, { createdAt: "asc" }],
   });
 }
+
+export function getAllTodos(userId: string) {
+  return prisma.todo.findMany({
+    where: { userId },
+    include: { subject: true },
+    orderBy: [{ dueDate: "desc" }, { order: "asc" }, { createdAt: "desc" }],
+  });
+}

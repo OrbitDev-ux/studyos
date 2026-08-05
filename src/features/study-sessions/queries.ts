@@ -8,7 +8,10 @@ export function getActiveStudySession(userId: string) {
   });
 }
 
-export async function getTodayStudySeconds(userId: string, timezone: string): Promise<number> {
+export async function getTodayStudySeconds(
+  userId: string,
+  timezone: string,
+): Promise<number> {
   const { start, end } = getTodayRange(timezone);
   const sessions = await prisma.studySession.findMany({
     where: { userId, startedAt: { gte: start, lt: end } },
@@ -27,7 +30,9 @@ export async function getStreak(userId: string, timezone: string): Promise<numbe
     take: STREAK_LOOKBACK,
   });
 
-  const studyDates = new Set(sessions.map((s) => getZonedDateString(s.startedAt, timezone)));
+  const studyDates = new Set(
+    sessions.map((s) => getZonedDateString(s.startedAt, timezone)),
+  );
 
   let streak = 0;
   const cursor = new Date();

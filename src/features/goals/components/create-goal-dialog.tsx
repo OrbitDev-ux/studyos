@@ -70,21 +70,38 @@ export function CreateGoalDialog({ subjects }: { subjects: Subject[] }) {
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="goal-title">목표</Label>
-            <Input id="goal-title" placeholder="예: 영어 단어 100개" {...register("title")} />
-            {errors.title && <p className="text-destructive text-xs">{errors.title.message}</p>}
+            <Input
+              id="goal-title"
+              placeholder="예: 영어 단어 100개"
+              {...register("title")}
+            />
+            {errors.title && (
+              <p className="text-destructive text-xs">{errors.title.message}</p>
+            )}
           </div>
           <div className="flex gap-3">
             <div className="flex flex-1 flex-col gap-1.5">
               <Label htmlFor="goal-target">목표량</Label>
-              <Input id="goal-target" type="number" min={1} {...register("targetValue")} />
+              <Input
+                id="goal-target"
+                type="number"
+                min={1}
+                {...register("targetValue")}
+              />
               {errors.targetValue && (
                 <p className="text-destructive text-xs">{errors.targetValue.message}</p>
               )}
             </div>
             <div className="flex flex-1 flex-col gap-1.5">
               <Label htmlFor="goal-unit">단위</Label>
-              <Input id="goal-unit" placeholder="개 / 문제 / 페이지" {...register("unit")} />
-              {errors.unit && <p className="text-destructive text-xs">{errors.unit.message}</p>}
+              <Input
+                id="goal-unit"
+                placeholder="개 / 문제 / 페이지"
+                {...register("unit")}
+              />
+              {errors.unit && (
+                <p className="text-destructive text-xs">{errors.unit.message}</p>
+              )}
             </div>
           </div>
           {subjects.length > 0 && (

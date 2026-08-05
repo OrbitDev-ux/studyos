@@ -17,14 +17,16 @@ import { requireCurrentUser } from "@/lib/session";
 export default async function DashboardPage() {
   const user = await requireCurrentUser();
 
-  const [activeSession, todaySeconds, streak, goals, todos, subjects] = await Promise.all([
-    getActiveStudySession(user.id),
-    getTodayStudySeconds(user.id, user.timezone),
-    getStreak(user.id, user.timezone),
-    getTodayGoals(user.id, user.timezone),
-    getTodayTodos(user.id, user.timezone),
-    getSubjects(user.id),
-  ]);
+  const [activeSession, todaySeconds, streak, goals, todos, subjects] = await Promise.all(
+    [
+      getActiveStudySession(user.id),
+      getTodayStudySeconds(user.id, user.timezone),
+      getStreak(user.id, user.timezone),
+      getTodayGoals(user.id, user.timezone),
+      getTodayTodos(user.id, user.timezone),
+      getSubjects(user.id),
+    ],
+  );
 
   const completedTodos = todos.filter((todo) => todo.completed).length;
   const progressPercent =

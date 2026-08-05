@@ -27,17 +27,27 @@ export function getTodayRange(timeZone: string, now = new Date()) {
   return { start, end };
 }
 
+/** Parses a "YYYY-MM-DD" string into a UTC-midnight Date for `@db.Date` columns. */
+export function parseDateOnly(dateStr: string): Date {
+  const parts = dateStr.split("-");
+  const y = Number(parts[0]);
+  const m = Number(parts[1]);
+  const d = Number(parts[2]);
+  return new Date(Date.UTC(y, m - 1, d));
+}
+
+/** Formats a `@db.Date` value back to "YYYY-MM-DD" (safe: already UTC midnight). */
+export function formatDateOnly(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
 /**
  * "Today" as a UTC-midnight Date matching the calendar date in `timeZone`.
  * Use for `@db.Date` columns (Todo.dueDate, Goal.date) — Postgres DATE has no
  * timezone, so the value must already carry the right calendar date in UTC.
  */
 export function getZonedDateOnly(timeZone: string, now = new Date()): Date {
-  const parts = getZonedDateString(now, timeZone).split("-");
-  const y = Number(parts[0]);
-  const m = Number(parts[1]);
-  const d = Number(parts[2]);
-  return new Date(Date.UTC(y, m - 1, d));
+  return parseDateOnly(getZonedDateString(now, timeZone));
 }
 
 export function formatKoreanDate(date: Date, timeZone: string): string {
@@ -46,5 +56,13 @@ export function formatKoreanDate(date: Date, timeZone: string): string {
     month: "long",
     day: "numeric",
     weekday: "long",
+  }).format(date);
+}
+
+export function formatShortKoreanDate(date: Date): string {
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "UTC",
+    month: "short",
+    day: "numeric",
   }).format(date);
 }

@@ -1,9 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getZonedDateOnly } from "@/lib/date";
+import { getZonedDateOnly, parseDateOnly } from "@/lib/date";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/session";
+import { todoFormSchema, type TodoFormValues } from "@/features/todos/schema";
 
 const MAX_TITLE_LENGTH = 200;
 
@@ -35,6 +36,45 @@ export async function quickAddTodo(formData: FormData) {
       dueDate: getZonedDateOnly(user.timezone),
     },
   });
+  revalidatePath("/dashboard");
+  revalidatePath("/todos");
+}
+
+export async function createTodo(values: TodoFormValues) {
+  const user = await requireCurrentUser();
+  const parsed = todoFormSchema.parse(values);
+
+  await prisma.todo.create({
+    data: {
+      userId: user.id,
+      title: parsed.title,
+      subjectId: parsed.subjectId || null,
+      dueDate: parseDateOnly(parsed.dueDate),
+    },
+  });
+  revalidatePath("/dashboard");
+  revalidatePath("/todos");
+}
+
+export async function updateTodo(todoId: string, values: TodoFormValues) {
+  const user = await requireCurrentUser();
+  const parsed = todoFormSchema.parse(values);
+
+  await prisma.todo.updateMany({
+    where: { id: todoId, userId: user.id },
+    data: {
+      title: parsed.title,
+      subjectId: parsed.subjectId || null,
+      dueDate: parseDateOnly(parsed.dueDate),
+    },
+  });
+  revalidatePath("/dashboard");
+  revalidatePath("/todos");
+}
+
+export async function deleteTodo(todoId: string) {
+  const user = await requireCurrentUser();
+  await prisma.todo.deleteMany({ where: { id: todoId, userId: user.id } });
   revalidatePath("/dashboard");
   revalidatePath("/todos");
 }
