@@ -96,3 +96,47 @@ export async function deleteProblem(problemId: string) {
   await prisma.problem.deleteMany({ where: { id: problemId, userId: user.id } });
   revalidatePath("/problems");
 }
+
+function normalizeAnswer(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, "");
+}
+
+/**
+ * Grades one attempt at a problem. Used both for first attempts on /problems
+ * and for retries on /review — a correct retry resolves the matching
+ * WrongAnswer row instead of leaving it duplicated.
+ */
+export async function submitProblemAnswer(
+  problemId: string,
+  answer: { choiceId?: string; text?: string },
+): Promise<{ correct: boolean; explanation: string | null }> {
+  const user = await requireCurrentUser();
+  const problem = await prisma.problem.findFirst({
+    where: { id: problemId, userId: user.id },
+    include: { choices: true },
+  });
+  if (!problem) throw new Error("문제를 찾을 수 없습니다.");
+
+  const correct =
+    problem.type === "MULTIPLE_CHOICE"
+      ? (problem.choices.find((choice) => choice.id === answer.choiceId)?.isCorrect ??
+        false)
+      : normalizeAnswer(answer.text ?? "") === normalizeAnswer(problem.answerText ?? "");
+
+  if (correct) {
+    await prisma.wrongAnswer.updateMany({
+      where: { userId: user.id, problemId, resolved: false },
+      data: { resolved: true },
+    });
+  } else {
+    await prisma.wrongAnswer.upsert({
+      where: { userId_problemId: { userId: user.id, problemId } },
+      create: { userId: user.id, problemId, source: "problem" },
+      update: { resolved: false },
+    });
+  }
+
+  revalidatePath("/problems");
+  revalidatePath("/review");
+  return { correct, explanation: problem.explanation };
+}

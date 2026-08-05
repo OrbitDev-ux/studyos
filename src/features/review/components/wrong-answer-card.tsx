@@ -1,16 +1,16 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { DeleteProblemButton } from "@/features/problems/components/delete-problem-button";
-import { FavoriteButton } from "@/features/problems/components/favorite-button";
-import { SolveProblemPanel } from "@/features/problems/components/solve-problem-panel";
 import { DIFFICULTY_LABEL } from "@/features/problems/constants";
-import type { getProblems } from "@/features/problems/queries";
+import { WrongAnswerActions } from "@/features/review/components/wrong-answer-actions";
+import type { getWrongAnswers } from "@/features/review/queries";
 
-export function ProblemCard({
-  problem,
+export function WrongAnswerCard({
+  wrongAnswer,
 }: {
-  problem: Awaited<ReturnType<typeof getProblems>>[number];
+  wrongAnswer: Awaited<ReturnType<typeof getWrongAnswers>>[number];
 }) {
+  const { problem } = wrongAnswer;
+
   return (
     <Card>
       <CardContent className="flex flex-col gap-3">
@@ -28,19 +28,13 @@ export function ProblemCard({
               </span>
             )}
             <Badge variant="outline">{DIFFICULTY_LABEL[problem.difficulty]}</Badge>
-            {problem.unit && (
-              <span className="text-muted-foreground text-xs">{problem.unit}</span>
-            )}
           </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <FavoriteButton problemId={problem.id} isFavorite={problem.isFavorite} />
-            <DeleteProblemButton problemId={problem.id} />
-          </div>
+          {wrongAnswer.resolved && <Badge>해결됨</Badge>}
         </div>
 
         <p className="text-sm font-medium">{problem.prompt}</p>
 
-        <SolveProblemPanel problem={problem} />
+        <WrongAnswerActions wrongAnswer={wrongAnswer} />
       </CardContent>
     </Card>
   );

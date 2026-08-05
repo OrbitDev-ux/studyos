@@ -1,0 +1,159 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { submitProblemAnswer } from "@/features/problems/actions";
+import { markResolved, requestAiExplanation } from "@/features/review/actions";
+import type { getWrongAnswers } from "@/features/review/queries";
+import { cn } from "@/lib/utils";
+
+export function WrongAnswerActions({
+  wrongAnswer,
+}: {
+  wrongAnswer: Awaited<ReturnType<typeof getWrongAnswers>>[number];
+}) {
+  const { problem } = wrongAnswer;
+  const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
+  const [answerText, setAnswerText] = useState("");
+  const [result, setResult] = useState<{
+    correct: boolean;
+    explanation: string | null;
+  } | null>(null);
+  const [explanation, setExplanation] = useState(wrongAnswer.aiExplanation);
+  const [isSubmitting, startSubmitting] = useTransition();
+  const [isExplaining, startExplaining] = useTransition();
+  const [isResolving, startResolving] = useTransition();
+
+  if (wrongAnswer.resolved && !result) {
+    return <p className="text-muted-foreground text-sm">해결한 문제입니다.</p>;
+  }
+
+  function handleRetry() {
+    startSubmitting(async () => {
+      const res = await submitProblemAnswer(problem.id, {
+        choiceId: selectedChoiceId ?? undefined,
+        text: answerText || undefined,
+      });
+      setResult(res);
+    });
+  }
+
+  function handleExplain() {
+    startExplaining(async () => {
+      const res = await requestAiExplanation(wrongAnswer.id);
+      setExplanation(res.explanation);
+    });
+  }
+
+  const canSubmit =
+    problem.type === "MULTIPLE_CHOICE"
+      ? !!selectedChoiceId
+      : answerText.trim().length > 0;
+
+  return (
+    <div className="flex flex-col gap-3">
+      {problem.type === "MULTIPLE_CHOICE" ? (
+        <div className="flex flex-col gap-1.5">
+          {problem.choices.map((choice) => {
+            const isSelected = selectedChoiceId === choice.id;
+            const revealed = result !== null;
+            return (
+              <button
+                key={choice.id}
+                type="button"
+                disabled={revealed}
+                onClick={() => setSelectedChoiceId(choice.id)}
+                className={cn(
+                  "rounded-md border px-3 py-2 text-left text-sm transition-colors",
+                  isSelected && !revealed && "border-primary bg-primary/5",
+                  revealed &&
+                    choice.isCorrect &&
+                    "border-primary bg-primary/10 font-medium",
+                  revealed &&
+                    isSelected &&
+                    !choice.isCorrect &&
+                    "border-destructive bg-destructive/5",
+                )}
+              >
+                {choice.label}. {choice.content}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <Input
+          placeholder="정답 입력"
+          value={answerText}
+          onChange={(event) => setAnswerText(event.target.value)}
+          disabled={result !== null}
+        />
+      )}
+
+      <div className="flex flex-wrap items-center gap-2">
+        {result === null ? (
+          <Button
+            type="button"
+            size="sm"
+            disabled={!canSubmit || isSubmitting}
+            onClick={handleRetry}
+          >
+            다시 풀기
+          </Button>
+        ) : (
+          !result.correct && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setResult(null);
+                setSelectedChoiceId(null);
+                setAnswerText("");
+              }}
+            >
+              한 번 더 시도
+            </Button>
+          )
+        )}
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={isExplaining}
+          onClick={handleExplain}
+        >
+          {isExplaining ? "생성 중..." : "AI 해설"}
+        </Button>
+        {!wrongAnswer.resolved && (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={isResolving}
+            onClick={() => startResolving(() => markResolved(wrongAnswer.id))}
+          >
+            이해했어요
+          </Button>
+        )}
+      </div>
+
+      {result && (
+        <p
+          className={cn(
+            "text-sm font-medium",
+            result.correct ? "text-primary" : "text-destructive",
+          )}
+        >
+          {result.correct ? "정답입니다! 해결 처리되었습니다." : "아직 오답입니다."}
+        </p>
+      )}
+
+      {explanation && (
+        <p className="text-muted-foreground bg-muted rounded-md p-3 text-xs whitespace-pre-wrap">
+          {explanation}
+        </p>
+      )}
+    </div>
+  );
+}
