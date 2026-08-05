@@ -10,17 +10,17 @@ MVP(인증/대시보드/Todo/과목/공부시간/통계)는 손대지 않고, `s
 의존성 순서대로 9단계. 각 단계는 그 자체로 데모 가능한 단위이며, 뒷 단계는 앞 단계가 만든
 데이터 모델을 재사용한다(중복 모델링 없음).
 
-| 단계 | 내용 | 의존성 |
-|---|---|---|
-| 1 | AI 공통 인프라 (`features/ai` 클라이언트, 프롬프트, zod 스키마) | 없음 |
-| 2 | `features/problems` — AI 문제 생성/저장/즐겨찾기 | 1 |
-| 3 | `features/review` — 오답노트 | 2 (문제 필요) |
-| 4 | `features/mock-exam` — 모의고사(문제 재사용, OMR, 채점) | 2 |
-| 5 | AI Tutor 확장 — 오답 분석/취약 단원/리포트 | 3, 4 (분석할 데이터 필요) |
-| 6 | 대시보드 카드 통합 (오늘 추천 문제/복습/모의고사) | 2, 3, 4 |
-| 7 | `features/social` — 친구/DM | 없음 (병렬 가능) |
-| 8 | `features/ranking` — 랭킹 | 7 (친구 스코프용) |
-| 9 | `features/battle` — 공부 배틀 | 7 |
+| 단계 | 내용                                                            | 의존성                    |
+| ---- | --------------------------------------------------------------- | ------------------------- |
+| 1    | AI 공통 인프라 (`features/ai` 클라이언트, 프롬프트, zod 스키마) | 없음                      |
+| 2    | `features/problems` — AI 문제 생성/저장/즐겨찾기                | 1                         |
+| 3    | `features/review` — 오답노트                                    | 2 (문제 필요)             |
+| 4    | `features/mock-exam` — 모의고사(문제 재사용, OMR, 채점)         | 2                         |
+| 5    | AI Tutor 확장 — 오답 분석/취약 단원/리포트                      | 3, 4 (분석할 데이터 필요) |
+| 6    | 대시보드 카드 통합 (오늘 추천 문제/복습/모의고사)               | 2, 3, 4                   |
+| 7    | `features/social` — 친구/DM                                     | 없음 (병렬 가능)          |
+| 8    | `features/ranking` — 랭킹                                       | 7 (친구 스코프용)         |
+| 9    | `features/battle` — 공부 배틀                                   | 7                         |
 
 **근거**: Problem/Question이 오답노트·모의고사·AI 분석의 공통 기반이라 가장 먼저 온다.
 소셜/랭킹/배틀 트랙은 학습 트랙과 데이터 의존이 거의 없어 병렬로 진행 가능하지만, 우선순위(7절)에서는
@@ -355,6 +355,7 @@ model BattleParticipant {
 ```
 
 **의도적으로 만들지 않은 모델**
+
 - **`Rank`**: 랭킹은 항상 `StudySession`/`ExamResult`/`Todo`에서 즉시 집계한다(MVP의 "Statistics
   테이블 없음" 원칙과 동일). 랭킹 계산이 무거워지면 그때 캐시 테이블을 추가해도 스키마가 깨지지
   않는다.
@@ -369,11 +370,11 @@ model BattleParticipant {
 기존 관행(Server Actions 우선)을 유지한다. Route Handler는 **스트리밍이 필요한 AI 생성**에만
 사용한다.
 
-| 엔드포인트 | 이유 |
-|---|---|
-| `POST /api/ai/problems/generate` | 여러 문제를 한 번에 생성 — SSE로 진행 상황 표시 |
+| 엔드포인트                        | 이유                                               |
+| --------------------------------- | -------------------------------------------------- |
+| `POST /api/ai/problems/generate`  | 여러 문제를 한 번에 생성 — SSE로 진행 상황 표시    |
 | `POST /api/ai/mock-exam/generate` | 45문항 생성은 수십 초 걸릴 수 있음 — 스트리밍 필수 |
-| `POST /api/ai/analysis/generate` | 리포트 생성도 길게 걸릴 수 있어 스트리밍 권장 |
+| `POST /api/ai/analysis/generate`  | 리포트 생성도 길게 걸릴 수 있어 스트리밍 권장      |
 
 즐겨찾기 토글, 답안 제출·채점, 친구 요청, 배틀 초대 등 **나머지 전부는 Server Actions**로
 유지한다.
@@ -382,15 +383,15 @@ model BattleParticipant {
 
 ## 5. Server Actions 구조
 
-| 파일 | 주요 함수 |
-|---|---|
-| `features/problems/actions.ts` | `createProblemsFromAi(input)`, `toggleFavorite(id)`, `deleteProblem(id)` |
+| 파일                            | 주요 함수                                                                                                                                                    |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `features/problems/actions.ts`  | `createProblemsFromAi(input)`, `toggleFavorite(id)`, `deleteProblem(id)`                                                                                     |
 | `features/mock-exam/actions.ts` | `createMockExam(input)`, `submitExamAnswers(examId, answers)` — 서버에서 `Choice.isCorrect` 대조 후 `ExamResult`+`ExamAnswer`+오답인 것만 `WrongAnswer` 생성 |
-| `features/review/actions.ts` | `retryWrongAnswer(id, answer)`, `requestAiExplanation(id)`, `markResolved(id)` |
-| `features/ai/actions.ts` | `generateWeaknessAnalysis(userId)`, `generateWeeklyReport(userId)` — AI 클라이언트 호출 후 `AIAnalysis`에 저장 |
-| `features/social/actions.ts` | `sendFriendRequest(email)`, `respondToFriendRequest(id, accept)`, `sendMessage(conversationId, content)` |
-| `features/ranking/queries.ts` | 조회 전용, mutation 없음 |
-| `features/battle/actions.ts` | `createBattle(input)`, `inviteParticipant`, `respondToBattleInvite` — 점수는 mutation이 아니라 읽을 때 기존 `StudySession`/`Todo`/`Goal` 집계로 계산 |
+| `features/review/actions.ts`    | `retryWrongAnswer(id, answer)`, `requestAiExplanation(id)`, `markResolved(id)`                                                                               |
+| `features/ai/actions.ts`        | `generateWeaknessAnalysis(userId)`, `generateWeeklyReport(userId)` — AI 클라이언트 호출 후 `AIAnalysis`에 저장                                               |
+| `features/social/actions.ts`    | `sendFriendRequest(email)`, `respondToFriendRequest(id, accept)`, `sendMessage(conversationId, content)`                                                     |
+| `features/ranking/queries.ts`   | 조회 전용, mutation 없음                                                                                                                                     |
+| `features/battle/actions.ts`    | `createBattle(input)`, `inviteParticipant`, `respondToBattleInvite` — 점수는 mutation이 아니라 읽을 때 기존 `StudySession`/`Todo`/`Goal` 집계로 계산         |
 
 모든 mutation은 기존 패턴대로 `requireCurrentUser()` + `userId` 스코프 필터를 그대로 따른다.
 

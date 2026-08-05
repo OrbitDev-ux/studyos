@@ -1,6 +1,6 @@
 import type { NextAuthConfig } from "next-auth";
 
-const PROTECTED_PATHS = ["/dashboard", "/todos", "/subjects", "/stats"];
+const PROTECTED_PATHS = ["/dashboard", "/todos", "/subjects", "/stats", "/problems"];
 
 // Edge-safe subset of the Auth.js config: no adapter, no providers that
 // touch Node.js-only APIs. This is what middleware runs on the Edge runtime.

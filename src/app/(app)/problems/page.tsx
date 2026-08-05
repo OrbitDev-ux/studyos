@@ -1,0 +1,20 @@
+import { ProblemList } from "@/features/problems/components/problem-list";
+import { getProblems } from "@/features/problems/queries";
+import { getSubjects } from "@/features/subjects/queries";
+import { requireCurrentUser } from "@/lib/session";
+
+export default async function ProblemsPage() {
+  const user = await requireCurrentUser();
+
+  const [problems, subjects] = await Promise.all([
+    getProblems(user.id),
+    getSubjects(user.id),
+  ]);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <h1 className="text-2xl font-semibold tracking-tight">문제</h1>
+      <ProblemList problems={problems} subjects={subjects} />
+    </div>
+  );
+}
