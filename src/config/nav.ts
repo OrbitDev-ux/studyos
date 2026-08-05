@@ -6,6 +6,7 @@ import {
   ListTodo,
   NotebookPen,
   Sparkles,
+  Swords,
   Trophy,
   Users,
 } from "lucide-react";
@@ -20,4 +21,5 @@ export const navItems = [
   { title: "모의고사", href: "/mock-exam", icon: ClipboardList },
   { title: "친구", href: "/social", icon: Users },
   { title: "랭킹", href: "/ranking", icon: Trophy },
+  { title: "배틀", href: "/battle", icon: Swords },
 ] as const;
