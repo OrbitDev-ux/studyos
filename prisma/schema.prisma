@@ -28,6 +28,7 @@ model User {
   studySessions StudySession[]
   problemSets   ProblemSet[]
   problems      Problem[]
+  wrongAnswers  WrongAnswer[]
 }
 
 model Account {
@@ -188,10 +189,11 @@ model Problem {
   isFavorite   Boolean      @default(false)
   createdAt    DateTime     @default(now())
 
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  problemSet ProblemSet? @relation(fields: [problemSetId], references: [id], onDelete: SetNull)
-  subject    Subject?    @relation(fields: [subjectId], references: [id], onDelete: SetNull)
-  choices    Choice[]
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problemSet   ProblemSet?   @relation(fields: [problemSetId], references: [id], onDelete: SetNull)
+  subject      Subject?      @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  choices      Choice[]
+  wrongAnswers WrongAnswer[]
 
   @@index([userId])
   @@index([subjectId])
@@ -207,4 +209,22 @@ model Choice {
   problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
 
   @@index([problemId])
+}
+
+/// One row per problem the user currently has wrong; re-attempting the same
+/// problem updates this row instead of creating a duplicate (see @@unique).
+model WrongAnswer {
+  id            String   @id @default(cuid())
+  userId        String
+  problemId     String
+  source        String   @default("problem") // "problem" | "mock-exam"
+  aiExplanation String?  @db.Text
+  resolved      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, problemId])
+  @@index([userId, resolved])
 }
