@@ -32,6 +32,11 @@ model User {
   mockExams     MockExam[]
   examResults   ExamResult[]
   aiAnalyses    AiAnalysis[]
+
+  sentFriendRequests      Friendship[]              @relation("FriendRequester")
+  receivedFriendRequests  Friendship[]              @relation("FriendAddressee")
+  conversationMemberships ConversationParticipant[]
+  messages                Message[]
 }
 
 model Account {
@@ -317,4 +322,58 @@ model AiAnalysis {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, type])
+}
+
+// ─── Social (v2) ──────────────────────────────────────────────────────────
+
+/// A friend connection. Requester sends it as "pending"; the addressee
+/// accepting flips it to "accepted". Declining or unfriending deletes the
+/// row rather than tracking a "declined"/"removed" history.
+model Friendship {
+  id          String   @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status      String // "pending" | "accepted"
+  createdAt   DateTime @default(now())
+
+  requester User @relation("FriendRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("FriendAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+}
+
+/// A DM thread. MVP scope is 1:1 only, enforced in application code (exactly
+/// two ConversationParticipant rows) rather than in the schema, so group
+/// chats can be added later without a migration.
+model Conversation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  participants ConversationParticipant[]
+  messages     Message[]
+}
+
+model ConversationParticipant {
+  id             String @id @default(cuid())
+  conversationId String
+  userId         String
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String   @db.Text
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
 }
