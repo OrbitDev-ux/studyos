@@ -10,6 +10,13 @@ export async function requireCurrentUser() {
 
   return prisma.user.findUniqueOrThrow({
     where: { id: session.user.id },
-    select: { id: true, name: true, email: true, image: true, timezone: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      image: true,
+      timezone: true,
+      school: true,
+    },
   });
 }

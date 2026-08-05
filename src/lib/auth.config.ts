@@ -9,6 +9,7 @@ const PROTECTED_PATHS = [
   "/review",
   "/mock-exam",
   "/social",
+  "/ranking",
 ];
 
 // Edge-safe subset of the Auth.js config: no adapter, no providers that
