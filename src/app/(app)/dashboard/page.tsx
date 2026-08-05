@@ -1,4 +1,7 @@
 import { Flame, ListChecks } from "lucide-react";
+import { WeaknessSummaryCard } from "@/features/ai/components/weakness-summary-card";
+import { WeeklyReportCard } from "@/features/ai/components/weekly-report-card";
+import { getLatestAiAnalysis } from "@/features/ai/queries";
 import { StatCard } from "@/features/dashboard/components/stat-card";
 import { TodayGoalsCard } from "@/features/goals/components/today-goals-card";
 import { getTodayGoals } from "@/features/goals/queries";
@@ -17,16 +20,25 @@ import { requireCurrentUser } from "@/lib/session";
 export default async function DashboardPage() {
   const user = await requireCurrentUser();
 
-  const [activeSession, todaySeconds, streak, goals, todos, subjects] = await Promise.all(
-    [
-      getActiveStudySession(user.id),
-      getTodayStudySeconds(user.id, user.timezone),
-      getStreak(user.id, user.timezone),
-      getTodayGoals(user.id, user.timezone),
-      getTodayTodos(user.id, user.timezone),
-      getSubjects(user.id),
-    ],
-  );
+  const [
+    activeSession,
+    todaySeconds,
+    streak,
+    goals,
+    todos,
+    subjects,
+    weaknessAnalysis,
+    weeklyReport,
+  ] = await Promise.all([
+    getActiveStudySession(user.id),
+    getTodayStudySeconds(user.id, user.timezone),
+    getStreak(user.id, user.timezone),
+    getTodayGoals(user.id, user.timezone),
+    getTodayTodos(user.id, user.timezone),
+    getSubjects(user.id),
+    getLatestAiAnalysis(user.id, "weakness"),
+    getLatestAiAnalysis(user.id, "weekly-report"),
+  ]);
 
   const completedTodos = todos.filter((todo) => todo.completed).length;
   const progressPercent =
@@ -56,6 +68,11 @@ export default async function DashboardPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <TodayGoalsCard goals={goals} subjects={subjects} />
         <TodayTodosCard todos={todos} />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <WeaknessSummaryCard initialContent={weaknessAnalysis?.content ?? null} />
+        <WeeklyReportCard initialContent={weeklyReport?.content ?? null} />
       </div>
     </div>
   );

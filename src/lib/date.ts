@@ -27,6 +27,27 @@ export function getTodayRange(timeZone: string, now = new Date()) {
   return { start, end };
 }
 
+/** The [start, end) UTC instant range covering the last `days` days ending today, in `timeZone`. */
+export function getRecentRange(timeZone: string, days: number, now = new Date()) {
+  const { end } = getTodayRange(timeZone, now);
+  const start = new Date(end.getTime() - days * DAY_MS);
+  return { start, end };
+}
+
+/**
+ * Inclusive [startDate, endDate] date-only range spanning the last `days`
+ * days ending today, in `timeZone`. Use for `@db.Date` columns — comparing
+ * one against `getRecentRange`'s instant boundaries silently drops a day:
+ * Prisma serializes a `@db.Date` filter by its UTC calendar date only, so an
+ * instant like "today 15:00 UTC" collapses to "today", excluding rows dated
+ * exactly today from a `lt` bound that was meant to include all of today.
+ */
+export function getRecentDateOnlyRange(timeZone: string, days: number, now = new Date()) {
+  const endDate = getZonedDateOnly(timeZone, now);
+  const startDate = new Date(endDate.getTime() - (days - 1) * DAY_MS);
+  return { startDate, endDate };
+}
+
 /** Parses a "YYYY-MM-DD" string into a UTC-midnight Date for `@db.Date` columns. */
 export function parseDateOnly(dateStr: string): Date {
   const parts = dateStr.split("-");
