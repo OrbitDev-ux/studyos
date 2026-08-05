@@ -29,6 +29,8 @@ model User {
   problemSets   ProblemSet[]
   problems      Problem[]
   wrongAnswers  WrongAnswer[]
+  mockExams     MockExam[]
+  examResults   ExamResult[]
 }
 
 model Account {
@@ -84,6 +86,7 @@ model Subject {
   studySessions StudySession[]
   problemSets   ProblemSet[]
   problems      Problem[]
+  mockExams     MockExam[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -189,11 +192,13 @@ model Problem {
   isFavorite   Boolean      @default(false)
   createdAt    DateTime     @default(now())
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  problemSet   ProblemSet?   @relation(fields: [problemSetId], references: [id], onDelete: SetNull)
-  subject      Subject?      @relation(fields: [subjectId], references: [id], onDelete: SetNull)
-  choices      Choice[]
-  wrongAnswers WrongAnswer[]
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problemSet    ProblemSet?    @relation(fields: [problemSetId], references: [id], onDelete: SetNull)
+  subject       Subject?       @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  choices       Choice[]
+  wrongAnswers  WrongAnswer[]
+  examQuestions ExamQuestion[]
+  examAnswers   ExamAnswer[]
 
   @@index([userId])
   @@index([subjectId])
@@ -206,7 +211,8 @@ model Choice {
   content   String
   isCorrect Boolean @default(false)
 
-  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  problem     Problem      @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  examAnswers ExamAnswer[]
 
   @@index([problemId])
 }
@@ -227,4 +233,71 @@ model WrongAnswer {
 
   @@unique([userId, problemId])
   @@index([userId, resolved])
+}
+
+/// A generated exam: a fixed, ordered set of (always multiple-choice, for
+/// OMR-style marking) problems with a time limit. Can be retaken — each
+/// attempt is a separate ExamResult.
+model MockExam {
+  id           String   @id @default(cuid())
+  userId       String
+  subjectId    String?
+  title        String
+  style        String? // e.g. "평가원"
+  timeLimitSec Int
+  createdAt    DateTime @default(now())
+
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject   Subject?       @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  questions ExamQuestion[]
+  results   ExamResult[]
+
+  @@index([userId])
+}
+
+model ExamQuestion {
+  id        String @id @default(cuid())
+  examId    String
+  problemId String
+  order     Int    @default(0)
+
+  exam    MockExam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  problem Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@unique([examId, problemId])
+  @@index([examId])
+}
+
+/// One attempt at a MockExam.
+model ExamResult {
+  id           String   @id @default(cuid())
+  examId       String
+  userId       String
+  score        Int
+  totalCount   Int
+  correctCount Int
+  durationSec  Int
+  submittedAt  DateTime @default(now())
+
+  exam    MockExam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers ExamAnswer[]
+
+  @@index([userId])
+  @@index([examId])
+}
+
+model ExamAnswer {
+  id               String  @id @default(cuid())
+  examResultId     String
+  problemId        String
+  selectedChoiceId String?
+  answerText       String?
+  isCorrect        Boolean
+
+  examResult     ExamResult @relation(fields: [examResultId], references: [id], onDelete: Cascade)
+  problem        Problem    @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  selectedChoice Choice?    @relation(fields: [selectedChoiceId], references: [id], onDelete: SetNull)
+
+  @@index([examResultId])
 }
