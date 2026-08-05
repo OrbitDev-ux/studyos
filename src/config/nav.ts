@@ -1,6 +1,7 @@
 import {
   BarChart3,
   BookOpen,
+  ClipboardList,
   LayoutDashboard,
   ListTodo,
   NotebookPen,
@@ -14,4 +15,5 @@ export const navItems = [
   { title: "통계", href: "/stats", icon: BarChart3 },
   { title: "문제", href: "/problems", icon: Sparkles },
   { title: "오답노트", href: "/review", icon: NotebookPen },
+  { title: "모의고사", href: "/mock-exam", icon: ClipboardList },
 ] as const;

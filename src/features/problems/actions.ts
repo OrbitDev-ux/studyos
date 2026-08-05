@@ -11,6 +11,7 @@ import {
   problemGenerationFormSchema,
   type ProblemGenerationFormValues,
 } from "@/features/problems/schema";
+import { normalizeAnswer } from "@/features/problems/utils";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/session";
 
@@ -95,10 +96,6 @@ export async function deleteProblem(problemId: string) {
   const user = await requireCurrentUser();
   await prisma.problem.deleteMany({ where: { id: problemId, userId: user.id } });
   revalidatePath("/problems");
-}
-
-function normalizeAnswer(value: string): string {
-  return value.trim().toLowerCase().replace(/\s+/g, "");
 }
 
 /**
