@@ -26,6 +26,8 @@ model User {
   todos         Todo[]
   goals         Goal[]
   studySessions StudySession[]
+  problemSets   ProblemSet[]
+  problems      Problem[]
 }
 
 model Account {
@@ -79,6 +81,8 @@ model Subject {
   todos         Todo[]
   goals         Goal[]
   studySessions StudySession[]
+  problemSets   ProblemSet[]
+  problems      Problem[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -137,4 +141,70 @@ model StudySession {
 
   @@index([userId, startedAt])
   @@index([subjectId])
+}
+
+// ─── AI problems (v2) ───────────────────────────────────────────────────
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  SHORT_ANSWER
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+/// A batch of AI-generated problems created together (one subject/unit/difficulty per set).
+model ProblemSet {
+  id         String     @id @default(cuid())
+  userId     String
+  subjectId  String?
+  title      String
+  unit       String?
+  difficulty Difficulty
+  createdAt  DateTime   @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject  Subject?  @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  problems Problem[]
+
+  @@index([userId])
+}
+
+model Problem {
+  id           String       @id @default(cuid())
+  userId       String
+  problemSetId String?
+  subjectId    String?
+  type         QuestionType
+  difficulty   Difficulty
+  unit         String?
+  prompt       String       @db.Text
+  /// Canonical answer for SHORT_ANSWER problems; MULTIPLE_CHOICE uses Choice.isCorrect instead.
+  answerText   String?
+  explanation  String?      @db.Text
+  isFavorite   Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problemSet ProblemSet? @relation(fields: [problemSetId], references: [id], onDelete: SetNull)
+  subject    Subject?    @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  choices    Choice[]
+
+  @@index([userId])
+  @@index([subjectId])
+}
+
+model Choice {
+  id        String  @id @default(cuid())
+  problemId String
+  label     String
+  content   String
+  isCorrect Boolean @default(false)
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@index([problemId])
 }
