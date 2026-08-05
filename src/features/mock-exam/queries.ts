@@ -12,6 +12,18 @@ export function getMockExams(userId: string) {
   });
 }
 
+/** Small "recently created" slice with each exam's latest attempt, for the dashboard card. */
+export function getRecentMockExams(userId: string, limit: number) {
+  return prisma.mockExam.findMany({
+    where: { userId },
+    include: {
+      results: { orderBy: { submittedAt: "desc" }, take: 1 },
+    },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+}
+
 export function getMockExam(examId: string, userId: string) {
   return prisma.mockExam.findFirst({
     where: { id: examId, userId },

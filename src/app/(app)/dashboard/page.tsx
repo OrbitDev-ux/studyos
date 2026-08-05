@@ -5,6 +5,15 @@ import { getLatestAiAnalysis } from "@/features/ai/queries";
 import { StatCard } from "@/features/dashboard/components/stat-card";
 import { TodayGoalsCard } from "@/features/goals/components/today-goals-card";
 import { getTodayGoals } from "@/features/goals/queries";
+import { TodayMockExamCard } from "@/features/mock-exam/components/today-mock-exam-card";
+import { getRecentMockExams } from "@/features/mock-exam/queries";
+import { RecommendedProblemsCard } from "@/features/problems/components/recommended-problems-card";
+import { getRecentProblems } from "@/features/problems/queries";
+import { TodayReviewCard } from "@/features/review/components/today-review-card";
+import {
+  getRecentUnresolvedWrongAnswers,
+  getUnresolvedWrongAnswerCount,
+} from "@/features/review/queries";
 import {
   getActiveStudySession,
   getStreak,
@@ -16,6 +25,8 @@ import { TodayTodosCard } from "@/features/todos/components/today-todos-card";
 import { getTodayTodos } from "@/features/todos/queries";
 import { formatKoreanDate } from "@/lib/date";
 import { requireCurrentUser } from "@/lib/session";
+
+const CARD_PREVIEW_LIMIT = 3;
 
 export default async function DashboardPage() {
   const user = await requireCurrentUser();
@@ -29,6 +40,10 @@ export default async function DashboardPage() {
     subjects,
     weaknessAnalysis,
     weeklyReport,
+    recentProblems,
+    unresolvedWrongAnswers,
+    unresolvedCount,
+    recentExams,
   ] = await Promise.all([
     getActiveStudySession(user.id),
     getTodayStudySeconds(user.id, user.timezone),
@@ -38,6 +53,10 @@ export default async function DashboardPage() {
     getSubjects(user.id),
     getLatestAiAnalysis(user.id, "weakness"),
     getLatestAiAnalysis(user.id, "weekly-report"),
+    getRecentProblems(user.id, CARD_PREVIEW_LIMIT),
+    getRecentUnresolvedWrongAnswers(user.id, CARD_PREVIEW_LIMIT),
+    getUnresolvedWrongAnswerCount(user.id),
+    getRecentMockExams(user.id, CARD_PREVIEW_LIMIT),
   ]);
 
   const completedTodos = todos.filter((todo) => todo.completed).length;
@@ -68,6 +87,15 @@ export default async function DashboardPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <TodayGoalsCard goals={goals} subjects={subjects} />
         <TodayTodosCard todos={todos} />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <RecommendedProblemsCard problems={recentProblems} />
+        <TodayReviewCard
+          wrongAnswers={unresolvedWrongAnswers}
+          totalCount={unresolvedCount}
+        />
+        <TodayMockExamCard exams={recentExams} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
