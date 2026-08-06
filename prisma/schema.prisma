@@ -418,3 +418,16 @@ model BattleParticipant {
   @@unique([battleId, userId])
   @@index([userId])
 }
+
+// ─── Admin ──────────────────────────────────────────────────────────────
+// Every /admin-auth attempt (success and failure), used both to rate-limit
+// by IP and as an audit trail. Prisma-only — never GRANTed to anon, so it's
+// unreachable via the public Supabase REST endpoint.
+model AdminLoginAttempt {
+  id        String   @id @default(cuid())
+  ip        String
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  @@index([ip, createdAt])
+}

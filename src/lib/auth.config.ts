@@ -1,4 +1,5 @@
 import type { NextAuthConfig } from "next-auth";
+import { ADMIN_SESSION_COOKIE, verifyAdminSessionToken } from "@/lib/admin/session";
 
 const PROTECTED_PATHS = [
   "/dashboard",
@@ -21,9 +22,19 @@ export const authConfig = {
   },
   providers: [],
   callbacks: {
-    authorized({ auth, request }) {
-      const isLoggedIn = !!auth?.user;
+    // Separate from the Auth.js user-session gate below: /admin/* uses its
+    // own passphrase-based session (ADMIN_SESSION_COOKIE), checked first so
+    // it never falls through to the user-session redirect logic.
+    async authorized({ auth, request }) {
       const { pathname } = request.nextUrl;
+
+      if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+        const token = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
+        const valid = await verifyAdminSessionToken(token);
+        return valid ? true : Response.redirect(new URL("/", request.nextUrl));
+      }
+
+      const isLoggedIn = !!auth?.user;
       const isProtectedPath = PROTECTED_PATHS.some((path) => pathname.startsWith(path));
 
       if (isProtectedPath && !isLoggedIn) {
