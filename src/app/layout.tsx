@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { siteConfig } from "@/config/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,9 +14,24 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const title = "StudyOS - AI 학습 플랫폼";
+const description = "AI가 문제를 만들고 공부를 분석하는 학습 플랫폼";
+
 export const metadata: Metadata = {
-  title: siteConfig.name,
-  description: siteConfig.description,
+  metadataBase: new URL(process.env.AUTH_URL ?? "http://localhost:3000"),
+  title,
+  description,
+  openGraph: {
+    title,
+    description,
+    locale: "ko_KR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

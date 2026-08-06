@@ -33,6 +33,13 @@ export async function generateStructured<T>({
       // constructs; `responseJsonSchema` accepts standard JSON Schema instead.
       responseJsonSchema: z.toJSONSchema(schema),
       thinkingConfig: useThinking ? { thinkingBudget: -1 } : undefined,
+      // SDK-native timeout + retry (exponential backoff on 408/429/5xx) so a
+      // slow or transient Gemini failure doesn't hang a Server Action
+      // indefinitely or fail on the first blip.
+      httpOptions: {
+        timeout: 30_000,
+        retryOptions: { attempts: 2 },
+      },
     },
   });
 
