@@ -1,40 +1,56 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
 import { requireCurrentUser } from "@/lib/session";
-import { prisma } from "@/lib/prisma";
 
 export async function startStudySession() {
   const user = await requireCurrentUser();
+  const supabase = await createClient();
 
-  const active = await prisma.studySession.findFirst({
-    where: { userId: user.id, endedAt: null },
-  });
+  const { data: active } = await supabase
+    .from("StudySession")
+    .select("id")
+    .eq("userId", user.id)
+    .is("endedAt", null)
+    .maybeSingle();
   if (active) return;
 
-  await prisma.studySession.create({
-    data: { userId: user.id, startedAt: new Date() },
+  const { error } = await supabase.from("StudySession").insert({
+    id: randomUUID(),
+    userId: user.id,
+    startedAt: new Date().toISOString(),
   });
+  if (error) throw error;
+
   revalidatePath("/dashboard");
 }
 
 export async function stopStudySession() {
   const user = await requireCurrentUser();
+  const supabase = await createClient();
 
-  const active = await prisma.studySession.findFirst({
-    where: { userId: user.id, endedAt: null },
-  });
+  const { data: active } = await supabase
+    .from("StudySession")
+    .select("id, startedAt")
+    .eq("userId", user.id)
+    .is("endedAt", null)
+    .maybeSingle();
   if (!active) return;
 
   const endedAt = new Date();
+  const startedAt = new Date(active.startedAt);
   const durationSec = Math.max(
     0,
-    Math.round((endedAt.getTime() - active.startedAt.getTime()) / 1000),
+    Math.round((endedAt.getTime() - startedAt.getTime()) / 1000),
   );
 
-  await prisma.studySession.update({
-    where: { id: active.id },
-    data: { endedAt, durationSec },
-  });
+  const { error } = await supabase
+    .from("StudySession")
+    .update({ endedAt: endedAt.toISOString(), durationSec })
+    .eq("id", active.id);
+  if (error) throw error;
+
   revalidatePath("/dashboard");
 }

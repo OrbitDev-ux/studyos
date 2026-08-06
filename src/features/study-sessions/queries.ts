@@ -1,11 +1,23 @@
 import { getTodayRange, getZonedDateString } from "@/lib/date";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 
-export function getActiveStudySession(userId: string) {
-  return prisma.studySession.findFirst({
-    where: { userId, endedAt: null },
-    orderBy: { startedAt: "desc" },
-  });
+export async function getActiveStudySession(userId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("StudySession")
+    .select("*")
+    .eq("userId", userId)
+    .is("endedAt", null)
+    .order("startedAt", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+
+  // PostgREST returns timestamp columns as strings — Prisma always
+  // returned Date instances here, and callers (e.g. the dashboard page)
+  // still call .toISOString() on this field, so convert at the boundary.
+  return { ...data, startedAt: new Date(data.startedAt) };
 }
 
 export async function getTodayStudySeconds(
@@ -13,25 +25,32 @@ export async function getTodayStudySeconds(
   timezone: string,
 ): Promise<number> {
   const { start, end } = getTodayRange(timezone);
-  const sessions = await prisma.studySession.findMany({
-    where: { userId, startedAt: { gte: start, lt: end } },
-    select: { durationSec: true },
-  });
-  return sessions.reduce((sum, session) => sum + session.durationSec, 0);
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("StudySession")
+    .select("durationSec")
+    .eq("userId", userId)
+    .gte("startedAt", start.toISOString())
+    .lt("startedAt", end.toISOString());
+  if (error) throw error;
+  return (data ?? []).reduce((sum, session) => sum + session.durationSec, 0);
 }
 
 const STREAK_LOOKBACK = 500;
 
 export async function getStreak(userId: string, timezone: string): Promise<number> {
-  const sessions = await prisma.studySession.findMany({
-    where: { userId, durationSec: { gt: 0 } },
-    select: { startedAt: true },
-    orderBy: { startedAt: "desc" },
-    take: STREAK_LOOKBACK,
-  });
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("StudySession")
+    .select("startedAt")
+    .eq("userId", userId)
+    .gt("durationSec", 0)
+    .order("startedAt", { ascending: false })
+    .limit(STREAK_LOOKBACK);
+  if (error) throw error;
 
   const studyDates = new Set(
-    sessions.map((s) => getZonedDateString(s.startedAt, timezone)),
+    (data ?? []).map((s) => getZonedDateString(new Date(s.startedAt), timezone)),
   );
 
   let streak = 0;
