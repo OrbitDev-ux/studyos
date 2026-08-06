@@ -1,5 +1,11 @@
-import { formatDateOnly, parseDateOnly } from "@/lib/date";
-import { prisma } from "@/lib/prisma";
+import type { Battle, BattleParticipant, User } from "@/generated/prisma/client";
+import { formatDateOnly } from "@/lib/date";
+import { createClient } from "@/lib/supabase/server";
+
+// Hand-typed to match what Prisma used to return — the Supabase client has
+// no generated DB types wired in, so .from().select() is loosely typed.
+type ParticipantWithUser = BattleParticipant & { user: User };
+type BattleWithParticipants = Battle & { participants: ParticipantWithUser[] };
 
 /**
  * Score is always computed from the participant's own StudySession/Todo/Goal
@@ -12,60 +18,106 @@ async function computeParticipantScore(
   startAt: Date,
   endAt: Date,
 ): Promise<number> {
+  const supabase = await createClient();
+
   if (metric === "study_time") {
-    const sessions = await prisma.studySession.findMany({
-      where: { userId, startedAt: { gte: startAt, lt: endAt } },
-      select: { durationSec: true },
-    });
-    return sessions.reduce((sum, session) => sum + session.durationSec, 0);
+    const { data, error } = await supabase
+      .from("StudySession")
+      .select("durationSec")
+      .eq("userId", userId)
+      .gte("startedAt", startAt.toISOString())
+      .lt("startedAt", endAt.toISOString());
+    if (error) throw error;
+    return (data ?? []).reduce((sum, session) => sum + session.durationSec, 0);
   }
 
   if (metric === "todo_count") {
-    return prisma.todo.count({
-      where: { userId, completed: true, completedAt: { gte: startAt, lt: endAt } },
-    });
+    const { count, error } = await supabase
+      .from("Todo")
+      .select("*", { count: "exact", head: true })
+      .eq("userId", userId)
+      .eq("completed", true)
+      .gte("completedAt", startAt.toISOString())
+      .lt("completedAt", endAt.toISOString());
+    if (error) throw error;
+    return count ?? 0;
   }
 
   // goal_progress: sum of each goal's completion percentage (capped at 100).
-  // Goal.date is a @db.Date column — must use date-only bounds, not the raw
-  // instants above (Prisma truncates a @db.Date filter to its bare UTC
-  // calendar date, so comparing it against a mid-day instant silently drops
-  // a day; see lib/date.ts's getRecentDateOnlyRange doc comment for the
-  // same bug caught earlier in the AI Tutor weekly report).
-  const startDate = parseDateOnly(formatDateOnly(startAt));
-  const endDate = parseDateOnly(formatDateOnly(endAt));
-  const goals = await prisma.goal.findMany({
-    where: { userId, date: { gte: startDate, lte: endDate } },
-    select: { currentValue: true, targetValue: true },
-  });
-  return goals.reduce((sum, goal) => {
+  // Goal.date is a native Postgres DATE column — filter with plain
+  // "YYYY-MM-DD" strings rather than full timestamps, the same date-only
+  // discipline this codebase already learned the hard way once (see
+  // lib/date.ts's getRecentDateOnlyRange doc comment — back then this was
+  // a Prisma @db.Date column and a full-precision filter silently dropped
+  // a day; going through raw PostgREST now, a bare date string sidesteps
+  // any date-vs-timestamp casting ambiguity entirely).
+  const startDate = formatDateOnly(startAt);
+  const endDate = formatDateOnly(endAt);
+  const { data: goals, error: goalError } = await supabase
+    .from("Goal")
+    .select("currentValue, targetValue")
+    .eq("userId", userId)
+    .gte("date", startDate)
+    .lte("date", endDate);
+  if (goalError) throw goalError;
+  return (goals ?? []).reduce((sum, goal) => {
     if (goal.targetValue <= 0) return sum;
     return sum + Math.min(100, Math.round((goal.currentValue / goal.targetValue) * 100));
   }, 0);
 }
 
 export async function getBattles(userId: string) {
-  const battles = await prisma.battle.findMany({
-    where: { participants: { some: { userId } } },
-    include: { participants: { include: { user: true } } },
-    orderBy: { createdAt: "desc" },
-  });
+  const supabase = await createClient();
 
+  // PostgREST's `!inner` join hint, needed to filter parent rows by an
+  // embedded column, also filters the embedded array down to just the
+  // matching child row — Prisma's `some` filter doesn't do that (it still
+  // embeds every participant). Two queries instead: which battles is this
+  // user in, then fetch those battles with all of their participants.
+  const { data: myParticipations, error: participationError } = await supabase
+    .from("BattleParticipant")
+    .select("battleId")
+    .eq("userId", userId);
+  if (participationError) throw participationError;
+  const battleIds = (myParticipations ?? []).map((p) => p.battleId);
+  if (battleIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("Battle")
+    .select("*, participants:BattleParticipant(*, user:User(*))")
+    .in("id", battleIds)
+    .order("createdAt", { ascending: false });
+  if (error) throw error;
+
+  const battles = data as unknown as BattleWithParticipants[];
   const now = new Date();
   return battles.map((battle) => ({
     ...battle,
-    isActive: battle.endAt > now,
+    isActive: new Date(battle.endAt) > now,
     myStatus: battle.participants.find((p) => p.userId === userId)?.status ?? "invited",
   }));
 }
 
 export async function getBattle(battleId: string, userId: string) {
-  const battle = await prisma.battle.findFirst({
-    where: { id: battleId, participants: { some: { userId } } },
-    include: { participants: { include: { user: true } } },
-  });
-  if (!battle) return null;
+  const supabase = await createClient();
 
+  const { data: myParticipation } = await supabase
+    .from("BattleParticipant")
+    .select("id")
+    .eq("battleId", battleId)
+    .eq("userId", userId)
+    .maybeSingle();
+  if (!myParticipation) return null;
+
+  const { data, error } = await supabase
+    .from("Battle")
+    .select("*, participants:BattleParticipant(*, user:User(*))")
+    .eq("id", battleId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+
+  const battle = data as unknown as BattleWithParticipants;
   const acceptedParticipants = battle.participants.filter((p) => p.status === "accepted");
   const scored = await Promise.all(
     acceptedParticipants.map(async (participant) => ({
@@ -76,8 +128,8 @@ export async function getBattle(battleId: string, userId: string) {
       score: await computeParticipantScore(
         participant.user.id,
         battle.metric,
-        battle.startAt,
-        battle.endAt,
+        new Date(battle.startAt),
+        new Date(battle.endAt),
       ),
     })),
   );
@@ -88,6 +140,6 @@ export async function getBattle(battleId: string, userId: string) {
     battle,
     leaderboard,
     pendingInvites: battle.participants.filter((p) => p.status === "invited"),
-    isActive: battle.endAt > new Date(),
+    isActive: new Date(battle.endAt) > new Date(),
   };
 }
