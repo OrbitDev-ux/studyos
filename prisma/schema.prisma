@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 // ─── Auth.js ────────────────────────────────────────────────────────────
@@ -16,6 +16,8 @@ model User {
   email         String    @unique
   emailVerified DateTime?
   image         String?
+  /// bcrypt hash; null for accounts that only ever signed in via Google.
+  password      String?
   timezone      String    @default("Asia/Seoul")
   school        String?
   createdAt     DateTime  @default(now())
@@ -49,17 +51,18 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Session {
@@ -109,7 +112,7 @@ model Todo {
   title       String
   completed   Boolean   @default(false)
   completedAt DateTime?
-  dueDate     DateTime  @default(now()) @db.Date
+  dueDate     DateTime  @default(now())
   order       Int       @default(0)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -130,7 +133,7 @@ model Goal {
   targetValue  Int
   currentValue Int      @default(0)
   unit         String
-  date         DateTime @default(now()) @db.Date
+  date         DateTime @default(now())
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -195,10 +198,10 @@ model Problem {
   type         QuestionType
   difficulty   Difficulty
   unit         String?
-  prompt       String       @db.Text
+  prompt       String
   /// Canonical answer for SHORT_ANSWER problems; MULTIPLE_CHOICE uses Choice.isCorrect instead.
   answerText   String?
-  explanation  String?      @db.Text
+  explanation  String?
   isFavorite   Boolean      @default(false)
   createdAt    DateTime     @default(now())
 
@@ -234,7 +237,7 @@ model WrongAnswer {
   userId        String
   problemId     String
   source        String   @default("problem") // "problem" | "mock-exam"
-  aiExplanation String?  @db.Text
+  aiExplanation String?
   resolved      Boolean  @default(false)
   createdAt     DateTime @default(now())
 
@@ -318,9 +321,9 @@ model AiAnalysis {
   id          String   @id @default(cuid())
   userId      String
   type        String // "weakness" | "weekly-report"
-  content     String   @db.Text
-  periodStart DateTime @db.Date
-  periodEnd   DateTime @db.Date
+  content     String
+  periodStart DateTime
+  periodEnd   DateTime
   createdAt   DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -344,6 +347,7 @@ model Friendship {
   addressee User @relation("FriendAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
 
   @@unique([requesterId, addresseeId])
+  @@index([addresseeId])
 }
 
 /// A DM thread. MVP scope is 1:1 only, enforced in application code (exactly
@@ -367,13 +371,14 @@ model ConversationParticipant {
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([conversationId, userId])
+  @@index([userId])
 }
 
 model Message {
   id             String   @id @default(cuid())
   conversationId String
   senderId       String
-  content        String   @db.Text
+  content        String
   createdAt      DateTime @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -411,4 +416,5 @@ model BattleParticipant {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([battleId, userId])
+  @@index([userId])
 }
