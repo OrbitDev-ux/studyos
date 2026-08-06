@@ -16,9 +16,6 @@ import { getRecentDateOnlyRange, getZonedDateOnly } from "@/lib/date";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/session";
 
-// AI generation calls regularly run past Vercel's default serverless timeout.
-export const maxDuration = 60;
-
 const WEEKLY_REPORT_WINDOW_DAYS = 7;
 
 export async function generateWeaknessAnalysis(): Promise<{ content: string }> {

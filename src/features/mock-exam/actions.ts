@@ -17,11 +17,6 @@ import { normalizeAnswer } from "@/features/problems/utils";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/session";
 
-// AI exam generation regularly runs past Vercel's default serverless
-// timeout — a 3-question exam alone took ~20s locally against the real
-// Gemini call before any DB writes.
-export const maxDuration = 60;
-
 export async function generateMockExam(
   values: MockExamGenerationFormValues,
 ): Promise<string> {

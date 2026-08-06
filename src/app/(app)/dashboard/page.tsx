@@ -26,6 +26,11 @@ import { getTodayTodos } from "@/features/todos/queries";
 import { formatKoreanDate } from "@/lib/date";
 import { requireCurrentUser } from "@/lib/session";
 
+// generateWeaknessAnalysis/generateWeeklyReport's AI calls regularly run
+// past Vercel's default serverless timeout — Server Actions inherit the
+// invoking route's maxDuration.
+export const maxDuration = 60;
+
 const CARD_PREVIEW_LIMIT = 3;
 
 export default async function DashboardPage() {

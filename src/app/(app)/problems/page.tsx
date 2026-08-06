@@ -3,6 +3,10 @@ import { getProblems } from "@/features/problems/queries";
 import { getSubjects } from "@/features/subjects/queries";
 import { requireCurrentUser } from "@/lib/session";
 
+// generateProblems' AI call regularly runs past Vercel's default serverless
+// timeout — Server Actions inherit the invoking route's maxDuration.
+export const maxDuration = 60;
+
 export default async function ProblemsPage() {
   const user = await requireCurrentUser();
 

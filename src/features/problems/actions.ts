@@ -16,9 +16,6 @@ import { normalizeAnswer } from "@/features/problems/utils";
 import { createClient } from "@/lib/supabase/server";
 import { requireCurrentUser } from "@/lib/session";
 
-// AI generation calls regularly run past Vercel's default serverless timeout.
-export const maxDuration = 60;
-
 export async function generateProblems(values: ProblemGenerationFormValues) {
   const user = await requireCurrentUser();
   const parsed = problemGenerationFormSchema.parse(values);
