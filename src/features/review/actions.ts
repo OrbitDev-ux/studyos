@@ -10,6 +10,9 @@ import { aiExplanationSchema } from "@/features/review/schema";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/session";
 
+// AI generation calls regularly run past Vercel's default serverless timeout.
+export const maxDuration = 60;
+
 export async function requestAiExplanation(
   wrongAnswerId: string,
 ): Promise<{ explanation: string }> {
