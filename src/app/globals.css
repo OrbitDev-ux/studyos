@@ -120,11 +120,21 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
   body {
     @apply bg-background text-foreground;
   }
   html {
     @apply font-sans;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
   }
 }
