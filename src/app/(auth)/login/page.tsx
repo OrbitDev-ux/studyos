@@ -1,8 +1,6 @@
 import Link from "next/link";
-import { Separator } from "@/components/ui/separator";
 import { siteConfig } from "@/config/site";
 import { EmailSignInForm } from "@/features/auth/components/email-sign-in-form";
-import { GoogleSignInButton } from "@/features/auth/components/google-sign-in-button";
 
 export default function LoginPage() {
   return (
@@ -12,12 +10,6 @@ export default function LoginPage() {
         <p className="text-muted-foreground text-sm">{siteConfig.description}</p>
       </div>
       <div className="flex w-full max-w-xs flex-col gap-4">
-        <GoogleSignInButton />
-        <div className="flex items-center gap-3">
-          <Separator className="flex-1" />
-          <span className="text-muted-foreground text-xs">또는</span>
-          <Separator className="flex-1" />
-        </div>
         <EmailSignInForm />
         <p className="text-muted-foreground text-center text-sm">
           계정이 없으신가요?{" "}
