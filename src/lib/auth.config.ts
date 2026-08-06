@@ -30,7 +30,7 @@ export const authConfig = {
         return Response.redirect(new URL("/login", request.nextUrl));
       }
 
-      if (pathname === "/login" && isLoggedIn) {
+      if ((pathname === "/login" || pathname === "/signup") && isLoggedIn) {
         return Response.redirect(new URL("/dashboard", request.nextUrl));
       }
 

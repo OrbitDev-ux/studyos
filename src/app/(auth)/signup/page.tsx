@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { siteConfig } from "@/config/site";
-import { EmailSignInForm } from "@/features/auth/components/email-sign-in-form";
+import { EmailSignUpForm } from "@/features/auth/components/email-sign-up-form";
 import { GoogleSignInButton } from "@/features/auth/components/google-sign-in-button";
 
-export default function LoginPage() {
+export default function SignUpPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-8 px-4">
       <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">{siteConfig.name}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{siteConfig.name} 시작하기</h1>
         <p className="text-muted-foreground text-sm">{siteConfig.description}</p>
       </div>
       <div className="flex w-full max-w-xs flex-col gap-4">
@@ -18,11 +18,11 @@ export default function LoginPage() {
           <span className="text-muted-foreground text-xs">또는</span>
           <Separator className="flex-1" />
         </div>
-        <EmailSignInForm />
+        <EmailSignUpForm />
         <p className="text-muted-foreground text-center text-sm">
-          계정이 없으신가요?{" "}
-          <Link href="/signup" className="text-primary hover:underline">
-            회원가입
+          이미 계정이 있으신가요?{" "}
+          <Link href="/login" className="text-primary hover:underline">
+            로그인
           </Link>
         </p>
       </div>
