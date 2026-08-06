@@ -5,8 +5,9 @@
 project_id = "StudyOS"
 
 [api]
-# Not used — the app talks to Postgres directly via Prisma, not PostgREST.
-enabled = false
+# Needed by @supabase/supabase-js, which talks to Postgres through
+# PostgREST rather than a direct connection.
+enabled = true
 # Port to use for the API URL.
 # Shifted +100 from the Supabase CLI default (54321) — another local
 # Supabase project ("STUDYHUB") already occupies the default ports on
