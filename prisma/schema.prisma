@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 // ─── Auth.js ────────────────────────────────────────────────────────────
@@ -51,12 +51,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String?
-  access_token      String?
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String?
+  id_token          String? @db.Text
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -112,7 +112,7 @@ model Todo {
   title       String
   completed   Boolean   @default(false)
   completedAt DateTime?
-  dueDate     DateTime  @default(now())
+  dueDate     DateTime  @default(now()) @db.Date
   order       Int       @default(0)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -133,7 +133,7 @@ model Goal {
   targetValue  Int
   currentValue Int      @default(0)
   unit         String
-  date         DateTime @default(now())
+  date         DateTime @default(now()) @db.Date
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -198,10 +198,10 @@ model Problem {
   type         QuestionType
   difficulty   Difficulty
   unit         String?
-  prompt       String
+  prompt       String       @db.Text
   /// Canonical answer for SHORT_ANSWER problems; MULTIPLE_CHOICE uses Choice.isCorrect instead.
   answerText   String?
-  explanation  String?
+  explanation  String?      @db.Text
   isFavorite   Boolean      @default(false)
   createdAt    DateTime     @default(now())
 
@@ -237,7 +237,7 @@ model WrongAnswer {
   userId        String
   problemId     String
   source        String   @default("problem") // "problem" | "mock-exam"
-  aiExplanation String?
+  aiExplanation String?  @db.Text
   resolved      Boolean  @default(false)
   createdAt     DateTime @default(now())
 
@@ -321,9 +321,9 @@ model AiAnalysis {
   id          String   @id @default(cuid())
   userId      String
   type        String // "weakness" | "weekly-report"
-  content     String
-  periodStart DateTime
-  periodEnd   DateTime
+  content     String   @db.Text
+  periodStart DateTime @db.Date
+  periodEnd   DateTime @db.Date
   createdAt   DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -378,7 +378,7 @@ model Message {
   id             String   @id @default(cuid())
   conversationId String
   senderId       String
-  content        String
+  content        String   @db.Text
   createdAt      DateTime @default(now())
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)

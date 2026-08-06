@@ -8,7 +8,12 @@ export default defineConfig({
   migrations: {
     path: "prisma/migrations",
   },
+  // Supabase's pooled connection (pgbouncer, port 6543) is what the app
+  // uses at runtime via the driver adapter in lib/prisma.ts, but `prisma
+  // migrate`/`generate` need a direct, non-pooled connection to run DDL —
+  // hence DIRECT_URL, falling back to DATABASE_URL for non-Supabase setups
+  // that only have one connection string.
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"],
   },
 });

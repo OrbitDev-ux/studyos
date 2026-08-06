@@ -37,12 +37,6 @@ yarn-error.log*
 # prisma generated client
 /src/generated
 
-# sqlite database files
-/prisma/*.db
-/prisma/*.db-journal
-/prisma/*.db-wal
-/prisma/*.db-shm
-
 # vercel
 .vercel
 
