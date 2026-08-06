@@ -26,7 +26,6 @@ import { createBattle } from "@/features/battle/actions";
 import { BATTLE_DURATION_LABEL, BATTLE_METRIC_LABEL } from "@/features/battle/constants";
 import {
   createBattleFormSchema,
-  type CreateBattleFormInput,
   type CreateBattleFormValues,
 } from "@/features/battle/schema";
 import type { getFriends } from "@/features/social/queries";
@@ -47,7 +46,7 @@ export function BattleCreateDialog({
     control,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<CreateBattleFormInput, unknown, CreateBattleFormValues>({
+  } = useForm<CreateBattleFormValues>({
     resolver: zodResolver(createBattleFormSchema),
     defaultValues: { metric: "study_time", durationDays: "3", friendUserIds: [] },
   });

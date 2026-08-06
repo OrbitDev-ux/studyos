@@ -12,7 +12,13 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export async function createBattle(values: CreateBattleFormValues): Promise<string> {
   const user = await requireCurrentUser();
-  const parsed = createBattleFormSchema.parse(values);
+  const result = createBattleFormSchema.safeParse(values);
+  if (!result.success) {
+    // Server Action errors only carry `.message` across to the client — a
+    // raw ZodError here would show up as unreadable JSON in the UI.
+    throw new Error("입력값을 확인해주세요.");
+  }
+  const parsed = result.data;
 
   const friendships = await prisma.friendship.findMany({
     where: {
@@ -30,14 +36,15 @@ export async function createBattle(values: CreateBattleFormValues): Promise<stri
     throw new Error("친구가 아닌 사용자는 초대할 수 없습니다.");
   }
 
+  const durationDays = Number(parsed.durationDays);
   const startAt = new Date();
-  const endAt = new Date(startAt.getTime() + parsed.durationDays * DAY_MS);
+  const endAt = new Date(startAt.getTime() + durationDays * DAY_MS);
 
   const battle = await prisma.battle.create({
     data: {
       creatorId: user.id,
       metric: parsed.metric,
-      durationDays: parsed.durationDays,
+      durationDays,
       startAt,
       endAt,
       participants: {
