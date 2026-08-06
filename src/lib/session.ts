@@ -1,22 +1,29 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 
-export async function requireCurrentUser() {
+export type CurrentUser = {
+  id: string;
+  name: string | null;
+  email: string;
+  image: string | null;
+  timezone: string;
+  school: string | null;
+};
+
+export async function requireCurrentUser(): Promise<CurrentUser> {
   const session = await auth();
   if (!session?.user) {
     redirect("/login");
   }
 
-  return prisma.user.findUniqueOrThrow({
-    where: { id: session.user.id },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      image: true,
-      timezone: true,
-      school: true,
-    },
-  });
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("User")
+    .select("id, name, email, image, timezone, school")
+    .eq("id", session.user.id)
+    .single();
+  if (error) throw error;
+
+  return data as CurrentUser;
 }

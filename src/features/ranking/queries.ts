@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 
 export type RankingEntry = {
   userId: string;
@@ -15,6 +16,12 @@ export type RankingEntry = {
  * No `take` here — the full scoped list is cheap at this app's scale, and
  * having it all lets the UI show "내 순위" even when it falls outside the
  * top N without a second query.
+ *
+ * The user lookup below runs through the Supabase SDK; the aggregation
+ * itself is still Prisma — PostgREST has no GROUP BY equivalent for
+ * @supabase/supabase-js (would need a Postgres view or an RPC function),
+ * which is its own decision outside the profiles/User slice this was
+ * converted for.
  */
 async function buildRanking(
   where: Prisma.StudySessionWhereInput,
@@ -27,11 +34,16 @@ async function buildRanking(
   });
   if (grouped.length === 0) return [];
 
-  const users = await prisma.user.findMany({
-    where: { id: { in: grouped.map((g) => g.userId) } },
-    select: { id: true, name: true, image: true },
-  });
-  const userById = new Map(users.map((u) => [u.id, u]));
+  const supabase = await createClient();
+  const { data: users, error } = await supabase
+    .from("User")
+    .select("id, name, image")
+    .in(
+      "id",
+      grouped.map((g) => g.userId),
+    );
+  if (error) throw error;
+  const userById = new Map((users ?? []).map((u) => [u.id, u]));
 
   const entries: RankingEntry[] = [];
   grouped.forEach((group, index) => {
@@ -78,17 +90,22 @@ export async function getFriendRanking(userId: string): Promise<RankingEntry[]> 
 
 /** `null` means the user hasn't set a school yet — distinct from an empty ranking. */
 export async function getSchoolRanking(userId: string): Promise<RankingEntry[] | null> {
-  const user = await prisma.user.findUniqueOrThrow({
-    where: { id: userId },
-    select: { school: true },
-  });
+  const supabase = await createClient();
+  const { data: user, error } = await supabase
+    .from("User")
+    .select("school")
+    .eq("id", userId)
+    .single();
+  if (error) throw error;
   if (!user.school) return null;
 
-  const schoolmates = await prisma.user.findMany({
-    where: { school: user.school },
-    select: { id: true },
-  });
-  return buildRanking({ userId: { in: schoolmates.map((u) => u.id) } });
+  const { data: schoolmates, error: schoolmatesError } = await supabase
+    .from("User")
+    .select("id")
+    .eq("school", user.school);
+  if (schoolmatesError) throw schoolmatesError;
+
+  return buildRanking({ userId: { in: (schoolmates ?? []).map((u) => u.id) } });
 }
 
 export function getSeasonRanking(): Promise<RankingEntry[]> {

@@ -7,6 +7,7 @@ import { verifyPassword } from "@/features/auth/password";
 import { seedDefaultSubjects } from "@/features/subjects/seed";
 import { authConfig } from "@/lib/auth.config";
 import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -26,9 +27,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const parsed = emailSignInSchema.safeParse(credentials);
         if (!parsed.success) return null;
 
-        const user = await prisma.user.findUnique({
-          where: { email: parsed.data.email },
-        });
+        const supabase = await createClient();
+        const { data: user } = await supabase
+          .from("User")
+          .select("id, name, email, image, password")
+          .eq("email", parsed.data.email)
+          .maybeSingle();
+
         const valid = await verifyPassword(parsed.data.password, user?.password ?? null);
         if (!user || !valid) return null;
 

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { addFriendFormSchema } from "@/features/social/schema";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 import { requireCurrentUser } from "@/lib/session";
 
 export async function sendFriendRequest(email: string) {
@@ -14,7 +15,12 @@ export async function sendFriendRequest(email: string) {
     throw new Error("자기 자신에게는 친구 요청을 보낼 수 없습니다.");
   }
 
-  const target = await prisma.user.findUnique({ where: { email: targetEmail } });
+  const supabase = await createClient();
+  const { data: target } = await supabase
+    .from("User")
+    .select("id")
+    .eq("email", targetEmail)
+    .maybeSingle();
   if (!target) {
     throw new Error("해당 이메일의 사용자를 찾을 수 없습니다.");
   }
