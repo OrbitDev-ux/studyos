@@ -1,6 +1,7 @@
 import {
   Bell,
   Bot,
+  FileCode,
   LayoutDashboard,
   ScrollText,
   Server,
@@ -33,6 +34,12 @@ export const adminNavItems: AdminNavItem[] = [
     capability: "manageAnnouncements",
   },
   { title: "AI", href: "/admin/ai", icon: Bot, capability: "manageAi" },
+  {
+    title: "AI 프롬프트",
+    href: "/admin/prompts",
+    icon: FileCode,
+    capability: "managePrompts",
+  },
   {
     title: "보안",
     href: "/admin/security",

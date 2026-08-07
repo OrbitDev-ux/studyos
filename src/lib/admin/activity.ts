@@ -24,6 +24,11 @@ export const ADMIN_ACTIONS = {
   MAINTENANCE_TOGGLE: "maintenance_toggle",
   AI_TOGGLE: "ai_toggle",
   AI_SETTINGS_UPDATE: "ai_settings_update",
+  PROMPT_CREATE: "prompt_create",
+  PROMPT_SAVE: "prompt_save",
+  PROMPT_ROLLBACK: "prompt_rollback",
+  PROMPT_TOGGLE: "prompt_toggle",
+  PROMPT_DELETE: "prompt_delete",
   SETTING_UPDATE: "setting_update",
   ERROR: "error",
 } as const;
@@ -50,6 +55,11 @@ export const ACTION_LABELS: Record<string, string> = {
   maintenance_toggle: "점검모드 전환",
   ai_toggle: "AI 전환",
   ai_settings_update: "AI 설정 변경",
+  prompt_create: "프롬프트 생성",
+  prompt_save: "프롬프트 저장",
+  prompt_rollback: "프롬프트 롤백",
+  prompt_toggle: "프롬프트 활성화 전환",
+  prompt_delete: "프롬프트 삭제",
   setting_update: "설정 변경",
   error: "오류",
 };
