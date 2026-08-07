@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { ADMIN_ROLES } from "@/lib/admin/permissions";
 
 // ─── Sign-in ────────────────────────────────────────────────────────────────
 
@@ -16,7 +15,9 @@ export type AdminCredentialsValues = z.infer<typeof adminCredentialsSchema>;
 
 // ─── Admin management ─────────────────────────────────────────────────────────
 
-const roleEnum = z.enum(ADMIN_ROLES as [string, ...string[]]);
+// Literal tuple (not derived from ADMIN_ROLES) so the inferred type is the
+// AdminRole union rather than a widened string, matching Prisma's enum.
+const roleEnum = z.enum(["SUPER_ADMIN", "ADMIN", "MODERATOR"]);
 
 export const createAdminSchema = z.object({
   email: z.string().trim().email("이메일 형식이 올바르지 않습니다"),
