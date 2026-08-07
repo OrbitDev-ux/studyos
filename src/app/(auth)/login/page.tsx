@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { siteConfig } from "@/config/site";
 import { EmailSignInForm } from "@/features/auth/components/email-sign-in-form";
+import { GuestSignInButton } from "@/features/auth/components/guest-sign-in-button";
 
 export default function LoginPage() {
   return (
@@ -11,6 +12,12 @@ export default function LoginPage() {
       </div>
       <div className="flex w-full max-w-xs flex-col gap-4">
         <EmailSignInForm />
+        <div className="flex items-center gap-3">
+          <span className="bg-border h-px flex-1" />
+          <span className="text-muted-foreground text-xs">또는</span>
+          <span className="bg-border h-px flex-1" />
+        </div>
+        <GuestSignInButton />
         <p className="text-muted-foreground text-center text-sm">
           계정이 없으신가요?{" "}
           <Link href="/signup" className="text-primary hover:underline">

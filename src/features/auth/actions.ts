@@ -23,6 +23,43 @@ export async function signOutAction() {
   await signOut({ redirectTo: "/login" });
 }
 
+/**
+ * Create a throwaway guest account and sign in immediately — a no-signup way
+ * to try the app (and a path back in for someone whose account was banned).
+ * The account is a normal User with a recognizable @guest.* email and a random
+ * password (never shown), seeded with the default subjects like any new user.
+ * Uses redirect:false + a returned result so the client navigates itself,
+ * avoiding the redirect-in-catch "failed" flash.
+ */
+export async function signInAsGuest(): Promise<{ error?: string }> {
+  const token = crypto.randomUUID();
+  const email = `guest_${token}@guest.studyos.app`;
+  const password = crypto.randomUUID();
+  const name = `게스트 ${token.slice(0, 4)}`;
+
+  try {
+    const passwordHash = await hashPassword(password);
+    await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: { name, email, password: passwordHash },
+      });
+      await seedDefaultSubjects(user.id, tx);
+    });
+  } catch {
+    return { error: "게스트 계정 생성에 실패했어요. 잠시 후 다시 시도해주세요." };
+  }
+
+  try {
+    await signIn("credentials", { email, password, redirect: false });
+    return {};
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return { error: "게스트 로그인에 실패했어요. 다시 시도해주세요." };
+    }
+    throw err;
+  }
+}
+
 export async function signInWithEmail(
   values: EmailSignInValues,
 ): Promise<{ error?: string }> {
@@ -52,7 +89,11 @@ export async function signUpWithEmail(
     const passwordHash = await hashPassword(parsed.data.password);
     await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
-        data: { name: parsed.data.name, email: parsed.data.email, password: passwordHash },
+        data: {
+          name: parsed.data.name,
+          email: parsed.data.email,
+          password: passwordHash,
+        },
       });
       await seedDefaultSubjects(user.id, tx);
     });
@@ -73,7 +114,8 @@ export async function signUpWithEmail(
   } catch (err) {
     if (err instanceof AuthError) {
       return {
-        error: "가입은 완료됐지만 로그인에 실패했어요. 로그인 페이지에서 다시 시도해주세요.",
+        error:
+          "가입은 완료됐지만 로그인에 실패했어요. 로그인 페이지에서 다시 시도해주세요.",
       };
     }
     throw err;
