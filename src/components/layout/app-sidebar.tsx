@@ -12,13 +12,20 @@ import {
   SidebarGroupContent,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { navItems } from "@/config/nav";
 import { siteConfig } from "@/config/site";
 
-export function AppSidebar({ user }: { user: Session["user"] }) {
+export function AppSidebar({
+  user,
+  socialCount = 0,
+}: {
+  user: Session["user"];
+  socialCount?: number;
+}) {
   const pathname = usePathname();
 
   return (
@@ -35,20 +42,28 @@ export function AppSidebar({ user }: { user: Session["user"] }) {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname.startsWith(item.href)}
-                    tooltip={item.title}
-                  >
-                    <Link href={item.href}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {navItems.map((item) => {
+                const badge = item.href === "/social" ? socialCount : 0;
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname.startsWith(item.href)}
+                      tooltip={item.title}
+                    >
+                      <Link href={item.href}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                    {badge > 0 && (
+                      <SidebarMenuBadge className="bg-primary text-primary-foreground">
+                        {badge > 99 ? "99+" : badge}
+                      </SidebarMenuBadge>
+                    )}
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

@@ -367,9 +367,12 @@ model Conversation {
 }
 
 model ConversationParticipant {
-  id             String @id @default(cuid())
+  id             String    @id @default(cuid())
   conversationId String
   userId         String
+  /// When this participant last opened the thread; messages after this from
+  /// the other person are "unread" and feed the sidebar badge.
+  lastReadAt     DateTime?
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
