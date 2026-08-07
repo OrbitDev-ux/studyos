@@ -6,15 +6,17 @@ import { unbanSelf } from "@/features/auth/actions";
 import { useKeyboardShortcut } from "@/hooks/use-keyboard-shortcut";
 
 /**
- * Recovery shortcut on the /suspended screen: ⌘+1 lifts the ban on the current
- * account and returns to the dashboard. Reuses the shared keyboard-shortcut
- * hook (listener bound once, cleaned up on unmount).
+ * Recovery shortcut on the /suspended screen: ⌘+Option+1 lifts the ban on the
+ * current account and returns to the dashboard. (Plain ⌘+1 is the browser's
+ * switch-to-tab shortcut, so we add Option and match the physical key —
+ * Option+1 rewrites event.key to "¡" but event.code stays "Digit1".) Reuses
+ * the shared keyboard-shortcut hook (listener bound once, cleaned up on unmount).
  */
 export function SuspendedShortcut() {
   const router = useRouter();
   const [status, setStatus] = useState<"idle" | "working" | "error">("idle");
 
-  useKeyboardShortcut({ key: "1", meta: true }, () => {
+  useKeyboardShortcut({ code: "Digit1", meta: true, alt: true }, () => {
     if (status === "working") return;
     setStatus("working");
     void (async () => {

@@ -1,8 +1,12 @@
 import { useEffect, useRef } from "react";
 
 export type KeyCombo = {
-  /** The main key, matched case-insensitively against KeyboardEvent.key (e.g. "a"). */
-  key: string;
+  /** Match KeyboardEvent.key, case-insensitive (e.g. "a"). Ignored when `code` is set. */
+  key?: string;
+  /** Match the physical key via KeyboardEvent.code (e.g. "Digit1"). Prefer this
+   * for combos involving Alt/Option on macOS, where Option rewrites event.key
+   * (Option+1 → "¡") but event.code stays "Digit1". */
+  code?: string;
   /** Command (⌘) on macOS / Windows key elsewhere — KeyboardEvent.metaKey. */
   meta?: boolean;
   ctrl?: boolean;
@@ -43,7 +47,7 @@ export function useKeyboardShortcut(
   const { enabled = true, ignoreWhenTyping = true } = options;
   // Destructure to primitives so the effect re-binds on real value changes,
   // not on a new combo/options object identity each render.
-  const { key, meta = false, ctrl = false, shift = false, alt = false } = combo;
+  const { key, code, meta = false, ctrl = false, shift = false, alt = false } = combo;
   const handlerRef = useRef(handler);
 
   useEffect(() => {
@@ -55,8 +59,13 @@ export function useKeyboardShortcut(
 
     function onKeyDown(event: KeyboardEvent) {
       if (ignoreWhenTyping && isTypingTarget(event.target)) return;
+      const keyMatch = code
+        ? event.code === code
+        : key
+          ? event.key.toLowerCase() === key.toLowerCase()
+          : false;
       const hit =
-        event.key.toLowerCase() === key.toLowerCase() &&
+        keyMatch &&
         event.metaKey === meta &&
         event.ctrlKey === ctrl &&
         event.shiftKey === shift &&
@@ -68,5 +77,5 @@ export function useKeyboardShortcut(
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [key, meta, ctrl, shift, alt, enabled, ignoreWhenTyping]);
+  }, [key, code, meta, ctrl, shift, alt, enabled, ignoreWhenTyping]);
 }
