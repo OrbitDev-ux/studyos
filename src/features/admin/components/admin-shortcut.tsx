@@ -36,7 +36,7 @@ export function AdminShortcut() {
           <DialogTitle>관리자 인증</DialogTitle>
           <DialogDescription>StudyOS 운영자 전용입니다.</DialogDescription>
         </DialogHeader>
-        <AdminLoginForm />
+        <AdminLoginForm onSuccess={() => setOpen(false)} />
       </DialogContent>
     </Dialog>
   );

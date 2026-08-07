@@ -114,7 +114,10 @@ export async function verifyAdminCode(
   });
 
   await establishSession(admin, ip);
-  redirect("/admin");
+  // Return success (cookie already set) and let the client navigate — a
+  // server-side redirect() here surfaces to the client form's try/catch as a
+  // thrown signal and flashed a spurious "failed" message before navigating.
+  return {};
 }
 
 /** Credential entry for admins created by a super admin. */
@@ -145,7 +148,10 @@ export async function verifyAdminCredentials(
   if (!valid || !admin) return { error: GENERIC_ERROR };
 
   await establishSession(admin, ip);
-  redirect("/admin");
+  // Return success (cookie already set) and let the client navigate — a
+  // server-side redirect() here surfaces to the client form's try/catch as a
+  // thrown signal and flashed a spurious "failed" message before navigating.
+  return {};
 }
 
 export async function adminSignOut() {

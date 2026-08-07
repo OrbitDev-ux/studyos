@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { KeyRound, Lock } from "lucide-react";
-import { unstable_rethrow } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,12 @@ import {
   type AdminCredentialsValues,
 } from "@/features/admin/schema";
 
-function CodeForm() {
+// The sign-in actions set the session cookie and return { } on success (they
+// deliberately do NOT redirect — a server redirect surfaced to the try/catch
+// below and flashed a spurious "failed" message). Navigation happens here on
+// the client after a clean success.
+function CodeForm({ onSuccess }: { onSuccess?: () => void }) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const {
     register,
@@ -29,12 +34,14 @@ function CodeForm() {
     setError(null);
     try {
       const result = await verifyAdminCode(values);
-      if (result?.error) setError(result.error);
-    } catch (err) {
-      // A successful login throws NEXT_REDIRECT (the action redirects to
-      // /admin). Re-throw framework control-flow signals so navigation
-      // proceeds instead of showing a spurious "failed" message.
-      unstable_rethrow(err);
+      if (result?.error) {
+        setError(result.error);
+        return;
+      }
+      onSuccess?.();
+      router.push("/admin");
+      router.refresh();
+    } catch {
       setError("인증에 실패했습니다.");
     }
   }
@@ -61,7 +68,8 @@ function CodeForm() {
   );
 }
 
-function CredentialsForm() {
+function CredentialsForm({ onSuccess }: { onSuccess?: () => void }) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const {
     register,
@@ -73,11 +81,14 @@ function CredentialsForm() {
     setError(null);
     try {
       const result = await verifyAdminCredentials(values);
-      if (result?.error) setError(result.error);
-    } catch (err) {
-      // Success redirects to /admin (throws NEXT_REDIRECT); re-throw framework
-      // signals so navigation proceeds rather than flashing a "failed" message.
-      unstable_rethrow(err);
+      if (result?.error) {
+        setError(result.error);
+        return;
+      }
+      onSuccess?.();
+      router.push("/admin");
+      router.refresh();
+    } catch {
       setError("인증에 실패했습니다.");
     }
   }
@@ -120,7 +131,7 @@ function CredentialsForm() {
   );
 }
 
-export function AdminLoginForm() {
+export function AdminLoginForm({ onSuccess }: { onSuccess?: () => void }) {
   return (
     <Tabs defaultValue="credentials" className="w-full">
       <TabsList className="w-full">
@@ -134,10 +145,10 @@ export function AdminLoginForm() {
         </TabsTrigger>
       </TabsList>
       <TabsContent value="credentials" className="pt-4">
-        <CredentialsForm />
+        <CredentialsForm onSuccess={onSuccess} />
       </TabsContent>
       <TabsContent value="code" className="pt-4">
-        <CodeForm />
+        <CodeForm onSuccess={onSuccess} />
       </TabsContent>
     </Tabs>
   );
