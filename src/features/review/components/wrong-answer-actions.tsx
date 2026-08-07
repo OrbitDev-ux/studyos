@@ -1,5 +1,6 @@
 "use client";
 
+import { unstable_rethrow } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +40,8 @@ export function WrongAnswerActions({
           text: answerText || undefined,
         });
         setResult(res);
-      } catch {
+      } catch (err) {
+        unstable_rethrow(err);
         setError("채점에 실패했습니다. 잠시 후 다시 시도해주세요.");
       }
     });
@@ -51,7 +53,8 @@ export function WrongAnswerActions({
       try {
         const res = await requestAiExplanation(wrongAnswer.id);
         setExplanation(res.explanation);
-      } catch {
+      } catch (err) {
+        unstable_rethrow(err);
         setError("AI 해설 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
       }
     });

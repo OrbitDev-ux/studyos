@@ -1,5 +1,6 @@
 "use client";
 
+import { unstable_rethrow } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +31,11 @@ export function SolveProblemPanel({
           text: answerText || undefined,
         });
         setResult(res);
-      } catch {
+      } catch (err) {
+        // A banned/expired session redirects (e.g. to /suspended); re-throw
+        // framework signals so navigation happens instead of showing a
+        // misleading "grading failed" message.
+        unstable_rethrow(err);
         setError("채점에 실패했습니다. 잠시 후 다시 시도해주세요.");
       }
     });
