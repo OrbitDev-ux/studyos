@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { ADMIN_ACTIONS, logAdminActivity } from "@/lib/admin/activity";
 import { requireCapability } from "@/lib/admin/context";
-import { setSetting, SETTING_KEYS } from "@/lib/admin/settings";
+import { invalidateMaintenanceCache, setSetting, SETTING_KEYS } from "@/lib/admin/settings";
 
 type Result = { error?: string };
 
@@ -16,6 +16,8 @@ export async function setMaintenanceMode(
   if (message !== undefined) {
     await setSetting(SETTING_KEYS.MAINTENANCE_MESSAGE, message, admin.id);
   }
+  // Drop the TTL cache so the toggle applies on the next request immediately.
+  invalidateMaintenanceCache();
 
   await logAdminActivity({
     adminId: admin.id,

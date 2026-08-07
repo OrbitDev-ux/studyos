@@ -75,7 +75,25 @@ export async function getAllSettings(): Promise<{
   };
 }
 
+// Maintenance mode is read on every authenticated request (the (app) layout
+// gate) but changes very rarely, so cache it per server instance with a short
+// TTL — this removes a DB round trip from every authenticated page load.
+// setMaintenanceMode() calls invalidateMaintenanceCache() so a toggle applies
+// instantly on the instance that changed it; others converge within the TTL.
+const MAINTENANCE_TTL_MS = 15_000;
+let maintenanceCache: { value: boolean; at: number } | null = null;
+
 /** Cheap maintenance-mode check for the end-user (app) layout gate. */
 export async function isMaintenanceMode(): Promise<boolean> {
-  return getSetting<boolean>(SETTING_KEYS.MAINTENANCE_MODE);
+  const now = Date.now();
+  if (maintenanceCache && now - maintenanceCache.at < MAINTENANCE_TTL_MS) {
+    return maintenanceCache.value;
+  }
+  const value = await getSetting<boolean>(SETTING_KEYS.MAINTENANCE_MODE);
+  maintenanceCache = { value, at: now };
+  return value;
+}
+
+export function invalidateMaintenanceCache(): void {
+  maintenanceCache = null;
 }
