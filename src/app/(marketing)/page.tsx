@@ -4,7 +4,6 @@ import { ProductPreview } from "@/components/marketing/product-preview";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { siteConfig } from "@/config/site";
-import { auth } from "@/lib/auth";
 
 const FEATURES = [
   {
@@ -21,10 +20,10 @@ const FEATURES = [
   },
 ];
 
-export default async function LandingPage() {
-  const session = await auth();
-  const ctaHref = session ? "/dashboard" : "/signup";
-
+// No auth() here so this first-impression page stays static and serves from
+// the CDN. The CTA points at /signup for everyone; a logged-in visitor is
+// redirected on to /dashboard by middleware, so the link still works for both.
+export default function LandingPage() {
   return (
     <main className="flex flex-1 flex-col">
       <section className="mx-auto flex w-full max-w-5xl flex-col items-center gap-6 px-4 py-24 text-center sm:px-6 sm:py-32">
@@ -43,7 +42,7 @@ export default async function LandingPage() {
           플랫폼입니다.
         </p>
         <Button asChild size="lg" className="h-11 px-6 text-base">
-          <Link href={ctaHref}>{session ? "대시보드로 이동" : "무료로 시작하기"}</Link>
+          <Link href="/signup">무료로 시작하기</Link>
         </Button>
       </section>
 
