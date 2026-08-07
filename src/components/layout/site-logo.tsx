@@ -2,11 +2,18 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef } from "react";
 import { siteConfig } from "@/config/site";
 
 const ADMIN_TRIGGER_CLICKS = 7;
 const ADMIN_TRIGGER_WINDOW_MS = 3000;
+
+// Module-level, not component state: a normal logo click navigates home, which
+// can unmount and remount this component (it lives in the marketing header, and
+// non-landing marketing pages leave for "/" on the first click). Component refs
+// would reset on that remount, so the count could never reach the threshold.
+// Module scope survives remounts within the session, so the clicks accumulate.
+let clickCount = 0;
+let lastClickAt = 0;
 
 function LogoMark() {
   return (
@@ -32,36 +39,27 @@ function LogoMark() {
 
 export function SiteLogo() {
   const router = useRouter();
-  const clickCountRef = useRef(0);
-  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function handleClick(event: React.MouseEvent<HTMLAnchorElement>) {
     // Let modifier-clicks (open in new tab, etc.) behave like a normal link —
     // only plain left-clicks participate in the counter.
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
 
-    // Always drive navigation ourselves instead of relying on Link's default
-    // handling: clicking a Link back to the current URL ("/") repeatedly is
-    // exactly what counting 1-6 needs to do, and leaving that to Link's own
-    // same-URL navigation behavior makes the counter easy to accidentally
-    // break. Explicit control removes that ambiguity.
-    event.preventDefault();
+    const now = Date.now();
+    // Reset the run when the previous click was too long ago; otherwise extend.
+    clickCount = now - lastClickAt > ADMIN_TRIGGER_WINDOW_MS ? 1 : clickCount + 1;
+    lastClickAt = now;
 
-    clickCountRef.current += 1;
-
-    if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
-    resetTimerRef.current = setTimeout(() => {
-      clickCountRef.current = 0;
-    }, ADMIN_TRIGGER_WINDOW_MS);
-
-    if (clickCountRef.current >= ADMIN_TRIGGER_CLICKS) {
-      clickCountRef.current = 0;
-      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    if (clickCount >= ADMIN_TRIGGER_CLICKS) {
+      clickCount = 0;
+      lastClickAt = 0;
+      event.preventDefault();
       router.push("/admin-auth");
       return;
     }
 
-    router.push("/");
+    // Below the threshold: let the Link navigate home as usual. The count lives
+    // in module scope, so it survives the remount that navigation may cause.
   }
 
   return (
