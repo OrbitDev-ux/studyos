@@ -1,19 +1,21 @@
 const KST = "Asia/Seoul";
 
-/** "YYYY-MM-DD HH:mm" in KST — the standard timestamp shown across admin tables. */
+/** "YYYY-MM-DD HH:mm" in KST — the standard timestamp shown across admin tables.
+ * Built from parts (not a locale string + regex) so the date/time separator is
+ * always a single space regardless of locale formatting quirks. */
 export function formatDateTime(date: Date): string {
-  return new Intl.DateTimeFormat("ko-KR", {
+  const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: KST,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-    hour12: false,
-  })
-    .format(date)
-    .replace(/\. /g, "-")
-    .replace(/\.$/, "");
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}`;
 }
 
 /** Compact "방금 전 / N분 전 / N시간 전 / N일 전", falling back to a date. */
