@@ -18,7 +18,7 @@ const DEFAULTS = {
   [SETTING_KEYS.MAINTENANCE_MODE]: false,
   [SETTING_KEYS.MAINTENANCE_MESSAGE]: "서비스 점검 중입니다. 잠시 후 다시 이용해주세요.",
   [SETTING_KEYS.AI_ENABLED]: true,
-  [SETTING_KEYS.AI_MODEL]: "gemini-2.5-flash",
+  [SETTING_KEYS.AI_MODEL]: "gemini-3.6-flash",
   [SETTING_KEYS.ADMIN_SESSION_EPOCH]: 0,
 } as const;
 
