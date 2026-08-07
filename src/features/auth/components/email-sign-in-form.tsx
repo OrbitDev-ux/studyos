@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { unstable_rethrow } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,11 @@ export function EmailSignInForm() {
     try {
       const result = await signInWithEmail(values);
       if (result.error) setError(result.error);
-    } catch {
+    } catch (err) {
+      // A successful sign-in redirects to /dashboard (throws NEXT_REDIRECT);
+      // re-throw framework signals so navigation proceeds instead of flashing
+      // a "failed" message.
+      unstable_rethrow(err);
       setError("로그인에 실패했습니다. 잠시 후 다시 시도해주세요.");
     }
   }

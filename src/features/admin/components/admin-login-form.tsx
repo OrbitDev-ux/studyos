@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { KeyRound, Lock } from "lucide-react";
+import { unstable_rethrow } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,11 @@ function CodeForm() {
     try {
       const result = await verifyAdminCode(values);
       if (result?.error) setError(result.error);
-    } catch {
+    } catch (err) {
+      // A successful login throws NEXT_REDIRECT (the action redirects to
+      // /admin). Re-throw framework control-flow signals so navigation
+      // proceeds instead of showing a spurious "failed" message.
+      unstable_rethrow(err);
       setError("인증에 실패했습니다.");
     }
   }
@@ -69,7 +74,10 @@ function CredentialsForm() {
     try {
       const result = await verifyAdminCredentials(values);
       if (result?.error) setError(result.error);
-    } catch {
+    } catch (err) {
+      // Success redirects to /admin (throws NEXT_REDIRECT); re-throw framework
+      // signals so navigation proceeds rather than flashing a "failed" message.
+      unstable_rethrow(err);
       setError("인증에 실패했습니다.");
     }
   }
