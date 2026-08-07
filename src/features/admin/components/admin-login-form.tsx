@@ -86,7 +86,9 @@ function CredentialsForm() {
           aria-invalid={Boolean(errors.email)}
           {...register("email")}
         />
-        {errors.email && <p className="text-destructive text-xs">{errors.email.message}</p>}
+        {errors.email && (
+          <p className="text-destructive text-xs">{errors.email.message}</p>
+        )}
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="admin-password">비밀번호</Label>

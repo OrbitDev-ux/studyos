@@ -18,9 +18,7 @@ export default async function AdminAuthPage() {
           <ShieldCheck className="size-6" />
         </div>
         <h1 className="text-lg font-semibold tracking-tight">관리자 인증</h1>
-        <p className="text-muted-foreground text-sm">
-          StudyOS 운영자 전용 페이지입니다.
-        </p>
+        <p className="text-muted-foreground text-sm">StudyOS 운영자 전용 페이지입니다.</p>
       </div>
       <div className="bg-card ring-foreground/10 w-full max-w-sm rounded-xl p-6 ring-1">
         <AdminLoginForm />

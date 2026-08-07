@@ -81,7 +81,9 @@ async function establishSession(admin: AdminUser, ip: string): Promise<void> {
 /** Passphrase entry: verifies ADMIN_SECRET and signs in as the bootstrap
  * SUPER_ADMIN, creating that account on first use. This is the only way the
  * first admin ever gets in; every later admin uses email + password. */
-export async function verifyAdminCode(values: AdminCodeValues): Promise<{ error?: string }> {
+export async function verifyAdminCode(
+  values: AdminCodeValues,
+): Promise<{ error?: string }> {
   const parsed = adminCodeSchema.safeParse(values);
   if (!parsed.success) return { error: GENERIC_ERROR };
 
@@ -90,7 +92,8 @@ export async function verifyAdminCode(values: AdminCodeValues): Promise<{ error?
   if (await isRateLimited(ip)) return { error: RATE_LIMITED_ERROR };
 
   const adminSecret = process.env.ADMIN_SECRET;
-  const valid = Boolean(adminSecret) && (await timingSafeEqual(parsed.data.code, adminSecret!));
+  const valid =
+    Boolean(adminSecret) && (await timingSafeEqual(parsed.data.code, adminSecret!));
 
   await prisma.adminLoginAttempt.create({ data: { ip, success: valid } });
   if (!valid) return { error: GENERIC_ERROR };
@@ -125,10 +128,15 @@ export async function verifyAdminCredentials(
   if (await isBlockedIp(ip)) return { error: BLOCKED_ERROR };
   if (await isRateLimited(ip)) return { error: RATE_LIMITED_ERROR };
 
-  const admin = await prisma.adminUser.findUnique({ where: { email: parsed.data.email } });
+  const admin = await prisma.adminUser.findUnique({
+    where: { email: parsed.data.email },
+  });
   // verifyPassword runs bcrypt.compare even when admin is null (dummy hash),
   // so a missing account and a wrong password take the same time.
-  const passwordOk = await verifyPassword(parsed.data.password, admin?.passwordHash ?? null);
+  const passwordOk = await verifyPassword(
+    parsed.data.password,
+    admin?.passwordHash ?? null,
+  );
   const valid = Boolean(admin) && admin!.isActive && passwordOk;
 
   await prisma.adminLoginAttempt.create({
