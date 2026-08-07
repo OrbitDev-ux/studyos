@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AdminShortcut } from "@/features/admin/components/admin-shortcut";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -49,6 +50,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           disableTransitionOnChange
         >
           <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
+          {/* Global hidden admin entry: ⌘+Shift+A opens the login modal. */}
+          <AdminShortcut />
         </ThemeProvider>
       </body>
     </html>
