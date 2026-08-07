@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AdminShortcut } from "@/features/admin/components/admin-shortcut";
+import { IpUnbanShortcut } from "@/features/admin/components/ip-unban-shortcut";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -52,6 +53,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
           {/* Global hidden admin entry: ⌘+Shift+A opens the login modal. */}
           <AdminShortcut />
+          {/* Global recovery: ⌘+Option+3 lifts the caller's IP block. */}
+          <IpUnbanShortcut />
         </ThemeProvider>
       </body>
     </html>
