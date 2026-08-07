@@ -36,6 +36,17 @@ export function SiteLogo() {
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function handleClick(event: React.MouseEvent<HTMLAnchorElement>) {
+    // Let modifier-clicks (open in new tab, etc.) behave like a normal link —
+    // only plain left-clicks participate in the counter.
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+
+    // Always drive navigation ourselves instead of relying on Link's default
+    // handling: clicking a Link back to the current URL ("/") repeatedly is
+    // exactly what counting 1-6 needs to do, and leaving that to Link's own
+    // same-URL navigation behavior makes the counter easy to accidentally
+    // break. Explicit control removes that ambiguity.
+    event.preventDefault();
+
     clickCountRef.current += 1;
 
     if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
@@ -44,11 +55,13 @@ export function SiteLogo() {
     }, ADMIN_TRIGGER_WINDOW_MS);
 
     if (clickCountRef.current >= ADMIN_TRIGGER_CLICKS) {
-      event.preventDefault();
       clickCountRef.current = 0;
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
       router.push("/admin-auth");
+      return;
     }
+
+    router.push("/");
   }
 
   return (
