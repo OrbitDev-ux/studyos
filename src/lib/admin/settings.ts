@@ -9,6 +9,9 @@ export const SETTING_KEYS = {
   MAINTENANCE_MESSAGE: "maintenance_message",
   AI_ENABLED: "ai_enabled",
   AI_MODEL: "ai_model",
+  // Epoch (ms) before which admin session tokens are rejected. Bumping it to
+  // "now" invalidates every issued admin cookie — the "clear sessions" lever.
+  ADMIN_SESSION_EPOCH: "admin_session_epoch",
 } as const;
 
 const DEFAULTS = {
@@ -16,6 +19,7 @@ const DEFAULTS = {
   [SETTING_KEYS.MAINTENANCE_MESSAGE]: "서비스 점검 중입니다. 잠시 후 다시 이용해주세요.",
   [SETTING_KEYS.AI_ENABLED]: true,
   [SETTING_KEYS.AI_MODEL]: "gemini-2.5-flash",
+  [SETTING_KEYS.ADMIN_SESSION_EPOCH]: 0,
 } as const;
 
 type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS];

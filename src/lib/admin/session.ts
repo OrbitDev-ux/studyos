@@ -60,7 +60,9 @@ export async function createAdminSessionToken(identity: {
     exp: now + ADMIN_SESSION_TTL_SECONDS * 1000,
   };
   const payloadBytes = new TextEncoder().encode(JSON.stringify(payload));
-  const signatureBytes = new Uint8Array(await crypto.subtle.sign("HMAC", key, payloadBytes));
+  const signatureBytes = new Uint8Array(
+    await crypto.subtle.sign("HMAC", key, payloadBytes),
+  );
   return `${base64UrlEncode(payloadBytes)}.${base64UrlEncode(signatureBytes)}`;
 }
 
@@ -84,7 +86,9 @@ export async function verifyAdminSessionToken(
     );
     if (!valid) return null;
 
-    const payload = JSON.parse(new TextDecoder().decode(payloadBytes)) as AdminSessionPayload;
+    const payload = JSON.parse(
+      new TextDecoder().decode(payloadBytes),
+    ) as AdminSessionPayload;
     if (typeof payload.exp !== "number" || payload.exp <= Date.now()) return null;
     if (typeof payload.sub !== "string" || typeof payload.role !== "string") return null;
     return payload;

@@ -4,6 +4,7 @@ import type { AdminUser } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ADMIN_SESSION_COOKIE, verifyAdminSessionToken } from "@/lib/admin/session";
 import { can, type Capability } from "@/lib/admin/permissions";
+import { getSetting, SETTING_KEYS } from "@/lib/admin/settings";
 
 /** The signed-in admin, re-read from the DB so deactivation/role changes take
  * effect immediately even while an older session cookie is still valid.
@@ -13,6 +14,10 @@ export async function getCurrentAdmin(): Promise<AdminUser | null> {
   const token = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
   const payload = await verifyAdminSessionToken(token);
   if (!payload) return null;
+
+  // Global session kill-switch: tokens issued before the epoch are rejected.
+  const epoch = await getSetting<number>(SETTING_KEYS.ADMIN_SESSION_EPOCH);
+  if (payload.iat < epoch) return null;
 
   const admin = await prisma.adminUser.findUnique({ where: { id: payload.sub } });
   if (!admin || !admin.isActive) return null;
