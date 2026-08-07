@@ -10,7 +10,7 @@ import {
 } from "@/features/auth/schema";
 import { seedDefaultSubjects } from "@/features/subjects/seed";
 import { Prisma } from "@/generated/prisma/client";
-import { signIn, signOut } from "@/lib/auth";
+import { auth, signIn, signOut } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 const INVALID_CREDENTIALS_ERROR = "이메일 또는 비밀번호가 올바르지 않습니다.";
@@ -21,6 +21,26 @@ export async function signInWithGoogle() {
 
 export async function signOutAction() {
   await signOut({ redirectTo: "/login" });
+}
+
+/**
+ * Lift the ban on the currently signed-in account (the ⌘+1 recovery shortcut
+ * on /suspended). The JWT session is still valid while banned, so the user id
+ * comes from auth(); we just clear the bannedAt/banReason flags.
+ *
+ * NOTE: this is a self-service unban — any banned user who reaches /suspended
+ * can lift their own ban with it. It exists as an escape hatch; gate it behind
+ * the admin code if bans must be enforceable against the account holder.
+ */
+export async function unbanSelf(): Promise<{ error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "로그인이 필요합니다." };
+
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { bannedAt: null, banReason: null },
+  });
+  return {};
 }
 
 /**
