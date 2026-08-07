@@ -20,7 +20,7 @@ import {
 import { prisma } from "@/lib/prisma";
 
 const RATE_LIMIT_WINDOW_MINUTES = 15;
-const RATE_LIMIT_MAX_ATTEMPTS = 5;
+const RATE_LIMIT_MAX_ATTEMPTS = 10;
 
 const GENERIC_ERROR = "인증 정보가 올바르지 않습니다.";
 const RATE_LIMITED_ERROR = "잠시 후 다시 시도해주세요.";
@@ -45,10 +45,13 @@ async function timingSafeEqual(a: string, b: string): Promise<boolean> {
 
 async function isRateLimited(ip: string): Promise<boolean> {
   const windowStart = new Date(Date.now() - RATE_LIMIT_WINDOW_MINUTES * 60 * 1000);
-  const recentAttempts = await prisma.adminLoginAttempt.count({
-    where: { ip, createdAt: { gte: windowStart } },
+  // Count only FAILED attempts — a successful login must never push a
+  // legitimate admin toward their own lockout. Brute-force protection is
+  // unchanged since only wrong guesses accumulate.
+  const recentFailures = await prisma.adminLoginAttempt.count({
+    where: { ip, success: false, createdAt: { gte: windowStart } },
   });
-  return recentAttempts >= RATE_LIMIT_MAX_ATTEMPTS;
+  return recentFailures >= RATE_LIMIT_MAX_ATTEMPTS;
 }
 
 async function isBlockedIp(ip: string): Promise<boolean> {
