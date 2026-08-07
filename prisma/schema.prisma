@@ -20,6 +20,10 @@ model User {
   password      String?
   timezone      String    @default("Asia/Seoul")
   school        String?
+  /// Set when an admin bans this account; null means active. The user's
+  /// study data is never deleted on a ban — this is a reversible gate.
+  bannedAt      DateTime?
+  banReason     String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -419,15 +423,111 @@ model BattleParticipant {
   @@index([userId])
 }
 
-// ─── Admin ──────────────────────────────────────────────────────────────
-// Every /admin-auth attempt (success and failure), used both to rate-limit
-// by IP and as an audit trail. Prisma-only — never GRANTed to anon, so it's
-// unreachable via the public Supabase REST endpoint.
+// ─── Admin panel ──────────────────────────────────────────────────────────
+// Every model below is Prisma-only and explicitly REVOKEd from anon in its
+// migration — Supabase auto-grants anon full CRUD on new public tables, and
+// none of this may ever be reachable through the public REST endpoint.
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  MODERATOR
+}
+
+/// A back-office operator, wholly separate from the end-user `User` table.
+/// The ADMIN_SECRET passphrase bootstraps the first SUPER_ADMIN; every
+/// admin after that is created by a SUPER_ADMIN and signs in with email +
+/// password (bcrypt, same hashing as user Credentials auth).
+model AdminUser {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String?
+  role         AdminRole @default(MODERATOR)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdById  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  createdBy     AdminUser?         @relation("AdminCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAdmins AdminUser[]        @relation("AdminCreatedBy")
+  activityLogs  AdminActivityLog[]
+  announcements Announcement[]
+  blockedIps    BlockedIp[]
+
+  @@index([role])
+}
+
+/// Every /admin-auth attempt (success and failure), used both to rate-limit
+/// by IP and as the security-page audit trail. `email` records which account
+/// was tried (null for passphrase attempts).
 model AdminLoginAttempt {
   id        String   @id @default(cuid())
   ip        String
+  email     String?
   success   Boolean
   createdAt DateTime @default(now())
 
   @@index([ip, createdAt])
+  @@index([createdAt])
+}
+
+/// Append-only audit trail of admin actions (logins, user/admin management,
+/// announcements, permission changes, system toggles, captured errors).
+model AdminActivityLog {
+  id         String   @id @default(cuid())
+  adminId    String?
+  action     String
+  targetType String?
+  targetId   String?
+  detail     String?  @db.Text
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  admin AdminUser? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([adminId, createdAt])
+  @@index([action])
+}
+
+/// A site-wide notice. Draft while publishedAt is null; scheduledAt lets a
+/// draft go live at a future time; isPinned floats it to the top.
+model Announcement {
+  id          String    @id @default(cuid())
+  title       String
+  body        String    @db.Text
+  authorId    String?
+  isPinned    Boolean   @default(false)
+  publishedAt DateTime?
+  scheduledAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  author AdminUser? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([isPinned, publishedAt])
+}
+
+/// An IP address blocked from admin sign-in, checked in verifyAdminCode.
+model BlockedIp {
+  id          String   @id @default(cuid())
+  ip          String   @unique
+  reason      String?
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  createdBy AdminUser? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([ip])
+}
+
+/// Key/value store for runtime toggles (maintenance mode, AI on/off, model
+/// selection). One row per setting; JSON-encoded value in `value`.
+model SystemSetting {
+  key         String   @id
+  value       String   @db.Text
+  updatedById String?
+  updatedAt   DateTime @updatedAt
 }

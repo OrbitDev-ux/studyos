@@ -1,12 +1,19 @@
 // Minimal signed-token admin session, built on the Web Crypto API instead of
-// a JWT library — it's a single fixed claim shape (issued/expiry only, no
-// user identity), and Web Crypto's HMAC sign/verify already gives us a
-// constant-time signature check for free. Works unmodified on both the Edge
-// runtime (middleware) and Node (Server Actions).
+// a JWT library — the claim shape is fixed and small, and Web Crypto's HMAC
+// sign/verify gives us a constant-time signature check for free. Works
+// unmodified on both the Edge runtime (middleware) and Node (Server Actions).
+//
+// The token now carries the admin's identity (id + role) so pages and actions
+// can authorize by role without a second lookup on the hot path; anything that
+// must reflect live state (isActive flips, role changes) re-reads AdminUser.
+import type { AdminRole } from "@/generated/prisma/client";
+
 export const ADMIN_SESSION_COOKIE = "admin_session";
 export const ADMIN_SESSION_TTL_SECONDS = 60 * 60 * 2; // 2 hours
 
-type AdminSessionPayload = {
+export type AdminSessionPayload = {
+  sub: string; // AdminUser.id
+  role: AdminRole;
   iat: number;
   exp: number;
 };
@@ -40,10 +47,15 @@ function base64UrlDecode(value: string): Uint8Array {
   return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
 
-export async function createAdminSessionToken(): Promise<string> {
+export async function createAdminSessionToken(identity: {
+  sub: string;
+  role: AdminRole;
+}): Promise<string> {
   const key = await getSigningKey();
   const now = Date.now();
   const payload: AdminSessionPayload = {
+    sub: identity.sub,
+    role: identity.role,
     iat: now,
     exp: now + ADMIN_SESSION_TTL_SECONDS * 1000,
   };
@@ -52,10 +64,13 @@ export async function createAdminSessionToken(): Promise<string> {
   return `${base64UrlEncode(payloadBytes)}.${base64UrlEncode(signatureBytes)}`;
 }
 
-export async function verifyAdminSessionToken(token: string | undefined): Promise<boolean> {
-  if (!token) return false;
+/** Returns the decoded payload for a valid, unexpired token, or null. */
+export async function verifyAdminSessionToken(
+  token: string | undefined,
+): Promise<AdminSessionPayload | null> {
+  if (!token) return null;
   const [payloadPart, signaturePart] = token.split(".");
-  if (!payloadPart || !signaturePart) return false;
+  if (!payloadPart || !signaturePart) return null;
 
   try {
     const key = await getSigningKey();
@@ -67,11 +82,13 @@ export async function verifyAdminSessionToken(token: string | undefined): Promis
       signatureBytes.buffer as ArrayBuffer,
       payloadBytes.buffer as ArrayBuffer,
     );
-    if (!valid) return false;
+    if (!valid) return null;
 
     const payload = JSON.parse(new TextDecoder().decode(payloadBytes)) as AdminSessionPayload;
-    return typeof payload.exp === "number" && payload.exp > Date.now();
+    if (typeof payload.exp !== "number" || payload.exp <= Date.now()) return null;
+    if (typeof payload.sub !== "string" || typeof payload.role !== "string") return null;
+    return payload;
   } catch {
-    return false;
+    return null;
   }
 }
