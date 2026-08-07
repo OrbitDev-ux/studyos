@@ -19,7 +19,7 @@ export function GuestSignInButton() {
           setError(result.error);
           return;
         }
-        router.push("/dashboard");
+        router.push("/dashboard?welcome=1");
         router.refresh();
       } catch {
         setError("게스트 로그인에 실패했어요. 다시 시도해주세요.");

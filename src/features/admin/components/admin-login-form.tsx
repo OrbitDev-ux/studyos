@@ -39,7 +39,7 @@ function CodeForm({ onSuccess }: { onSuccess?: () => void }) {
         return;
       }
       onSuccess?.();
-      router.push("/admin");
+      router.push("/admin?welcome=1");
       router.refresh();
     } catch {
       setError("인증에 실패했습니다.");
@@ -86,7 +86,7 @@ function CredentialsForm({ onSuccess }: { onSuccess?: () => void }) {
         return;
       }
       onSuccess?.();
-      router.push("/admin");
+      router.push("/admin?welcome=1");
       router.refresh();
     } catch {
       setError("인증에 실패했습니다.");

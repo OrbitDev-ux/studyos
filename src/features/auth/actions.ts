@@ -16,7 +16,7 @@ import { prisma } from "@/lib/prisma";
 const INVALID_CREDENTIALS_ERROR = "이메일 또는 비밀번호가 올바르지 않습니다.";
 
 export async function signInWithGoogle() {
-  await signIn("google", { redirectTo: "/dashboard" });
+  await signIn("google", { redirectTo: "/dashboard?welcome=1" });
 }
 
 export async function signOutAction() {
@@ -87,7 +87,7 @@ export async function signInWithEmail(
   if (!parsed.success) return { error: INVALID_CREDENTIALS_ERROR };
 
   try {
-    await signIn("credentials", { ...parsed.data, redirectTo: "/dashboard" });
+    await signIn("credentials", { ...parsed.data, redirectTo: "/dashboard?welcome=1" });
     return {};
   } catch (err) {
     // signIn() throws Next.js's redirect control-flow exception on success —
@@ -128,7 +128,7 @@ export async function signUpWithEmail(
     await signIn("credentials", {
       email: parsed.data.email,
       password: parsed.data.password,
-      redirectTo: "/dashboard",
+      redirectTo: "/dashboard?welcome=1",
     });
     return {};
   } catch (err) {

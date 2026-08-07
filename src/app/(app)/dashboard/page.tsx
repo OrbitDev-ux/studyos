@@ -1,4 +1,5 @@
 import { Flame, ListChecks } from "lucide-react";
+import { LoginExperience } from "@/features/login-experience/login-experience";
 import { WeaknessSummaryCard } from "@/features/ai/components/weakness-summary-card";
 import { WeeklyReportCard } from "@/features/ai/components/weekly-report-card";
 import { getLatestAiAnalysis } from "@/features/ai/queries";
@@ -70,6 +71,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <LoginExperience role="user" />
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">
           안녕하세요, {user.name ?? user.email}님

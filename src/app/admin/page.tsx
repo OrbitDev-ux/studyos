@@ -14,6 +14,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ActivityList } from "@/features/admin/components/activity-list";
+import { LoginExperience } from "@/features/login-experience/login-experience";
 import { AdminPageHeader } from "@/features/admin/components/admin-page-header";
 import { StatTile } from "@/features/admin/components/stat-tile";
 import {
@@ -45,6 +46,7 @@ export default async function AdminDashboardPage() {
 
   return (
     <>
+      <LoginExperience role="admin" />
       <AdminPageHeader
         title={`안녕하세요, ${admin.name ?? "관리자"}님`}
         description={`${ROLE_LABELS[admin.role]} 권한으로 접속했습니다.`}
