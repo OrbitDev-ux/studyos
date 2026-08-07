@@ -2,10 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { generateStructured } from "@/features/ai/client";
-import {
-  buildMockExamGenerationPrompt,
-  MOCK_EXAM_GENERATION_SYSTEM_PROMPT,
-} from "@/features/ai/prompts/mock-exam-generation";
+import { getActivePromptContent } from "@/features/ai/prompt-service";
+import { PROMPT_TYPES } from "@/features/ai/prompt-registry";
+import { buildMockExamGenerationPrompt } from "@/features/ai/prompts/mock-exam-generation";
 import {
   mockExamGenerationFormSchema,
   submitExamSchema,
@@ -35,7 +34,7 @@ export async function generateMockExam(
   });
 
   const { problems } = await generateStructured({
-    system: MOCK_EXAM_GENERATION_SYSTEM_PROMPT,
+    system: await getActivePromptContent(PROMPT_TYPES.MOCK_EXAM_GENERATION),
     prompt,
     schema: aiProblemSetSchema,
   });

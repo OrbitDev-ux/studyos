@@ -3,10 +3,9 @@
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { generateStructured } from "@/features/ai/client";
-import {
-  buildProblemGenerationPrompt,
-  PROBLEM_GENERATION_SYSTEM_PROMPT,
-} from "@/features/ai/prompts/problem-generation";
+import { getActivePromptContent } from "@/features/ai/prompt-service";
+import { PROMPT_TYPES } from "@/features/ai/prompt-registry";
+import { buildProblemGenerationPrompt } from "@/features/ai/prompts/problem-generation";
 import {
   aiProblemSetSchema,
   problemGenerationFormSchema,
@@ -38,7 +37,7 @@ export async function generateProblems(values: ProblemGenerationFormValues) {
   });
 
   const { problems } = await generateStructured({
-    system: PROBLEM_GENERATION_SYSTEM_PROMPT,
+    system: await getActivePromptContent(PROMPT_TYPES.PROBLEM_GENERATION),
     prompt,
     schema: aiProblemSetSchema,
   });

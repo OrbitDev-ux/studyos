@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { ADMIN_SESSION_COOKIE, verifyAdminSessionToken } from "@/lib/admin/session";
 import { can, type Capability } from "@/lib/admin/permissions";
 import { getSetting, SETTING_KEYS } from "@/lib/admin/settings";
+import { getClientIp } from "@/lib/ip";
 
 /** The signed-in admin, re-read from the DB so deactivation/role changes take
  * effect immediately even while an older session cookie is still valid.
@@ -40,11 +41,9 @@ export async function requireCapability(capability: Capability): Promise<AdminUs
   return admin;
 }
 
-/** Best-effort client IP from the proxy headers, shared by audit logging and
- * rate limiting. */
+/** Real client IP from the proxy headers (Cloudflare/Vercel/XFF/…), normalized
+ * so it compares equal to a stored ban. Shared by audit logging, rate limiting,
+ * and the ban check. */
 export async function getRequestIp(): Promise<string> {
-  const headerList = await headers();
-  const forwardedFor = headerList.get("x-forwarded-for");
-  if (forwardedFor) return (forwardedFor.split(",")[0] ?? "unknown").trim();
-  return headerList.get("x-real-ip") ?? "unknown";
+  return getClientIp(await headers());
 }

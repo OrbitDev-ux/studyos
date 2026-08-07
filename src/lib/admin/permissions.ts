@@ -47,6 +47,9 @@ export const CAPABILITIES = {
   manageSecurity: "ADMIN",
   manageSystem: "SUPER_ADMIN",
   manageAi: "ADMIN",
+  // High-risk operations — super admin only.
+  manageIpBans: "SUPER_ADMIN",
+  managePrompts: "SUPER_ADMIN",
 } as const satisfies Record<string, AdminRole>;
 
 export type Capability = keyof typeof CAPABILITIES;

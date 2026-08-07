@@ -452,9 +452,10 @@ model AdminUser {
 
   createdBy     AdminUser?         @relation("AdminCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   createdAdmins AdminUser[]        @relation("AdminCreatedBy")
-  activityLogs  AdminActivityLog[]
-  announcements Announcement[]
-  blockedIps    BlockedIp[]
+  activityLogs   AdminActivityLog[]
+  announcements  Announcement[]
+  blockedIps     BlockedIp[]
+  promptVersions PromptVersion[]
 
   @@index([role])
 }
@@ -510,17 +511,25 @@ model Announcement {
   @@index([isPinned, publishedAt])
 }
 
-/// An IP address blocked from admin sign-in, checked in verifyAdminCode.
+/// An IP address blocked from admin sign-in, checked before login. Supports
+/// permanent and time-limited bans; `active` allows soft-disable without
+/// losing the record. The effective block = active && (permanent || expiresAt
+/// in the future).
 model BlockedIp {
-  id          String   @id @default(cuid())
-  ip          String   @unique
+  id          String    @id @default(cuid())
+  ip          String    @unique
   reason      String?
   createdById String?
-  createdAt   DateTime @default(now())
+  permanent   Boolean   @default(true)
+  expiresAt   DateTime?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   createdBy AdminUser? @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([ip])
+  @@index([active])
 }
 
 /// Key/value store for runtime toggles (maintenance mode, AI on/off, model
@@ -530,4 +539,42 @@ model SystemSetting {
   value       String   @db.Text
   updatedById String?
   updatedAt   DateTime @updatedAt
+}
+
+// ─── AI Prompt management ─────────────────────────────────────────────────
+// Prompts live in the DB, not in code. Each logical prompt (one per `type`)
+// keeps an append-only version history; `activeVersion` points at the version
+// the AI engine actually uses. Editing never overwrites — it appends a new
+// version — so any prior version can be re-activated (rollback).
+
+model Prompt {
+  id            String   @id @default(cuid())
+  type          String   @unique
+  title         String
+  description   String?
+  enabled       Boolean  @default(true)
+  activeVersion Int      @default(1)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  versions PromptVersion[]
+
+  @@index([type])
+}
+
+model PromptVersion {
+  id          String   @id @default(cuid())
+  promptId    String
+  version     Int
+  content     String   @db.Text
+  note        String?
+  createdById String?
+  ip          String?
+  createdAt   DateTime @default(now())
+
+  prompt    Prompt     @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  createdBy AdminUser? @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([promptId, version])
+  @@index([promptId])
 }

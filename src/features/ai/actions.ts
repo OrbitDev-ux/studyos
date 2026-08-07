@@ -2,14 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { generateStructured } from "@/features/ai/client";
-import {
-  buildWeaknessAnalysisPrompt,
-  WEAKNESS_ANALYSIS_SYSTEM_PROMPT,
-} from "@/features/ai/prompts/weakness-analysis";
-import {
-  buildWeeklyReportPrompt,
-  WEEKLY_REPORT_SYSTEM_PROMPT,
-} from "@/features/ai/prompts/report-generation";
+import { getActivePromptContent } from "@/features/ai/prompt-service";
+import { PROMPT_TYPES } from "@/features/ai/prompt-registry";
+import { buildWeaknessAnalysisPrompt } from "@/features/ai/prompts/weakness-analysis";
+import { buildWeeklyReportPrompt } from "@/features/ai/prompts/report-generation";
 import { getWeaknessSourceData, getWeeklyReportSourceData } from "@/features/ai/queries";
 import { aiAnalysisResultSchema } from "@/features/ai/schema";
 import { getRecentDateOnlyRange, getZonedDateOnly } from "@/lib/date";
@@ -23,7 +19,7 @@ export async function generateWeaknessAnalysis(): Promise<{ content: string }> {
   const wrongAnswers = await getWeaknessSourceData(user.id);
 
   const { content } = await generateStructured({
-    system: WEAKNESS_ANALYSIS_SYSTEM_PROMPT,
+    system: await getActivePromptContent(PROMPT_TYPES.WEAKNESS_ANALYSIS),
     prompt: buildWeaknessAnalysisPrompt(wrongAnswers),
     schema: aiAnalysisResultSchema,
     useThinking: true,
@@ -49,7 +45,7 @@ export async function generateWeeklyReport(): Promise<{ content: string }> {
   const data = await getWeeklyReportSourceData(user.id, user.timezone);
 
   const { content } = await generateStructured({
-    system: WEEKLY_REPORT_SYSTEM_PROMPT,
+    system: await getActivePromptContent(PROMPT_TYPES.WEEKLY_REPORT),
     prompt: buildWeeklyReportPrompt(data),
     schema: aiAnalysisResultSchema,
     useThinking: true,

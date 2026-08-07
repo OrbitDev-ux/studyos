@@ -11,6 +11,7 @@ import {
   type AdminCredentialsValues,
 } from "@/features/admin/schema";
 import { getCurrentAdmin, getRequestIp } from "@/lib/admin/context";
+import { findActiveBan, logBanCheck } from "@/features/admin/ip-ban";
 import { ADMIN_ACTIONS, logAdminActivity } from "@/lib/admin/activity";
 import {
   ADMIN_SESSION_COOKIE,
@@ -54,12 +55,6 @@ async function isRateLimited(ip: string): Promise<boolean> {
   return recentFailures >= RATE_LIMIT_MAX_ATTEMPTS;
 }
 
-async function isBlockedIp(ip: string): Promise<boolean> {
-  if (ip === "unknown") return false;
-  const blocked = await prisma.blockedIp.findUnique({ where: { ip } });
-  return Boolean(blocked);
-}
-
 /** Mint the session cookie, stamp lastLoginAt, and record the successful
  * sign-in. Shared by both the passphrase and credential paths. */
 async function establishSession(admin: AdminUser, ip: string): Promise<void> {
@@ -90,8 +85,12 @@ export async function verifyAdminCode(
   const parsed = adminCodeSchema.safeParse(values);
   if (!parsed.success) return { error: GENERIC_ERROR };
 
+  // Ban check happens BEFORE any credential check — a blocked IP never
+  // reaches authentication.
   const ip = await getRequestIp();
-  if (await isBlockedIp(ip)) return { error: BLOCKED_ERROR };
+  const ban = await findActiveBan(ip);
+  logBanCheck(ip, ban);
+  if (ban) return { error: BLOCKED_ERROR };
   if (await isRateLimited(ip)) return { error: RATE_LIMITED_ERROR };
 
   const adminSecret = process.env.ADMIN_SECRET;
@@ -130,8 +129,12 @@ export async function verifyAdminCredentials(
   const parsed = adminCredentialsSchema.safeParse(values);
   if (!parsed.success) return { error: GENERIC_ERROR };
 
+  // Ban check happens BEFORE any credential check — a blocked IP never
+  // reaches authentication.
   const ip = await getRequestIp();
-  if (await isBlockedIp(ip)) return { error: BLOCKED_ERROR };
+  const ban = await findActiveBan(ip);
+  logBanCheck(ip, ban);
+  if (ban) return { error: BLOCKED_ERROR };
   if (await isRateLimited(ip)) return { error: RATE_LIMITED_ERROR };
 
   const admin = await prisma.adminUser.findUnique({

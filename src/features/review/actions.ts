@@ -1,11 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import {
-  ANSWER_EXPLANATION_SYSTEM_PROMPT,
-  buildAnswerExplanationPrompt,
-} from "@/features/ai/prompts/answer-explanation";
+import { buildAnswerExplanationPrompt } from "@/features/ai/prompts/answer-explanation";
 import { generateStructured } from "@/features/ai/client";
+import { getActivePromptContent } from "@/features/ai/prompt-service";
+import { PROMPT_TYPES } from "@/features/ai/prompt-registry";
 import { aiExplanationSchema } from "@/features/review/schema";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/session";
@@ -26,7 +25,7 @@ export async function requestAiExplanation(
       : (wrongAnswer.problem.answerText ?? "");
 
   const { explanation } = await generateStructured({
-    system: ANSWER_EXPLANATION_SYSTEM_PROMPT,
+    system: await getActivePromptContent(PROMPT_TYPES.ANSWER_EXPLANATION),
     prompt: buildAnswerExplanationPrompt({
       prompt: wrongAnswer.problem.prompt,
       correctAnswer,

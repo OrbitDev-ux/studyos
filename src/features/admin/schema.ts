@@ -69,8 +69,17 @@ export const blockIpSchema = z.object({
     .max(64)
     .regex(/^[0-9a-fA-F:.]+$/, "IP 형식이 올바르지 않습니다"),
   reason: z.string().trim().max(200).optional().or(z.literal("")),
+  permanent: z.boolean().default(true),
+  // Hours until the ban expires when not permanent (max 1 year).
+  durationHours: z.number().int().positive().max(8760).optional(),
 });
 export type BlockIpValues = z.infer<typeof blockIpSchema>;
+
+export const updateBanSchema = z.object({
+  id: z.string().min(1),
+  reason: z.string().trim().max(200).optional().or(z.literal("")),
+});
+export type UpdateBanValues = z.infer<typeof updateBanSchema>;
 
 // ─── AI settings ──────────────────────────────────────────────────────────────
 

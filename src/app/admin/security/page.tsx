@@ -11,26 +11,30 @@ import {
 } from "@/components/ui/table";
 import { AdminPageHeader } from "@/features/admin/components/admin-page-header";
 import {
+  BanRowActions,
   BlockIpForm,
   ClearSessionsButton,
-  UnblockButton,
 } from "@/features/admin/components/security-controls";
 import { formatDateTime } from "@/features/admin/format";
 import {
   getAdminLoginHistory,
   getBlockedIps,
+  getCurrentIp,
   getFailedLoginAttempts,
 } from "@/features/admin/security-queries";
 import { requireCapability } from "@/lib/admin/context";
+import { can } from "@/lib/admin/permissions";
 
 export const metadata = { robots: { index: false, follow: false } };
 
 export default async function AdminSecurityPage() {
-  await requireCapability("manageSecurity");
-  const [logins, failures, blocked] = await Promise.all([
+  const admin = await requireCapability("manageSecurity");
+  const canManageBans = can(admin.role, "manageIpBans");
+  const [logins, failures, blocked, currentIp] = await Promise.all([
     getAdminLoginHistory(15),
     getFailedLoginAttempts(15),
     getBlockedIps(),
+    getCurrentIp(),
   ]);
 
   return (
@@ -50,7 +54,13 @@ export default async function AdminSecurityPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <BlockIpForm />
+          {canManageBans ? (
+            <BlockIpForm currentIp={currentIp} />
+          ) : (
+            <p className="text-muted-foreground text-xs">
+              IP 차단/해제는 슈퍼 관리자만 가능합니다. (현재 IP: {currentIp})
+            </p>
+          )}
           {blocked.length === 0 ? (
             <p className="text-muted-foreground text-sm">차단된 IP가 없습니다.</p>
           ) : (
@@ -58,24 +68,47 @@ export default async function AdminSecurityPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>IP</TableHead>
+                  <TableHead>상태</TableHead>
                   <TableHead className="hidden sm:table-cell">사유</TableHead>
-                  <TableHead className="hidden md:table-cell">차단일</TableHead>
-                  <TableHead className="w-24" />
+                  <TableHead className="hidden md:table-cell">만료</TableHead>
+                  {canManageBans && <TableHead className="w-10" />}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {blocked.map((b) => (
                   <TableRow key={b.id}>
                     <TableCell className="font-mono text-xs">{b.ip}</TableCell>
+                    <TableCell>
+                      {b.effective ? (
+                        <Badge variant="destructive">차단중</Badge>
+                      ) : b.active ? (
+                        <Badge variant="outline">만료됨</Badge>
+                      ) : (
+                        <Badge variant="secondary">해제됨</Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="text-muted-foreground hidden text-xs sm:table-cell">
                       {b.reason ?? "—"}
                     </TableCell>
                     <TableCell className="text-muted-foreground hidden text-xs md:table-cell">
-                      {formatDateTime(b.createdAt)}
+                      {b.permanent
+                        ? "영구"
+                        : b.expiresAt
+                          ? formatDateTime(b.expiresAt)
+                          : "—"}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <UnblockButton id={b.id} ip={b.ip} />
-                    </TableCell>
+                    {canManageBans && (
+                      <TableCell className="text-right">
+                        <BanRowActions
+                          ban={{
+                            id: b.id,
+                            ip: b.ip,
+                            reason: b.reason,
+                            effective: b.effective,
+                          }}
+                        />
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
