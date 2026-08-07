@@ -84,6 +84,7 @@ export default async function AdminSystemPage() {
         <CardContent>
           <MaintenanceControl
             enabled={status.maintenanceMode}
+            title={status.maintenanceTitle}
             message={status.maintenanceMessage}
           />
         </CardContent>

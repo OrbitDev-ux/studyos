@@ -1,6 +1,7 @@
 import { version as appVersion } from "../../../package.json";
 import { prisma } from "@/lib/prisma";
 import { getAllSettings } from "@/lib/admin/settings";
+import { getMaintenance } from "@/lib/maintenance";
 
 export type ServiceStatus = "ok" | "down";
 
@@ -12,6 +13,7 @@ export type SystemStatus = {
   nodeVersion: string;
   environment: string;
   maintenanceMode: boolean;
+  maintenanceTitle: string;
   maintenanceMessage: string;
   aiEnabled: boolean;
 };
@@ -24,7 +26,7 @@ export async function getSystemStatus(): Promise<SystemStatus> {
     database = "down";
   }
 
-  const settings = await getAllSettings();
+  const [settings, maintenance] = await Promise.all([getAllSettings(), getMaintenance()]);
 
   return {
     // We're executing, so the server is up. The DB is probed live above.
@@ -36,8 +38,9 @@ export async function getSystemStatus(): Promise<SystemStatus> {
     version: appVersion,
     nodeVersion: process.version,
     environment: process.env.NODE_ENV ?? "development",
-    maintenanceMode: settings.maintenanceMode,
-    maintenanceMessage: settings.maintenanceMessage,
+    maintenanceMode: maintenance.enabled,
+    maintenanceTitle: maintenance.title ?? "",
+    maintenanceMessage: maintenance.message ?? "",
     aiEnabled: settings.aiEnabled,
   };
 }

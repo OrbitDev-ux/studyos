@@ -4,9 +4,10 @@ import { prisma } from "@/lib/prisma";
 // so booleans/strings/numbers round-trip through the same TEXT column. Each
 // key has a default used when the row is absent, so a fresh DB behaves sanely
 // before any admin has touched settings.
+//
+// Maintenance state lives in its own table (lib/maintenance.ts) because the
+// Edge middleware must read it — it is not a SystemSetting.
 export const SETTING_KEYS = {
-  MAINTENANCE_MODE: "maintenance_mode",
-  MAINTENANCE_MESSAGE: "maintenance_message",
   AI_ENABLED: "ai_enabled",
   AI_MODEL: "ai_model",
   // Epoch (ms) before which admin session tokens are rejected. Bumping it to
@@ -15,8 +16,6 @@ export const SETTING_KEYS = {
 } as const;
 
 const DEFAULTS = {
-  [SETTING_KEYS.MAINTENANCE_MODE]: false,
-  [SETTING_KEYS.MAINTENANCE_MESSAGE]: "서비스 점검 중입니다. 잠시 후 다시 이용해주세요.",
   [SETTING_KEYS.AI_ENABLED]: true,
   [SETTING_KEYS.AI_MODEL]: "gemini-3.6-flash",
   [SETTING_KEYS.ADMIN_SESSION_EPOCH]: 0,
@@ -49,8 +48,6 @@ export async function setSetting(
 
 /** Read every known setting in one round trip, with defaults filled in. */
 export async function getAllSettings(): Promise<{
-  maintenanceMode: boolean;
-  maintenanceMessage: string;
   aiEnabled: boolean;
   aiModel: string;
 }> {
@@ -68,32 +65,7 @@ export async function getAllSettings(): Promise<{
   };
 
   return {
-    maintenanceMode: read<boolean>(SETTING_KEYS.MAINTENANCE_MODE),
-    maintenanceMessage: read<string>(SETTING_KEYS.MAINTENANCE_MESSAGE),
     aiEnabled: read<boolean>(SETTING_KEYS.AI_ENABLED),
     aiModel: read<string>(SETTING_KEYS.AI_MODEL),
   };
-}
-
-// Maintenance mode is read on every authenticated request (the (app) layout
-// gate) but changes very rarely, so cache it per server instance with a short
-// TTL — this removes a DB round trip from every authenticated page load.
-// setMaintenanceMode() calls invalidateMaintenanceCache() so a toggle applies
-// instantly on the instance that changed it; others converge within the TTL.
-const MAINTENANCE_TTL_MS = 15_000;
-let maintenanceCache: { value: boolean; at: number } | null = null;
-
-/** Cheap maintenance-mode check for the end-user (app) layout gate. */
-export async function isMaintenanceMode(): Promise<boolean> {
-  const now = Date.now();
-  if (maintenanceCache && now - maintenanceCache.at < MAINTENANCE_TTL_MS) {
-    return maintenanceCache.value;
-  }
-  const value = await getSetting<boolean>(SETTING_KEYS.MAINTENANCE_MODE);
-  maintenanceCache = { value, at: now };
-  return value;
-}
-
-export function invalidateMaintenanceCache(): void {
-  maintenanceCache = null;
 }

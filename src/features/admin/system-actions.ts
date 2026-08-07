@@ -3,26 +3,34 @@
 import { revalidatePath } from "next/cache";
 import { ADMIN_ACTIONS, logAdminActivity } from "@/lib/admin/activity";
 import { requireCapability } from "@/lib/admin/context";
-import { invalidateMaintenanceCache, setSetting, SETTING_KEYS } from "@/lib/admin/settings";
+import { setSetting, SETTING_KEYS } from "@/lib/admin/settings";
+import { setMaintenance } from "@/lib/maintenance";
 
 type Result = { error?: string };
 
-export async function setMaintenanceMode(
-  enabled: boolean,
-  message?: string,
-): Promise<Result> {
+/** Toggle maintenance and/or update its title/message (super admin only).
+ * Persists to the Maintenance singleton read by both the middleware (Edge) and
+ * the app. Any omitted field is left unchanged. */
+export async function setMaintenanceMode(input: {
+  enabled?: boolean;
+  title?: string;
+  message?: string;
+}): Promise<Result> {
   const admin = await requireCapability("manageSystem");
-  await setSetting(SETTING_KEYS.MAINTENANCE_MODE, enabled, admin.id);
-  if (message !== undefined) {
-    await setSetting(SETTING_KEYS.MAINTENANCE_MESSAGE, message, admin.id);
-  }
-  // Drop the TTL cache so the toggle applies on the next request immediately.
-  invalidateMaintenanceCache();
+
+  await setMaintenance(
+    {
+      enabled: input.enabled,
+      title: input.title,
+      message: input.message,
+    },
+    admin.id,
+  );
 
   await logAdminActivity({
     adminId: admin.id,
     action: ADMIN_ACTIONS.MAINTENANCE_TOGGLE,
-    detail: { enabled },
+    detail: { enabled: input.enabled },
   });
 
   revalidatePath("/", "layout");

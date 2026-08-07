@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,13 +27,16 @@ import {
 
 export function MaintenanceControl({
   enabled,
+  title,
   message,
 }: {
   enabled: boolean;
+  title: string;
   message: string;
 }) {
   const router = useRouter();
   const { toast } = useToast();
+  const [titleText, setTitleText] = useState(title);
   const [msg, setMsg] = useState(message);
   const [pending, setPending] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -40,7 +44,11 @@ export function MaintenanceControl({
   async function apply(nextEnabled: boolean) {
     setPending(true);
     try {
-      const result = await setMaintenanceMode(nextEnabled, msg);
+      const result = await setMaintenanceMode({
+        enabled: nextEnabled,
+        title: titleText,
+        message: msg,
+      });
       if (result?.error) {
         toast({ title: "실패", description: result.error, variant: "error" });
         return;
@@ -82,11 +90,23 @@ export function MaintenanceControl({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="maint-message">점검 안내 메시지</Label>
+        <Label htmlFor="maint-title">점검 제목</Label>
+        <Input
+          id="maint-title"
+          value={titleText}
+          onChange={(e) => setTitleText(e.target.value)}
+          placeholder="서비스 점검 중"
+          className="h-9"
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="maint-message">점검 안내 내용</Label>
         <Textarea
           id="maint-message"
           value={msg}
           onChange={(e) => setMsg(e.target.value)}
+          placeholder="현재 StudyOS는 점검 중입니다."
           className="min-h-16"
         />
         <div>
@@ -96,7 +116,7 @@ export function MaintenanceControl({
             disabled={pending}
             onClick={() => apply(enabled)}
           >
-            메시지 저장
+            제목·내용 저장
           </Button>
         </div>
       </div>

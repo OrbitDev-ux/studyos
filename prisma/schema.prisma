@@ -532,8 +532,21 @@ model BlockedIp {
   @@index([active])
 }
 
-/// Key/value store for runtime toggles (maintenance mode, AI on/off, model
-/// selection). One row per setting; JSON-encoded value in `value`.
+/// Single-row maintenance state. Kept in its own table (not SystemSetting)
+/// because it must be readable at the Edge (middleware) via the anon Supabase
+/// role — it's public "we're down" info — while writes go through Prisma. One
+/// fixed row (id = "singleton") guarantees a single active state.
+model Maintenance {
+  id          String   @id @default("singleton")
+  enabled     Boolean  @default(false)
+  title       String?
+  message     String?
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+}
+
+/// Key/value store for runtime toggles (AI on/off, model selection, admin
+/// session epoch). One row per setting; JSON-encoded value in `value`.
 model SystemSetting {
   key         String   @id
   value       String   @db.Text

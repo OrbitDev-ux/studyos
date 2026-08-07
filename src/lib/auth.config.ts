@@ -1,5 +1,6 @@
 import type { NextAuthConfig } from "next-auth";
 import { ADMIN_SESSION_COOKIE, verifyAdminSessionToken } from "@/lib/admin/session";
+import { getMaintenanceEdge } from "@/lib/maintenance-edge";
 
 const PROTECTED_PATHS = [
   "/dashboard",
@@ -27,6 +28,25 @@ export const authConfig = {
     // it never falls through to the user-session redirect logic.
     async authorized({ auth, request }) {
       const { pathname } = request.nextUrl;
+
+      // Maintenance gate — runs before all other routing. The admin area, the
+      // admin login, and the maintenance page itself are always reachable so a
+      // super admin can toggle it back off. A valid admin session bypasses it;
+      // everyone else is sent to /maintenance while it's on.
+      const isAdminArea =
+        pathname === "/admin" ||
+        pathname.startsWith("/admin/") ||
+        pathname === "/admin-auth";
+      if (!isAdminArea && pathname !== "/maintenance") {
+        const maintenance = await getMaintenanceEdge();
+        if (maintenance.enabled) {
+          const adminToken = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
+          const adminValid = await verifyAdminSessionToken(adminToken);
+          if (!adminValid) {
+            return Response.redirect(new URL("/maintenance", request.nextUrl));
+          }
+        }
+      }
 
       if (pathname === "/admin" || pathname.startsWith("/admin/")) {
         const token = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;

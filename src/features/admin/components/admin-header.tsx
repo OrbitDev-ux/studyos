@@ -32,9 +32,11 @@ export type AdminNotification = {
 export function AdminHeader({
   admin,
   notifications,
+  maintenance,
 }: {
   admin: { name: string | null; email: string; role: AdminRole };
   notifications: AdminNotification[];
+  maintenance?: boolean;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -64,6 +66,11 @@ export function AdminHeader({
             className="h-8 w-48 pl-7 lg:w-64"
           />
         </form>
+        {maintenance && (
+          <Badge className="animate-pulse bg-amber-500/15 text-amber-600 dark:text-amber-400">
+            🚧 Maintenance Mode
+          </Badge>
+        )}
       </div>
 
       <div className="flex items-center gap-1">
