@@ -12,43 +12,101 @@ import {
   type ProblemGenerationFormValues,
 } from "@/features/problems/schema";
 import { normalizeAnswer } from "@/features/problems/utils";
+import { recordProblemAttempt, type AttemptSource } from "@/features/learning/record-attempt";
+import {
+  recordReviewSuccess,
+  registerWrongAnswerForReview,
+} from "@/features/review/schedule-service";
+import { resolveTaxonomy } from "@/features/curriculum/taxonomy";
+import { withGenerationQuota, QuotaError } from "@/features/ai/generation-guard";
+import { DEFAULT_SUBJECTS, SUBJECT_COLOR_PALETTE } from "@/features/subjects/constants";
+import { getClientIp } from "@/lib/ip";
+import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { requireCurrentUser } from "@/lib/session";
+import { headers } from "next/headers";
 
-export async function generateProblems(values: ProblemGenerationFormValues) {
+export async function generateProblems(
+  values: ProblemGenerationFormValues,
+): Promise<{ error?: string }> {
   const user = await requireCurrentUser();
   const parsed = problemGenerationFormSchema.parse(values);
+
+  // Server is the authoritative source for taxonomy: re-validate the whole
+  // (grade → subject → unit) path against the static tree and derive canonical
+  // names. Client-sent ids are never trusted, and the AI never invents subjects
+  // or units — we pass it the canonical ones and store those verbatim.
+  const resolved = resolveTaxonomy({
+    gradeId: parsed.gradeId,
+    subjectId: parsed.subjectId,
+    unitId: parsed.unitId,
+  });
+  if (!resolved.ok) return { error: resolved.error };
+  const { subjectName, unitName } = resolved.value;
+
   const supabase = await createClient();
 
-  const { data: subject } = await supabase
-    .from("Subject")
-    .select("*")
-    .eq("id", parsed.subjectId)
-    .eq("userId", user.id)
-    .maybeSingle();
-  if (!subject) throw new Error("과목을 찾을 수 없습니다.");
+  // Map the canonical taxonomy subject onto the user's OWN Subject row (every
+  // user is seeded with 수학/영어/국어/과학), creating it if missing. Keeps
+  // Problem.subjectId pointing at a per-user Subject exactly as before, so all
+  // Learning-OS aggregations (weakness/mission/review) keep working unchanged.
+  const defaultColor = DEFAULT_SUBJECTS.find((s) => s.name === subjectName)?.color;
+  const subject = await prisma.subject.upsert({
+    where: { userId_name: { userId: user.id, name: subjectName } },
+    create: {
+      userId: user.id,
+      name: subjectName,
+      color: defaultColor ?? SUBJECT_COLOR_PALETTE[0],
+    },
+    update: {},
+  });
 
   const prompt = buildProblemGenerationPrompt({
-    subjectName: subject.name,
-    unit: parsed.unit,
+    subjectName,
+    unit: unitName ?? undefined,
     difficulty: parsed.difficulty,
     type: parsed.type,
     count: parsed.count,
   });
 
-  const { problems } = await generateStructured({
-    system: await getActivePromptContent(PROMPT_TYPES.PROBLEM_GENERATION),
-    prompt,
-    schema: aiProblemSetSchema,
-  });
+  // AI cost protection: reserve a quota slot (per-user advisory lock) BEFORE the
+  // Gemini call. Over-quota throws QuotaError and no AI call happens. Only the
+  // AI call is inside the guard, so success is recorded exactly when the (valid,
+  // schema-checked) result comes back — DB persistence below can't affect quota.
+  const ip = getClientIp(await headers());
+  let problems;
+  try {
+    ({ problems } = await withGenerationQuota(
+      {
+        userId: user.id,
+        email: user.email,
+        timezone: user.timezone,
+        ip,
+        kind: "problem",
+        count: parsed.count,
+      },
+      async () =>
+        generateStructured({
+          system: await getActivePromptContent(PROMPT_TYPES.PROBLEM_GENERATION),
+          prompt,
+          schema: aiProblemSetSchema,
+        }),
+    ));
+  } catch (err) {
+    // Quota rejections are expected, user-facing outcomes — return the message
+    // so it survives to the client (thrown Server Action errors are masked in
+    // production). Everything else is a real failure and rethrows.
+    if (err instanceof QuotaError) return { error: err.message };
+    throw err;
+  }
 
   const problemSetId = randomUUID();
   const { error: setError } = await supabase.from("ProblemSet").insert({
     id: problemSetId,
     userId: user.id,
     subjectId: subject.id,
-    title: `${subject.name}${parsed.unit ? ` · ${parsed.unit}` : ""}`,
-    unit: parsed.unit || null,
+    title: `${subject.name}${unitName ? ` · ${unitName}` : ""}`,
+    unit: unitName,
     difficulty: parsed.difficulty,
   });
   if (setError) throw setError;
@@ -69,7 +127,7 @@ export async function generateProblems(values: ProblemGenerationFormValues) {
         subjectId: subject.id,
         type: parsed.type,
         difficulty: parsed.difficulty,
-        unit: parsed.unit || null,
+        unit: unitName,
         prompt: problem.prompt,
         explanation: problem.explanation,
         answerText: problem.answerText || null,
@@ -99,6 +157,7 @@ export async function generateProblems(values: ProblemGenerationFormValues) {
   }
 
   revalidatePath("/problems");
+  return {};
 }
 
 export async function toggleFavorite(problemId: string) {
@@ -144,6 +203,7 @@ export async function deleteProblem(problemId: string) {
 export async function submitProblemAnswer(
   problemId: string,
   answer: { choiceId?: string; text?: string },
+  opts?: { source?: Extract<AttemptSource, "practice" | "review">; durationMs?: number },
 ): Promise<{ correct: boolean; explanation: string | null }> {
   const user = await requireCurrentUser();
   const supabase = await createClient();
@@ -156,44 +216,46 @@ export async function submitProblemAnswer(
     .maybeSingle();
   if (!problem) throw new Error("문제를 찾을 수 없습니다.");
 
+  const selectedChoice =
+    problem.type === "MULTIPLE_CHOICE"
+      ? problem.choices.find(
+          (choice: { id: string; isCorrect: boolean }) => choice.id === answer.choiceId,
+        )
+      : undefined;
+
   const correct =
     problem.type === "MULTIPLE_CHOICE"
-      ? (problem.choices.find(
-          (choice: { id: string; isCorrect: boolean }) => choice.id === answer.choiceId,
-        )?.isCorrect ?? false)
+      ? (selectedChoice?.isCorrect ?? false)
       : normalizeAnswer(answer.text ?? "") === normalizeAnswer(problem.answerText ?? "");
 
+  // The user's answer in readable form, for the attempt log / 오답 DNA.
+  const userAnswerText =
+    problem.type === "MULTIPLE_CHOICE"
+      ? ((selectedChoice as { content?: string } | undefined)?.content ?? null)
+      : (answer.text?.trim() || null);
+
+  // Log every attempt (correct or wrong) to the learning data foundation.
+  await recordProblemAttempt({
+    userId: user.id,
+    problemId,
+    subjectId: problem.subjectId ?? null,
+    unit: problem.unit ?? null,
+    difficulty: problem.difficulty,
+    isCorrect: correct,
+    source: opts?.source ?? "practice",
+    answerText: userAnswerText,
+    durationMs: opts?.durationMs ?? null,
+  });
+
+  // Spaced-repetition scheduling (Phase 5). A correct answer advances the
+  // review schedule (and graduates the item after the last interval); a wrong
+  // answer registers/re-opens it as due after the first interval. This replaces
+  // the old plain resolved-toggle so every submission keeps the schedule
+  // consistent.
   if (correct) {
-    const { error } = await supabase
-      .from("WrongAnswer")
-      .update({ resolved: true })
-      .eq("userId", user.id)
-      .eq("problemId", problemId)
-      .eq("resolved", false);
-    if (error) throw error;
+    await recordReviewSuccess(user.id, problemId);
   } else {
-    // Same create-then-update-only-on-conflict semantics as the old
-    // prisma.wrongAnswer.upsert(): a fresh row gets source: "problem", but
-    // an existing row (e.g. originally logged from a mock exam) only has
-    // `resolved` touched — its `source` must not be overwritten.
-    const { error: insertError } = await supabase.from("WrongAnswer").insert({
-      id: randomUUID(),
-      userId: user.id,
-      problemId,
-      source: "problem",
-    });
-    if (insertError) {
-      if (insertError.code === "23505") {
-        const { error: updateError } = await supabase
-          .from("WrongAnswer")
-          .update({ resolved: false })
-          .eq("userId", user.id)
-          .eq("problemId", problemId);
-        if (updateError) throw updateError;
-      } else {
-        throw insertError;
-      }
-    }
+    await registerWrongAnswerForReview(user.id, problemId, "problem");
   }
 
   revalidatePath("/problems");

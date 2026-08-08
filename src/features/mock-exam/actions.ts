@@ -13,12 +13,17 @@ import {
 } from "@/features/mock-exam/schema";
 import { aiProblemSetSchema } from "@/features/problems/schema";
 import { normalizeAnswer } from "@/features/problems/utils";
+import { recordProblemAttempt } from "@/features/learning/record-attempt";
+import { scheduleForNewWrong } from "@/features/review/schedule";
+import { withGenerationQuota, QuotaError } from "@/features/ai/generation-guard";
+import { getClientIp } from "@/lib/ip";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/session";
+import { headers } from "next/headers";
 
 export async function generateMockExam(
   values: MockExamGenerationFormValues,
-): Promise<string> {
+): Promise<{ examId?: string; error?: string }> {
   const user = await requireCurrentUser();
   const parsed = mockExamGenerationFormSchema.parse(values);
 
@@ -33,11 +38,30 @@ export async function generateMockExam(
     count: parsed.count,
   });
 
-  const { problems } = await generateStructured({
-    system: await getActivePromptContent(PROMPT_TYPES.MOCK_EXAM_GENERATION),
-    prompt,
-    schema: aiProblemSetSchema,
-  });
+  // AI cost protection — same per-user quota gate as problem generation.
+  const ip = getClientIp(await headers());
+  let problems;
+  try {
+    ({ problems } = await withGenerationQuota(
+      {
+        userId: user.id,
+        email: user.email,
+        timezone: user.timezone,
+        ip,
+        kind: "mock-exam",
+        count: parsed.count,
+      },
+      async () =>
+        generateStructured({
+          system: await getActivePromptContent(PROMPT_TYPES.MOCK_EXAM_GENERATION),
+          prompt,
+          schema: aiProblemSetSchema,
+        }),
+    ));
+  } catch (err) {
+    if (err instanceof QuotaError) return { error: err.message };
+    throw err;
+  }
 
   const examId = await prisma.$transaction(async (tx) => {
     const exam = await tx.mockExam.create({
@@ -83,7 +107,7 @@ export async function generateMockExam(
   });
 
   revalidatePath("/mock-exam");
-  return examId;
+  return { examId };
 }
 
 export async function submitExam(examId: string, input: SubmitExamInput) {
@@ -116,10 +140,13 @@ export async function submitExam(examId: string, input: SubmitExamInput) {
     for (const question of exam.questions) {
       const problem = question.problem;
       const answer = answerByProblemId.get(problem.id);
+      const selectedChoice =
+        problem.type === "MULTIPLE_CHOICE"
+          ? problem.choices.find((choice) => choice.id === answer?.choiceId)
+          : undefined;
       const isCorrect =
         problem.type === "MULTIPLE_CHOICE"
-          ? (problem.choices.find((choice) => choice.id === answer?.choiceId)
-              ?.isCorrect ?? false)
+          ? (selectedChoice?.isCorrect ?? false)
           : normalizeAnswer(answer?.text ?? "") ===
             normalizeAnswer(problem.answerText ?? "");
 
@@ -136,11 +163,48 @@ export async function submitExam(examId: string, input: SubmitExamInput) {
         },
       });
 
+      // Log this attempt to the learning data foundation (same log as practice
+      // problems). Per-question timing isn't tracked for exams, so durationMs
+      // stays null.
+      await recordProblemAttempt(
+        {
+          userId: user.id,
+          problemId: problem.id,
+          subjectId: problem.subjectId ?? null,
+          unit: problem.unit ?? null,
+          difficulty: problem.difficulty,
+          isCorrect,
+          source: "mock-exam",
+          answerText:
+            problem.type === "MULTIPLE_CHOICE"
+              ? (selectedChoice?.content ?? null)
+              : (answer?.text?.trim() || null),
+        },
+        tx,
+      );
+
       if (!isCorrect) {
+        // Register into the spaced-repetition schedule (Phase 5): reset to
+        // stage 0, due after the first interval. Kept inline in the exam's
+        // transaction (rather than calling the service) so it commits atomically
+        // with the ExamResult/ExamAnswer rows.
+        const schedule = scheduleForNewWrong();
         await tx.wrongAnswer.upsert({
           where: { userId_problemId: { userId: user.id, problemId: problem.id } },
-          create: { userId: user.id, problemId: problem.id, source: "mock-exam" },
-          update: { resolved: false, source: "mock-exam" },
+          create: {
+            userId: user.id,
+            problemId: problem.id,
+            source: "mock-exam",
+            reviewStage: schedule.reviewStage,
+            nextReviewAt: schedule.nextReviewAt,
+          },
+          update: {
+            resolved: false,
+            source: "mock-exam",
+            reviewStage: schedule.reviewStage,
+            nextReviewAt: schedule.nextReviewAt,
+            lastReviewedAt: new Date(),
+          },
         });
       }
     }

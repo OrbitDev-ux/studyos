@@ -13,12 +13,20 @@ export const SETTING_KEYS = {
   // Epoch (ms) before which admin session tokens are rejected. Bumping it to
   // "now" invalidates every issued admin cookie — the "clear sessions" lever.
   ADMIN_SESSION_EPOCH: "admin_session_epoch",
+  // AI cost-protection policy (per-tier daily quota / rate limit / concurrency),
+  // JSON-encoded. Admin-tunable so limits can change without a deploy; the
+  // typed shape + defaults live in features/ai/quota.ts.
+  AI_QUOTA: "ai_quota",
 } as const;
 
 const DEFAULTS = {
   [SETTING_KEYS.AI_ENABLED]: true,
   [SETTING_KEYS.AI_MODEL]: "gemini-3.6-flash",
   [SETTING_KEYS.ADMIN_SESSION_EPOCH]: 0,
+  // `null` = "no stored override" → features/ai/quota.ts falls back to its own
+  // code default policy. Kept out of getAllSettings() (below) which only serves
+  // the hot-path AI kill-switch + model.
+  [SETTING_KEYS.AI_QUOTA]: null,
 } as const;
 
 type SettingKey = (typeof SETTING_KEYS)[keyof typeof SETTING_KEYS];

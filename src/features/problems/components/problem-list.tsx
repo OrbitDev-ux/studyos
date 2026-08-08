@@ -7,16 +7,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProblemCard } from "@/features/problems/components/problem-card";
 import { ProblemGeneratorForm } from "@/features/problems/components/problem-generator-form";
 import type { getProblems } from "@/features/problems/queries";
-import type { Subject } from "@/generated/prisma/client";
 
 type Filter = "all" | "favorites";
 
 export function ProblemList({
   problems,
-  subjects,
 }: {
   problems: Awaited<ReturnType<typeof getProblems>>;
-  subjects: Subject[];
 }) {
   const [filter, setFilter] = useState<Filter>("all");
 
@@ -35,25 +32,14 @@ export function ProblemList({
           </TabsList>
         </Tabs>
         <ProblemGeneratorForm
-          subjects={subjects}
           trigger={
-            <Button
-              type="button"
-              size="sm"
-              className="gap-1.5"
-              disabled={subjects.length === 0}
-            >
+            <Button type="button" size="sm" className="gap-1.5">
               <Sparkles className="size-4" />
               문제 생성
             </Button>
           }
         />
       </div>
-      {subjects.length === 0 && (
-        <p className="text-muted-foreground text-sm">
-          문제를 생성하려면 먼저 과목을 추가해주세요.
-        </p>
-      )}
       {filteredProblems.length === 0 ? (
         <p className="text-muted-foreground text-sm">표시할 문제가 없습니다.</p>
       ) : (

@@ -60,10 +60,14 @@ export function ExamSetupForm({
   async function onSubmit(values: MockExamGenerationFormValues) {
     setError(null);
     try {
-      const examId = await generateMockExam(values);
+      const result = await generateMockExam(values);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
       reset();
       setOpen(false);
-      router.push(`/mock-exam/${examId}`);
+      router.push(`/mock-exam/${result.examId}`);
     } catch {
       setError("모의고사 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
     }

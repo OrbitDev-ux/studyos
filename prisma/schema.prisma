@@ -32,6 +32,12 @@ model User {
   /// study data is never deleted on a ban — this is a reversible gate.
   bannedAt      DateTime?
   banReason     String?
+  /// When the new-user onboarding tutorial was completed (or skipped). Null =
+  /// never finished → the tutorial auto-starts on next app load. Set once and
+  /// never re-shown automatically; "튜토리얼 다시 보기" clears it back to null.
+  /// Lives on User (not a cookie) so it is per-account and works for guests
+  /// (a guest is a normal User row) — no separate onboarding model.
+  tutorialCompletedAt DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -47,6 +53,8 @@ model User {
   mockExams     MockExam[]
   examResults   ExamResult[]
   aiAnalyses    AiAnalysis[]
+  problemAttempts ProblemAttempt[]
+  aiGenerationLogs AiGenerationLog[]
 
   sentFriendRequests      Friendship[]              @relation("FriendRequester")
   receivedFriendRequests  Friendship[]              @relation("FriendAddressee")
@@ -163,6 +171,10 @@ model StudySession {
   startedAt   DateTime
   endedAt     DateTime?
   durationSec Int       @default(0)
+  /// What kind of study block this was: FOCUS | PROBLEM | MOCK_EXAM | REVIEW |
+  /// AI_TUTOR. Free-form string (not an enum) so new modes can be added
+  /// without a migration; existing rows default to FOCUS.
+  type        String    @default("FOCUS")
   createdAt   DateTime  @default(now())
 
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -170,6 +182,66 @@ model StudySession {
 
   @@index([userId, startedAt])
   @@index([subjectId])
+}
+
+/// One graded attempt at a single problem — the per-attempt learning log that
+/// powers weakness analysis, accuracy trends, and solve-speed stats. Written
+/// on every practice/exam/review submission (correct AND wrong), unlike
+/// WrongAnswer which only tracks the currently-unresolved wrong set. Prisma-
+/// only table: never exposed to the Supabase anon role (REVOKEd in migration).
+model ProblemAttempt {
+  id         String     @id @default(cuid())
+  userId     String
+  problemId  String
+  /// Denormalized from Problem at write time so weakness aggregation never
+  /// needs to join back through Problem (which may later be deleted).
+  subjectId  String?
+  unit       String?
+  difficulty Difficulty
+  isCorrect  Boolean
+  /// Where the attempt came from: "practice" | "mock-exam" | "review".
+  source     String
+  /// The answer the user actually gave, in human-readable form (chosen choice
+  /// content for MC, typed text for short-answer). Powers 오답 DNA analysis.
+  answerText String?
+  /// Wall-clock time the user spent on this attempt, if the client reported it.
+  durationMs Int?
+  createdAt  DateTime   @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, subjectId])
+  @@index([problemId])
+}
+
+/// One row per AI-generation attempt (problem set / mock exam), the server-side
+/// source of truth for AI cost protection: daily quota, per-minute rate limit,
+/// and concurrent-generation guard. Modeled like AdminLoginAttempt (a DB-backed
+/// rate-limit/audit trail) since the app has no Redis — the quota critical
+/// section serializes on a Postgres advisory lock, so no extra infra is needed.
+/// A row is created `pending` when a request passes the quota gate, then flipped
+/// to `success` / `validation_failed` / `error`. Only `success` (+ still-live
+/// `pending`) consume daily quota, so failed/aborted calls don't burn quota.
+/// Prisma-only table: REVOKEd from the Supabase anon role in its migration.
+model AiGenerationLog {
+  id        String   @id @default(cuid())
+  userId    String
+  ip        String?
+  /// Which generator: "problem" | "mock-exam".
+  kind      String
+  /// "pending" | "success" | "validation_failed" | "error".
+  status    String
+  /// How many items were requested (problem count), for observability.
+  count     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, status, createdAt])
 }
 
 // ─── AI problems (v2) ───────────────────────────────────────────────────
@@ -224,6 +296,7 @@ model Problem {
   wrongAnswers  WrongAnswer[]
   examQuestions ExamQuestion[]
   examAnswers   ExamAnswer[]
+  attempts      ProblemAttempt[]
 
   @@index([userId])
   @@index([subjectId])
@@ -251,6 +324,20 @@ model WrongAnswer {
   source        String   @default("problem") // "problem" | "mock-exam"
   aiExplanation String?  @db.Text
   resolved      Boolean  @default(false)
+  /// ── 오답 DNA (Phase 4) ── structured "why it was wrong" from the AI, stored
+  /// once on demand (analyzedAt set) so it is never re-generated on every read.
+  errorType     String?  // CALCULATION|CONCEPT|READING|FORMULA|CARELESS|UNKNOWN _ERROR
+  errorConcept  String?
+  errorReason   String?  @db.Text
+  analyzedAt    DateTime?
+  /// ── 자동 복습 (Phase 5, spaced repetition) ── reviewStage = number of
+  /// successful reviews so far; it indexes REVIEW_INTERVALS_DAYS to set
+  /// nextReviewAt (when this becomes "due" again). A correct review advances
+  /// the stage; a wrong one resets it to 0. Graduating past the last interval
+  /// flips `resolved` true and clears nextReviewAt.
+  reviewStage    Int       @default(0)
+  nextReviewAt   DateTime?
+  lastReviewedAt DateTime?
   createdAt     DateTime @default(now())
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -258,6 +345,7 @@ model WrongAnswer {
 
   @@unique([userId, problemId])
   @@index([userId, resolved])
+  @@index([userId, nextReviewAt])
 }
 
 /// A generated exam: a fixed, ordered set of (always multiple-choice, for

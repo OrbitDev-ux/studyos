@@ -28,15 +28,23 @@ import {
   type ProblemGenerationFormInput,
   type ProblemGenerationFormValues,
 } from "@/features/problems/schema";
-import type { Subject } from "@/generated/prisma/client";
+import {
+  getCurriculumOption,
+  listGrades,
+  listSubjects,
+  listUnits,
+} from "@/features/curriculum/taxonomy";
 
-export function ProblemGeneratorForm({
-  subjects,
-  trigger,
-}: {
-  subjects: Subject[];
-  trigger: ReactNode;
-}) {
+// Curriculum-driven defaults: preselect the first valid (grade → subject → unit)
+// path so the form is submittable immediately and never starts in an invalid
+// state.
+const GRADES = listGrades();
+const CURRICULUM = getCurriculumOption();
+const FIRST_GRADE = GRADES[0]?.id ?? "";
+const FIRST_SUBJECT = listSubjects(FIRST_GRADE)[0]?.id ?? "";
+const FIRST_UNIT = listUnits(FIRST_GRADE, FIRST_SUBJECT)[0]?.id ?? "";
+
+export function ProblemGeneratorForm({ trigger }: { trigger: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,22 +53,35 @@ export function ProblemGeneratorForm({
     handleSubmit,
     control,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ProblemGenerationFormInput, unknown, ProblemGenerationFormValues>({
     resolver: zodResolver(problemGenerationFormSchema),
     defaultValues: {
-      subjectId: subjects[0]?.id ?? "",
-      unit: "",
+      gradeId: FIRST_GRADE,
+      subjectId: FIRST_SUBJECT,
+      unitId: FIRST_UNIT,
       difficulty: "MEDIUM",
       type: "MULTIPLE_CHOICE",
       count: 5,
     },
   });
 
+  // Dependent option lists follow the current grade/subject selection.
+  const gradeId = watch("gradeId");
+  const subjectId = watch("subjectId");
+  const subjectOptions = listSubjects(gradeId);
+  const unitOptions = listUnits(gradeId, subjectId);
+
   async function onSubmit(values: ProblemGenerationFormValues) {
     setError(null);
     try {
-      await generateProblems(values);
+      const result = await generateProblems(values);
+      if (result?.error) {
+        setError(result.error);
+        return;
+      }
       reset();
       setOpen(false);
     } catch {
@@ -86,17 +107,71 @@ export function ProblemGeneratorForm({
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
+            <Label>학년</Label>
+            <Controller
+              control={control}
+              name="gradeId"
+              render={({ field }) => (
+                <Select
+                  value={field.value}
+                  onValueChange={(next) => {
+                    field.onChange(next);
+                    // Reset dependent selections to the first valid child so the
+                    // path never points at a subject/unit from another grade.
+                    const firstSubject = listSubjects(next)[0]?.id ?? "";
+                    setValue("subjectId", firstSubject);
+                    setValue("unitId", listUnits(next, firstSubject)[0]?.id ?? "");
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="학년 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GRADES.map((grade) => (
+                      <SelectItem key={grade.id} value={grade.id}>
+                        {grade.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.gradeId && (
+              <p className="text-destructive text-xs">{errors.gradeId.message}</p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label>교육과정</Label>
+            {/* Single curriculum for now — shown for context, fixed. */}
+            <Select value={CURRICULUM.id} disabled>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={CURRICULUM.id}>{CURRICULUM.name}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
             <Label>과목</Label>
             <Controller
               control={control}
               name="subjectId"
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
+                <Select
+                  value={field.value}
+                  onValueChange={(next) => {
+                    field.onChange(next);
+                    setValue("unitId", listUnits(gradeId, next)[0]?.id ?? "");
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="과목 선택" />
                   </SelectTrigger>
                   <SelectContent>
-                    {subjects.map((subject) => (
+                    {subjectOptions.map((subject) => (
                       <SelectItem key={subject.id} value={subject.id}>
                         {subject.name}
                       </SelectItem>
@@ -111,8 +186,28 @@ export function ProblemGeneratorForm({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="problem-unit">단원 (선택)</Label>
-            <Input id="problem-unit" placeholder="예: 이차함수" {...register("unit")} />
+            <Label>단원</Label>
+            <Controller
+              control={control}
+              name="unitId"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="단원 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unitOptions.map((unit) => (
+                      <SelectItem key={unit.id} value={unit.id}>
+                        {unit.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.unitId && (
+              <p className="text-destructive text-xs">{errors.unitId.message}</p>
+            )}
           </div>
 
           <div className="flex gap-3">
@@ -177,7 +272,7 @@ export function ProblemGeneratorForm({
           {error && <p className="text-destructive text-xs">{error}</p>}
 
           <DialogFooter>
-            <Button type="submit" disabled={isSubmitting || subjects.length === 0}>
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "생성 중..." : "생성"}
             </Button>
           </DialogFooter>

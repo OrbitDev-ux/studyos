@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { getRecentUnresolvedWrongAnswers } from "@/features/review/queries";
+import type { getDueReviews } from "@/features/review/queries";
 
 export function TodayReviewCard({
   wrongAnswers,
   totalCount,
 }: {
-  wrongAnswers: Awaited<ReturnType<typeof getRecentUnresolvedWrongAnswers>>;
+  wrongAnswers: Awaited<ReturnType<typeof getDueReviews>>;
   totalCount: number;
 }) {
   return (
@@ -21,11 +21,11 @@ export function TodayReviewCard({
       <CardContent className="flex flex-col gap-2">
         {totalCount === 0 ? (
           <p className="text-muted-foreground text-sm">
-            복습할 오답이 없어요. 잘하고 있어요!
+            오늘 복습할 오답이 없어요. 잘하고 있어요!
           </p>
         ) : (
           <>
-            <p className="text-sm font-medium">미해결 오답 {totalCount}개</p>
+            <p className="text-sm font-medium">복습 예정 {totalCount}개</p>
             <ul className="flex flex-col gap-1.5">
               {wrongAnswers.map((wrongAnswer) => (
                 <li

@@ -8,15 +8,26 @@ export function getWrongAnswers(userId: string) {
   });
 }
 
-export function getUnresolvedWrongAnswerCount(userId: string) {
-  return prisma.wrongAnswer.count({ where: { userId, resolved: false } });
+/** Spaced-repetition "due now" filter: unresolved wrong answers whose
+ * nextReviewAt has passed (or was never set). Soonest-due first. */
+function dueReviewWhere(userId: string) {
+  return {
+    userId,
+    resolved: false,
+    OR: [{ nextReviewAt: { lte: new Date() } }, { nextReviewAt: null }],
+  };
 }
 
-export function getRecentUnresolvedWrongAnswers(userId: string, limit: number) {
+/** Wrong answers due for review right now (Phase 5) — feeds the "오늘 복습" card. */
+export function getDueReviews(userId: string, limit: number) {
   return prisma.wrongAnswer.findMany({
-    where: { userId, resolved: false },
+    where: dueReviewWhere(userId),
     include: { problem: { include: { subject: true } } },
-    orderBy: { createdAt: "desc" },
+    orderBy: { nextReviewAt: "asc" },
     take: limit,
   });
+}
+
+export function getDueReviewCount(userId: string): Promise<number> {
+  return prisma.wrongAnswer.count({ where: dueReviewWhere(userId) });
 }

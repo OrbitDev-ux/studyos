@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { DIFFICULTY_LABEL } from "@/features/problems/constants";
 import { WrongAnswerActions } from "@/features/review/components/wrong-answer-actions";
+import { ERROR_TYPE_LABEL, toErrorType } from "@/features/review/dna";
 import type { getWrongAnswers } from "@/features/review/queries";
 
 export function WrongAnswerCard({
@@ -28,6 +29,11 @@ export function WrongAnswerCard({
               </span>
             )}
             <Badge variant="outline">{DIFFICULTY_LABEL[problem.difficulty]}</Badge>
+            {wrongAnswer.errorType && (
+              <Badge variant="destructive">
+                {ERROR_TYPE_LABEL[toErrorType(wrongAnswer.errorType)]}
+              </Badge>
+            )}
           </div>
           {wrongAnswer.resolved && <Badge>해결됨</Badge>}
         </div>
