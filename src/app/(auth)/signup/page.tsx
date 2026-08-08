@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/config/site";
 import { EmailSignUpForm } from "@/features/auth/components/email-sign-up-form";
 import { GuestSignInButton } from "@/features/auth/components/guest-sign-in-button";
@@ -20,6 +21,9 @@ export default function SignUpPage() {
           <span className="bg-border h-px flex-1" />
         </div>
         <GuestSignInButton />
+        <Button asChild variant="ghost" size="lg" className="w-full">
+          <Link href="/demo">👀 StudyOS 둘러보기 (로그인 없이 체험)</Link>
+        </Button>
         <p className="text-muted-foreground text-center text-sm">
           이미 계정이 있으신가요?{" "}
           <Link href="/login" className="text-primary hover:underline">

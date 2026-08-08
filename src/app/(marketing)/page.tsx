@@ -41,9 +41,14 @@ export default function LandingPage() {
           오답노트, 모의고사, 친구와의 랭킹·배틀까지 한 곳에서 관리하는 학생용 올인원
           플랫폼입니다.
         </p>
-        <Button asChild size="lg" className="h-11 px-6 text-base">
-          <Link href="/signup">무료로 시작하기</Link>
-        </Button>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Button asChild size="lg" className="h-11 px-6 text-base">
+            <Link href="/signup">무료로 시작하기</Link>
+          </Button>
+          <Button asChild size="lg" variant="outline" className="h-11 px-6 text-base">
+            <Link href="/demo">👀 로그인 없이 둘러보기</Link>
+          </Button>
+        </div>
       </section>
 
       <section className="mx-auto w-full max-w-5xl px-4 pb-16 sm:px-6 sm:pb-20">
