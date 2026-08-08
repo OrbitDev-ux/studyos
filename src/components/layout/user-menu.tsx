@@ -1,8 +1,11 @@
+import { UserRound } from "lucide-react";
+import Link from "next/link";
 import type { Session } from "next-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -30,6 +33,12 @@ export function UserMenu({ user }: { user: Session["user"] }) {
             <DropdownMenuLabel className="text-muted-foreground truncate font-normal">
               {user.email}
             </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/profile">
+                <UserRound className="size-4" />내 프로필
+              </Link>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <div className="px-1 py-1">
               <SignOutButton />

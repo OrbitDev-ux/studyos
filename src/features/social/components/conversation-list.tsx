@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProfileNameplate } from "@/features/profile/components/profile-nameplate";
 import type { getConversations } from "@/features/social/queries";
 
 export function ConversationList({
@@ -26,30 +26,25 @@ export function ConversationList({
               )?.user;
               const lastMessage = conversation.messages[0];
               return (
-                <li key={conversation.id}>
+                <li key={conversation.id} className="flex items-center gap-2">
+                  {/* Clicking the avatar/name opens the profile card; clicking
+                      the message area opens the conversation. */}
+                  {other && (
+                    <ProfileNameplate
+                      userId={other.id}
+                      name={other.name}
+                      image={other.image}
+                      fallbackLabel={other.email}
+                    />
+                  )}
                   <Link
                     href={`/social/${conversation.id}`}
-                    className="flex items-center gap-2 hover:opacity-80"
+                    className="flex min-w-0 flex-1 flex-col hover:opacity-80"
+                    aria-label="대화 열기"
                   >
-                    <Avatar className="size-8">
-                      <AvatarImage
-                        src={other?.image ?? undefined}
-                        alt={other?.name ?? ""}
-                      />
-                      <AvatarFallback>
-                        {(other?.name ?? other?.email ?? "?").at(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex min-w-0 flex-col">
-                      <span className="text-sm font-medium">
-                        {other?.name ?? other?.email}
-                      </span>
-                      {lastMessage && (
-                        <span className="text-muted-foreground truncate text-xs">
-                          {lastMessage.content}
-                        </span>
-                      )}
-                    </div>
+                    <span className="text-muted-foreground truncate text-xs">
+                      {lastMessage ? lastMessage.content : "대화 열기"}
+                    </span>
                   </Link>
                 </li>
               );

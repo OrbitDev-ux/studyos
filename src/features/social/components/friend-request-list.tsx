@@ -1,9 +1,9 @@
 "use client";
 
 import { useTransition } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProfileNameplate } from "@/features/profile/components/profile-nameplate";
 import { respondToFriendRequest } from "@/features/social/actions";
 import type { getReceivedFriendRequests } from "@/features/social/queries";
 
@@ -23,20 +23,12 @@ export function FriendRequestList({
         <ul className="flex flex-col gap-3">
           {requests.map((request) => (
             <li key={request.id} className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Avatar className="size-8">
-                  <AvatarImage
-                    src={request.requester.image ?? undefined}
-                    alt={request.requester.name ?? ""}
-                  />
-                  <AvatarFallback>
-                    {(request.requester.name ?? request.requester.email).at(0)}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-sm font-medium">
-                  {request.requester.name ?? request.requester.email}
-                </span>
-              </div>
+              <ProfileNameplate
+                userId={request.requester.id}
+                name={request.requester.name}
+                image={request.requester.image}
+                fallbackLabel={request.requester.email}
+              />
               <div className="flex items-center gap-2">
                 <Button
                   type="button"

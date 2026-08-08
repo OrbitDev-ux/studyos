@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { ProfileNameplate } from "@/features/profile/components/profile-nameplate";
 import { ConversationPanel } from "@/features/social/components/conversation-panel";
 import { MarkReadRefresh } from "@/features/social/components/mark-read-refresh";
 import { MessageInput } from "@/features/social/components/message-input";
@@ -24,9 +25,18 @@ export default async function ConversationPage({
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold tracking-tight">
-        {other?.name ?? other?.email}
-      </h1>
+      {other ? (
+        <ProfileNameplate
+          userId={other.id}
+          name={other.name}
+          image={other.image}
+          fallbackLabel={other.email}
+          nameClassName="text-xl font-semibold tracking-tight"
+          avatarClassName="size-9"
+        />
+      ) : (
+        <h1 className="text-xl font-semibold tracking-tight">알 수 없는 사용자</h1>
+      )}
       <div className="flex flex-1 flex-col gap-4 rounded-lg border p-4">
         <ConversationPanel conversation={conversation} currentUserId={user.id} />
       </div>

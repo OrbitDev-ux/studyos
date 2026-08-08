@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { Header } from "@/components/layout/header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { PresenceHeartbeat } from "@/features/profile/components/presence-heartbeat";
 import { getSocialNotificationCount } from "@/features/social/queries";
 import { getCurrentAdmin } from "@/lib/admin/context";
 import { getMaintenance } from "@/lib/maintenance";
@@ -27,6 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <SidebarProvider>
+      <PresenceHeartbeat />
       <AppSidebar user={session.user} socialCount={socialCount} />
       <SidebarInset>
         <Header />

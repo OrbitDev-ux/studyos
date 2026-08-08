@@ -20,6 +20,14 @@ export async function signInWithGoogle() {
 }
 
 export async function signOutAction() {
+  // Mark the user OFFLINE immediately on an explicit sign-out rather than
+  // waiting for the presence heartbeat to go stale.
+  const session = await auth();
+  if (session?.user?.id) {
+    await prisma.user
+      .update({ where: { id: session.user.id }, data: { lastSeenAt: null } })
+      .catch(() => {});
+  }
   await signOut({ redirectTo: "/login" });
 }
 

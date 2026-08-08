@@ -1,5 +1,5 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProfileNameplate } from "@/features/profile/components/profile-nameplate";
 import { MessageFriendButton } from "@/features/social/components/message-friend-button";
 import { RemoveFriendButton } from "@/features/social/components/remove-friend-button";
 import type { getFriends } from "@/features/social/queries";
@@ -23,13 +23,12 @@ export function FriendList({
           <ul className="flex flex-col gap-3">
             {friends.map(({ friendshipId, user }) => (
               <li key={friendshipId} className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Avatar className="size-8">
-                    <AvatarImage src={user.image ?? undefined} alt={user.name ?? ""} />
-                    <AvatarFallback>{(user.name ?? user.email).at(0)}</AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium">{user.name ?? user.email}</span>
-                </div>
+                <ProfileNameplate
+                  userId={user.id}
+                  name={user.name}
+                  image={user.image}
+                  fallbackLabel={user.email}
+                />
                 <div className="flex items-center gap-1">
                   <MessageFriendButton friendUserId={user.id} />
                   <RemoveFriendButton friendshipId={friendshipId} />

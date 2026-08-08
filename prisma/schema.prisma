@@ -20,6 +20,14 @@ model User {
   password      String?
   timezone      String    @default("Asia/Seoul")
   school        String?
+  /// Short profile status message ("상태 메시지"), shown on the profile card.
+  /// Display nickname reuses `name` and avatar reuses `image` — no duplicate
+  /// user table, per the profile system's extend-don't-duplicate design.
+  bio           String?
+  /// Heartbeat timestamp for online presence. Updated while the user has an
+  /// app tab open; online status (ONLINE/IDLE/OFFLINE) is derived from how
+  /// stale this is. Null (or stale) means OFFLINE — set null on sign-out.
+  lastSeenAt    DateTime?
   /// Set when an admin bans this account; null means active. The user's
   /// study data is never deleted on a ban — this is a reversible gate.
   bannedAt      DateTime?
