@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState, useTransition } from "react";
+import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { submitExam } from "@/features/mock-exam/actions";
 import { ExamTimer } from "@/features/mock-exam/components/exam-timer";
@@ -51,7 +53,15 @@ export function TakeExamView({
             {answeredCount} / {exam.questions.length}문항 답변함
           </p>
         </div>
-        <ExamTimer timeLimitSec={exam.timeLimitSec} onExpire={handleSubmit} />
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="gap-1.5">
+            <Link href={`/mock-exam/${exam.id}/paper`}>
+              <Printer className="size-4" />
+              시험지
+            </Link>
+          </Button>
+          <ExamTimer timeLimitSec={exam.timeLimitSec} onExpire={handleSubmit} />
+        </div>
       </div>
 
       <OmrSheet

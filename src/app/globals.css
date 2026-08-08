@@ -138,3 +138,397 @@
     text-wrap: pretty;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Exam Paper design system — a printable, A4 "real school exam" document.
+   Self-contained (own tokens, always light/B&W) so it looks identical on screen
+   and in PDF regardless of the app theme. Minimal, editorial, black & white with
+   a single restrained accent. See features/exam-paper/*.
+   ───────────────────────────────────────────────────────────────────────── */
+.exam-doc-bg {
+  --exam-ink: #111111;
+  --exam-gray: #555555;
+  --exam-gray-light: #888888;
+  --exam-line: #111111;
+  --exam-line-soft: #d8d8d8;
+  --exam-fill: #f3f3f3;
+  --exam-accent: #2563eb;
+  background: #f5f5f5;
+  padding: 24px 12px;
+  min-height: 100%;
+}
+
+.exam-paper {
+  font-family: Pretendard, "Noto Sans KR", system-ui, -apple-system, "Apple SD Gothic Neo",
+    "Malgun Gothic", sans-serif;
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 18mm 16mm 22mm;
+  background: #ffffff;
+  color: var(--exam-ink);
+  box-shadow: 0 1px 10px rgba(0, 0, 0, 0.12);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+/* Header */
+.exam-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.exam-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-size: 15px;
+}
+.exam-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--exam-ink);
+  font-size: 11px;
+  font-weight: 700;
+}
+.exam-kicker {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--exam-gray);
+}
+.exam-rule {
+  height: 0;
+  border: none;
+  border-top: 1px solid var(--exam-line);
+  margin: 8px 0 0;
+}
+.exam-rule-soft {
+  border-top: 1px solid var(--exam-line-soft);
+}
+
+/* Title */
+.exam-title-section {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 20mm;
+}
+.exam-meta {
+  font-size: 11px;
+  color: #777777;
+  letter-spacing: 0.02em;
+}
+.exam-title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin-top: 6px;
+  line-height: 1.2;
+}
+.exam-infoboxes {
+  display: flex;
+  gap: 8px;
+}
+.exam-infobox {
+  min-width: 64px;
+  border: 1px solid var(--exam-line-soft);
+  border-radius: 3px;
+  padding: 6px 10px;
+  text-align: center;
+  background: #ffffff;
+}
+.exam-infobox-label {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--exam-gray-light);
+}
+.exam-infobox-value {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* Student fields */
+.exam-student {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--exam-ink);
+}
+.exam-field {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.exam-field-label {
+  color: var(--exam-gray);
+  white-space: nowrap;
+}
+.exam-field-line {
+  display: inline-block;
+  border-bottom: 1px solid var(--exam-ink);
+  min-width: 120px;
+  height: 1.1em;
+}
+.exam-field-line--wide {
+  min-width: 200px;
+}
+
+/* Notice */
+.exam-notice {
+  font-size: 10px;
+  color: #888888;
+  line-height: 1.6;
+  margin-top: 12px;
+}
+
+/* Problems — 2 columns by default; long items span both */
+.exam-problems {
+  column-count: 2;
+  column-gap: 12mm;
+  margin-top: 8mm;
+}
+.exam-problem {
+  break-inside: avoid;
+  page-break-inside: avoid;
+  margin: 0 0 8mm;
+}
+.exam-problem--full {
+  column-span: all;
+}
+.exam-problem-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.exam-problem-prompt {
+  font-size: 14px;
+  line-height: 1.7;
+}
+.exam-problem-no {
+  font-weight: 700;
+}
+.exam-points {
+  font-size: 11px;
+  color: var(--exam-gray);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Data / 보기 boxes */
+.exam-box {
+  border: 1px solid var(--exam-line-soft);
+  border-radius: 4px;
+  padding: 12px 14px;
+  margin-top: 10px;
+  background: #ffffff;
+}
+.exam-box-label {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+/* Table */
+.exam-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 13px;
+}
+.exam-table th,
+.exam-table td {
+  border: 1px solid var(--exam-line-soft);
+  padding: 6px 8px;
+  text-align: center;
+}
+.exam-table th {
+  background: var(--exam-fill);
+  font-weight: 600;
+}
+.exam-table td.exam-td-left {
+  text-align: left;
+}
+
+/* Multiple choice — circled numbers, vertical */
+.exam-choices {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.exam-choice {
+  display: flex;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.exam-choice-mark {
+  flex-shrink: 0;
+}
+
+/* Answer sheet */
+.exam-answersheet {
+  break-before: page;
+  page-break-before: always;
+  margin-top: 8mm;
+}
+.exam-answersheet-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 24px;
+  margin-top: 12px;
+}
+.exam-answersheet-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--exam-line-soft);
+  padding: 5px 2px;
+  font-size: 13px;
+}
+.exam-answersheet-no {
+  width: 26px;
+  font-variant-numeric: tabular-nums;
+  color: var(--exam-gray);
+}
+.exam-answersheet-bubbles {
+  display: flex;
+  gap: 12px;
+}
+
+/* Footers */
+.exam-screen-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16mm;
+  padding-top: 8px;
+  border-top: 1px solid var(--exam-line-soft);
+  font-size: 9px;
+  color: var(--exam-gray-light);
+  text-transform: lowercase;
+}
+.exam-running-footer {
+  display: none;
+}
+
+/* Toolbar (screen only) */
+.exam-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 210mm;
+  max-width: 100%;
+  margin: 0 auto 12px;
+}
+
+/* Simple bar graph (SVG-less, CSS) */
+.exam-graph {
+  margin-top: 10px;
+}
+
+/* Responsive web preview: shrink to viewport on small screens */
+@media screen and (max-width: 900px) {
+  .exam-paper {
+    width: 100%;
+    min-height: 0;
+    padding: 20px 16px;
+    box-shadow: none;
+  }
+  .exam-toolbar {
+    width: 100%;
+  }
+  .exam-problems {
+    column-count: 1;
+  }
+  .exam-title-section {
+    margin-top: 24px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Print: isolate the paper, restore true A4, repeat a running footer */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 14mm 14mm 16mm;
+    /* Page numbers where the print engine supports margin boxes (e.g. Chromium
+       "Save as PDF"); harmless no-op elsewhere. The running footer below always
+       carries the brand + subject regardless. */
+    @bottom-right {
+      content: counter(page) " / " counter(pages);
+      font-size: 9px;
+      color: #888888;
+    }
+  }
+  html,
+  body {
+    background: #ffffff !important;
+  }
+  /* Print ONLY the exam paper (hide sidebar/header/toolbar regardless of markup). */
+  body {
+    visibility: hidden;
+  }
+  .exam-paper,
+  .exam-paper *,
+  .exam-running-footer,
+  .exam-running-footer * {
+    visibility: visible;
+  }
+  .exam-doc-bg {
+    background: #ffffff !important;
+    padding: 0;
+  }
+  .exam-paper {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+  .exam-problems {
+    column-count: 2;
+  }
+  .exam-screen-footer,
+  .exam-toolbar {
+    display: none !important;
+  }
+  /* Running footer repeats on every printed page (brand + subject). */
+  .exam-running-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 4mm;
+    font-size: 9px;
+    color: #888888;
+  }
+  /* Ensure light fills (table headers, boxes) actually print. */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

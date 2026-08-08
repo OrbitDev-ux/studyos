@@ -21,6 +21,9 @@ export function MockExamCard({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/mock-exam/${exam.id}/paper`}>시험지</Link>
+          </Button>
           {latestResult && (
             <Button asChild size="sm" variant="outline">
               <Link href={`/mock-exam/${exam.id}/result?resultId=${latestResult.id}`}>
