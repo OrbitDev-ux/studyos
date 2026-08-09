@@ -34,6 +34,7 @@ import {
   listSubjects,
   listUnits,
 } from "@/features/curriculum/taxonomy";
+import { UpgradeNotice } from "@/features/billing/components/upgrade-notice";
 
 // Curriculum-driven defaults: preselect the first valid (grade → subject → unit)
 // path so the form is submittable immediately and never starts in an invalid
@@ -44,9 +45,18 @@ const FIRST_GRADE = GRADES[0]?.id ?? "";
 const FIRST_SUBJECT = listSubjects(FIRST_GRADE)[0]?.id ?? "";
 const FIRST_UNIT = listUnits(FIRST_GRADE, FIRST_SUBJECT)[0]?.id ?? "";
 
+/** Client-safe shape of a generation rejection (mirrors the server payload). */
+type LimitFeedback = {
+  error?: string;
+  code?: string;
+  limit?: number;
+  used?: number;
+  upgradePlan?: string | null;
+};
+
 export function ProblemGeneratorForm({ trigger }: { trigger: ReactNode }) {
   const [open, setOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<LimitFeedback | null>(null);
 
   const {
     register,
@@ -75,17 +85,17 @@ export function ProblemGeneratorForm({ trigger }: { trigger: ReactNode }) {
   const unitOptions = listUnits(gradeId, subjectId);
 
   async function onSubmit(values: ProblemGenerationFormValues) {
-    setError(null);
+    setFeedback(null);
     try {
-      const result = await generateProblems(values);
+      const result = (await generateProblems(values)) as LimitFeedback;
       if (result?.error) {
-        setError(result.error);
+        setFeedback(result);
         return;
       }
       reset();
       setOpen(false);
     } catch {
-      setError("문제 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      setFeedback({ error: "문제 생성에 실패했습니다. 잠시 후 다시 시도해주세요." });
     }
   }
 
@@ -96,7 +106,7 @@ export function ProblemGeneratorForm({ trigger }: { trigger: ReactNode }) {
         setOpen(next);
         if (!next) {
           reset();
-          setError(null);
+          setFeedback(null);
         }
       }}
     >
@@ -269,7 +279,20 @@ export function ProblemGeneratorForm({ trigger }: { trigger: ReactNode }) {
             )}
           </div>
 
-          {error && <p className="text-destructive text-xs">{error}</p>}
+          {feedback?.code === "FEATURE_LIMIT_REACHED" ? (
+            <UpgradeNotice
+              title="AI 문제 생성 한도를 모두 사용했어요"
+              message={
+                `${feedback.upgradePlan ?? "상위"} 플랜으로 업그레이드하면 더 많이 사용할 수 있어요.` +
+                (feedback.limit != null ? ` (오늘 ${feedback.used}/${feedback.limit})` : "")
+              }
+              cta={`${feedback.upgradePlan ?? "플랜"} 알아보기`}
+            />
+          ) : (
+            feedback?.error && (
+              <p className="text-destructive text-xs">{feedback.error}</p>
+            )
+          )}
 
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting}>

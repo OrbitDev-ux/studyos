@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
@@ -16,8 +17,10 @@ import { cn } from "@/lib/utils";
 
 export function WrongAnswerActions({
   wrongAnswer,
+  canUseDna,
 }: {
   wrongAnswer: Awaited<ReturnType<typeof getWrongAnswers>>[number];
+  canUseDna: boolean;
 }) {
   const { problem } = wrongAnswer;
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
@@ -170,17 +173,22 @@ export function WrongAnswerActions({
         >
           {isExplaining ? "생성 중..." : "AI 해설"}
         </Button>
-        {!dna && (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={isAnalyzing}
-            onClick={handleAnalyze}
-          >
-            {isAnalyzing ? "분석 중..." : "오답 원인 분석"}
-          </Button>
-        )}
+        {!dna &&
+          (canUseDna ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={isAnalyzing}
+              onClick={handleAnalyze}
+            >
+              {isAnalyzing ? "분석 중..." : "오답 원인 분석"}
+            </Button>
+          ) : (
+            <Button type="button" size="sm" variant="outline" asChild>
+              <Link href="/pricing">🔒 오답 DNA (PRO)</Link>
+            </Button>
+          ))}
         {!wrongAnswer.resolved && (
           <Button
             type="button"

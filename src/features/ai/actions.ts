@@ -9,13 +9,23 @@ import { buildWeeklyReportPrompt } from "@/features/ai/prompts/report-generation
 import { getWeaknessSourceData, getWeeklyReportSourceData } from "@/features/ai/queries";
 import { aiAnalysisResultSchema } from "@/features/ai/schema";
 import { getRecentDateOnlyRange, getZonedDateOnly } from "@/lib/date";
+import { accessStateFor } from "@/features/billing/access";
+import { canUseFeature } from "@/features/billing/entitlements";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/session";
 
 const WEEKLY_REPORT_WINDOW_DAYS = 7;
 
+/** AI analysis/recommendation is gated by plan (blocked once a trial expires). */
+function assertAiRecommendation(user: Parameters<typeof accessStateFor>[0]): void {
+  if (!canUseFeature(accessStateFor(user), "AI_RECOMMENDATION")) {
+    throw new Error("AI 분석은 플랜에서 사용할 수 있어요. 플랜을 선택해주세요.");
+  }
+}
+
 export async function generateWeaknessAnalysis(): Promise<{ content: string }> {
   const user = await requireCurrentUser();
+  assertAiRecommendation(user);
   const wrongAnswers = await getWeaknessSourceData(user.id);
 
   const { content } = await generateStructured({
@@ -42,6 +52,7 @@ export async function generateWeaknessAnalysis(): Promise<{ content: string }> {
 
 export async function generateWeeklyReport(): Promise<{ content: string }> {
   const user = await requireCurrentUser();
+  assertAiRecommendation(user);
   const data = await getWeeklyReportSourceData(user.id, user.timezone);
 
   const { content } = await generateStructured({

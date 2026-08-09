@@ -2,11 +2,16 @@ import { CalendarDays, Mail, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileHeader } from "@/features/profile/components/profile-header";
 import { getMyProfile } from "@/features/profile/queries";
+import { SubscriptionCard } from "@/features/billing/components/subscription-card";
+import { getPlanSummary } from "@/features/billing/usage";
 import { requireCurrentUser } from "@/lib/session";
 
 export default async function ProfilePage() {
   const user = await requireCurrentUser();
-  const profile = await getMyProfile(user.id);
+  const [profile, planSummary] = await Promise.all([
+    getMyProfile(user.id),
+    getPlanSummary(user.id),
+  ]);
   const joined = profile.createdAt.toLocaleDateString("ko-KR", {
     year: "numeric",
     month: "long",
@@ -20,6 +25,8 @@ export default async function ProfilePage() {
           <ProfileHeader profile={profile} />
         </CardContent>
       </Card>
+
+      <SubscriptionCard summary={planSummary} />
 
       <Card>
         <CardHeader>

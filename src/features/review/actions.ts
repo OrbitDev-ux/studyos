@@ -8,6 +8,8 @@ import { getActivePromptContent } from "@/features/ai/prompt-service";
 import { PROMPT_TYPES } from "@/features/ai/prompt-registry";
 import { wrongAnswerDnaSchema, type WrongAnswerDna } from "@/features/review/dna";
 import { aiExplanationSchema } from "@/features/review/schema";
+import { accessStateFor } from "@/features/billing/access";
+import { canUseFeature } from "@/features/billing/entitlements";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/session";
 
@@ -56,6 +58,12 @@ export async function analyzeWrongAnswerDna(
   wrongAnswerId: string,
 ): Promise<WrongAnswerDna> {
   const user = await requireCurrentUser();
+
+  // Plan gate (server-authoritative backstop; the UI also hides this for
+  // non-entitled plans). 오답 DNA is a PRO+ feature.
+  if (!canUseFeature(accessStateFor(user), "WRONG_ANSWER_DNA")) {
+    throw new Error("오답 DNA는 PRO 플랜에서 사용할 수 있어요.");
+  }
 
   const wrongAnswer = await prisma.wrongAnswer.findFirst({
     where: { id: wrongAnswerId, userId: user.id },

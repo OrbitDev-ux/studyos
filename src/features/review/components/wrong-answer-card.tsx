@@ -7,8 +7,10 @@ import type { getWrongAnswers } from "@/features/review/queries";
 
 export function WrongAnswerCard({
   wrongAnswer,
+  canUseDna,
 }: {
   wrongAnswer: Awaited<ReturnType<typeof getWrongAnswers>>[number];
+  canUseDna: boolean;
 }) {
   const { problem } = wrongAnswer;
 
@@ -40,7 +42,7 @@ export function WrongAnswerCard({
 
         <p className="text-sm font-medium">{problem.prompt}</p>
 
-        <WrongAnswerActions wrongAnswer={wrongAnswer} />
+        <WrongAnswerActions wrongAnswer={wrongAnswer} canUseDna={canUseDna} />
       </CardContent>
     </Card>
   );

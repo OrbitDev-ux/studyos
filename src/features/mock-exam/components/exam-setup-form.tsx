@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { generateMockExam } from "@/features/mock-exam/actions";
+import { UpgradeNotice } from "@/features/billing/components/upgrade-notice";
 import {
   mockExamGenerationFormSchema,
   type MockExamGenerationFormInput,
@@ -40,6 +41,11 @@ export function ExamSetupForm({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [limitInfo, setLimitInfo] = useState<{
+    limit?: number;
+    used?: number;
+    upgradePlan?: string | null;
+  } | null>(null);
 
   const {
     register,
@@ -59,10 +65,19 @@ export function ExamSetupForm({
 
   async function onSubmit(values: MockExamGenerationFormValues) {
     setError(null);
+    setLimitInfo(null);
     try {
       const result = await generateMockExam(values);
       if (result.error) {
-        setError(result.error);
+        if (result.code === "FEATURE_LIMIT_REACHED") {
+          setLimitInfo({
+            limit: result.limit,
+            used: result.used,
+            upgradePlan: result.upgradePlan,
+          });
+        } else {
+          setError(result.error);
+        }
         return;
       }
       reset();
@@ -81,6 +96,7 @@ export function ExamSetupForm({
         if (!next) {
           reset();
           setError(null);
+          setLimitInfo(null);
         }
       }}
     >
@@ -151,6 +167,16 @@ export function ExamSetupForm({
             </div>
           </div>
 
+          {limitInfo && (
+            <UpgradeNotice
+              title="모의고사 생성 한도를 모두 사용했어요"
+              message={
+                `${limitInfo.upgradePlan ?? "상위"} 플랜으로 업그레이드하면 더 많이 만들 수 있어요.` +
+                (limitInfo.limit != null ? ` (${limitInfo.used}/${limitInfo.limit})` : "")
+              }
+              cta={`${limitInfo.upgradePlan ?? "플랜"} 알아보기`}
+            />
+          )}
           {error && <p className="text-destructive text-xs">{error}</p>}
 
           <DialogFooter>

@@ -9,8 +9,11 @@ type Filter = "unresolved" | "all" | "resolved";
 
 export function WrongAnswerList({
   wrongAnswers,
+  canUseDna,
 }: {
   wrongAnswers: Awaited<ReturnType<typeof getWrongAnswers>>;
+  /** Whether the current plan may run 오답 DNA analysis (PRO+). */
+  canUseDna: boolean;
 }) {
   const [filter, setFilter] = useState<Filter>("unresolved");
 
@@ -34,7 +37,11 @@ export function WrongAnswerList({
       ) : (
         <div className="flex flex-col gap-3">
           {filtered.map((wrongAnswer) => (
-            <WrongAnswerCard key={wrongAnswer.id} wrongAnswer={wrongAnswer} />
+            <WrongAnswerCard
+              key={wrongAnswer.id}
+              wrongAnswer={wrongAnswer}
+              canUseDna={canUseDna}
+            />
           ))}
         </div>
       )}

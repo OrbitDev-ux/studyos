@@ -18,7 +18,12 @@ import {
   registerWrongAnswerForReview,
 } from "@/features/review/schedule-service";
 import { resolveTaxonomy } from "@/features/curriculum/taxonomy";
-import { withGenerationQuota, QuotaError } from "@/features/ai/generation-guard";
+import {
+  withGenerationQuota,
+  generationErrorPayload,
+  type GenerationErrorPayload,
+} from "@/features/ai/generation-guard";
+import { accessStateFor, trialStartedDate } from "@/features/billing/access";
 import { DEFAULT_SUBJECTS, SUBJECT_COLOR_PALETTE } from "@/features/subjects/constants";
 import { getClientIp } from "@/lib/ip";
 import { prisma } from "@/lib/prisma";
@@ -28,7 +33,7 @@ import { headers } from "next/headers";
 
 export async function generateProblems(
   values: ProblemGenerationFormValues,
-): Promise<{ error?: string }> {
+): Promise<{ error?: string } | GenerationErrorPayload> {
   const user = await requireCurrentUser();
   const parsed = problemGenerationFormSchema.parse(values);
 
@@ -79,11 +84,13 @@ export async function generateProblems(
     ({ problems } = await withGenerationQuota(
       {
         userId: user.id,
-        email: user.email,
         timezone: user.timezone,
         ip,
         kind: "problem",
         count: parsed.count,
+        // Server-authoritative plan/trial state — never from the client.
+        state: accessStateFor(user),
+        trialStartedAt: trialStartedDate(user),
       },
       async () =>
         generateStructured({
@@ -93,10 +100,11 @@ export async function generateProblems(
         }),
     ));
   } catch (err) {
-    // Quota rejections are expected, user-facing outcomes — return the message
-    // so it survives to the client (thrown Server Action errors are masked in
-    // production). Everything else is a real failure and rethrows.
-    if (err instanceof QuotaError) return { error: err.message };
+    // Plan-limit / rate rejections are expected outcomes — return a structured
+    // payload (with upgrade info) so it survives to the client (thrown Server
+    // Action errors are masked in production). Real failures rethrow.
+    const payload = generationErrorPayload(err);
+    if (payload) return payload;
     throw err;
   }
 

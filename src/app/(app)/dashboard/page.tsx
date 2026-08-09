@@ -20,6 +20,10 @@ import { WeakProblemsCard } from "@/features/learning/components/weak-problems-c
 import { getWeakProblemBoard } from "@/features/learning/weak-problems-queries";
 import { OnboardingLauncher } from "@/features/onboarding/components/onboarding-launcher";
 import { getOnboardingState } from "@/features/onboarding/queries";
+import { TrialBanner } from "@/features/billing/components/trial-banner";
+import { getPlanSummary } from "@/features/billing/usage";
+import { adsVisibleFor } from "@/features/billing/access";
+import { AdSlot } from "@/features/ads/components/ad-slot";
 import {
   getActiveStudySession,
   getStreak,
@@ -59,6 +63,7 @@ export default async function DashboardPage() {
     missionBoard,
     weakProblemBoard,
     onboarding,
+    planSummary,
   ] = await Promise.all([
     getActiveStudySession(user.id),
     getTodayStudySeconds(user.id, user.timezone),
@@ -76,7 +81,9 @@ export default async function DashboardPage() {
     getDailyMissionBoard(user.id, user.timezone),
     getWeakProblemBoard(user.id, user.timezone),
     getOnboardingState(user.id),
+    getPlanSummary(user.id),
   ]);
+  const showAds = adsVisibleFor(user);
 
   const completedTodos = todos.filter((todo) => todo.completed).length;
   const progressPercent =
@@ -100,6 +107,8 @@ export default async function DashboardPage() {
         />
       </div>
 
+      <TrialBanner summary={planSummary} />
+
       <div className="grid gap-4 sm:grid-cols-2">
         <StatCard label="오늘 진행률" value={`${progressPercent}%`} icon={ListChecks} />
         <StatCard label="연속 공부일" value={`${streak}일`} icon={Flame} />
@@ -113,6 +122,10 @@ export default async function DashboardPage() {
           <WeakProblemsCard board={weakProblemBoard} />
         </div>
       </div>
+
+      {/* Ads only for trial-active users; positioned between learning cards and
+          the rest of the dashboard, never inside a study flow. */}
+      <AdSlot placement="dashboard" show={showAds} />
 
       <StudyTimerCard
         todaySeconds={todaySeconds}

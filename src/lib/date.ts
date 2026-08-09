@@ -27,6 +27,14 @@ export function getTodayRange(timeZone: string, now = new Date()) {
   return { start, end };
 }
 
+/** UTC instant of the first day 00:00 of the current month in `timeZone`. Use as
+ * the start of a monthly usage window (e.g. plan mock-exam limits). */
+export function getMonthStart(timeZone: string, now = new Date()): Date {
+  const todayStr = getZonedDateString(now, timeZone); // YYYY-MM-DD in tz
+  const firstOfMonth = `${todayStr.slice(0, 7)}-01`; // YYYY-MM-01
+  return zonedTimeToUtc(`${firstOfMonth}T00:00:00`, timeZone);
+}
+
 /** The [start, end) UTC instant range covering the last `days` days ending today, in `timeZone`. */
 export function getRecentRange(timeZone: string, days: number, now = new Date()) {
   const { end } = getTodayRange(timeZone, now);

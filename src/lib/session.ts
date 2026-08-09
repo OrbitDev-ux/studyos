@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import type { Plan, SubscriptionStatus } from "@/generated/prisma/client";
 import { auth } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -9,6 +10,12 @@ export type CurrentUser = {
   image: string | null;
   timezone: string;
   school: string | null;
+  /** Subscription plan; the authoritative server value used for entitlements. */
+  plan: Plan;
+  subscriptionStatus: SubscriptionStatus;
+  /** ISO strings from Supabase; null only for rows created before the backfill. */
+  trialStartedAt: string | null;
+  trialEndsAt: string | null;
 };
 
 export async function requireCurrentUser(): Promise<CurrentUser> {
@@ -20,7 +27,9 @@ export async function requireCurrentUser(): Promise<CurrentUser> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("User")
-    .select("id, name, email, image, timezone, school, bannedAt")
+    .select(
+      "id, name, email, image, timezone, school, plan, subscriptionStatus, trialStartedAt, trialEndsAt, bannedAt",
+    )
     .eq("id", session.user.id)
     .single();
   if (error) throw error;

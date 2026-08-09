@@ -38,6 +38,20 @@ model User {
   /// Lives on User (not a cookie) so it is per-account and works for guests
   /// (a guest is a normal User row) — no separate onboarding model.
   tutorialCompletedAt DateTime?
+  /// Subscription plan + lifecycle gating feature access/limits (see
+  /// features/billing). Kept as columns on User (not a separate Subscription
+  /// table yet) — this Phase builds the Subscription/Plan/Entitlement structure
+  /// only; a future billing layer flips these without touching any feature code.
+  /// New users start TRIAL/TRIALING with a trialStartedAt (default now()); the
+  /// trial window is 7 days and expiry is computed from trialEndsAt + server
+  /// time. SECURITY: plan / subscriptionStatus / trialStartedAt / trialEndsAt
+  /// all have UPDATE REVOKEd from the Supabase anon role in the migration, so a
+  /// client can NEVER change its own plan or trial dates via the public REST
+  /// endpoint — only server-side Prisma (owner role) can.
+  plan               Plan               @default(TRIAL)
+  subscriptionStatus SubscriptionStatus @default(TRIALING)
+  trialStartedAt     DateTime?          @default(now())
+  trialEndsAt        DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -255,6 +269,26 @@ enum Difficulty {
   EASY
   MEDIUM
   HARD
+}
+
+/// Subscription plans, ascending capability. New users start on TRIAL (a 7-day
+/// experience, not a permanent free tier). Central enum consumed by the
+/// entitlement system (features/billing) — never compared inline across the app.
+enum Plan {
+  TRIAL
+  PRO
+  PREMIUM
+}
+
+/// Subscription lifecycle status, separate from `plan` so a future billing layer
+/// can drive it (webhooks flip ACTIVE/CANCELED). For now it is TRIALING for new
+/// users; TRIAL expiry is computed from trialEndsAt + server time, not trusted
+/// solely from this column.
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  EXPIRED
+  CANCELED
 }
 
 /// A batch of AI-generated problems created together (one subject/unit/difficulty per set).

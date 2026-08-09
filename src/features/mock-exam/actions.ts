@@ -15,7 +15,12 @@ import { aiProblemSetSchema } from "@/features/problems/schema";
 import { normalizeAnswer } from "@/features/problems/utils";
 import { recordProblemAttempt } from "@/features/learning/record-attempt";
 import { scheduleForNewWrong } from "@/features/review/schedule";
-import { withGenerationQuota, QuotaError } from "@/features/ai/generation-guard";
+import {
+  withGenerationQuota,
+  generationErrorPayload,
+  type GenerationErrorPayload,
+} from "@/features/ai/generation-guard";
+import { accessStateFor, trialStartedDate } from "@/features/billing/access";
 import { getClientIp } from "@/lib/ip";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/session";
@@ -23,7 +28,7 @@ import { headers } from "next/headers";
 
 export async function generateMockExam(
   values: MockExamGenerationFormValues,
-): Promise<{ examId?: string; error?: string }> {
+): Promise<{ examId?: string } & Partial<GenerationErrorPayload>> {
   const user = await requireCurrentUser();
   const parsed = mockExamGenerationFormSchema.parse(values);
 
@@ -45,11 +50,12 @@ export async function generateMockExam(
     ({ problems } = await withGenerationQuota(
       {
         userId: user.id,
-        email: user.email,
         timezone: user.timezone,
         ip,
         kind: "mock-exam",
         count: parsed.count,
+        state: accessStateFor(user),
+        trialStartedAt: trialStartedDate(user),
       },
       async () =>
         generateStructured({
@@ -59,7 +65,8 @@ export async function generateMockExam(
         }),
     ));
   } catch (err) {
-    if (err instanceof QuotaError) return { error: err.message };
+    const payload = generationErrorPayload(err);
+    if (payload) return payload;
     throw err;
   }
 
