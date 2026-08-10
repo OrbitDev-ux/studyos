@@ -78,6 +78,29 @@ model User {
 
   createdBattles       Battle[]            @relation("BattleCreator")
   battleParticipations BattleParticipant[]
+
+  legalConsents LegalConsent[]
+}
+
+/// A record that a user agreed to a specific legal document at a specific
+/// version. documentType mirrors the LegalDocSlug in features/legal/documents
+/// ("terms" | "privacy" | ...) and version mirrors that document's `version`,
+/// so a bumped document version can require fresh consent without a schema
+/// change. One row per (user, document, version) — re-agreeing to the same
+/// version is idempotent. Prisma-only table: REVOKEd from the Supabase anon
+/// role in its migration so a client can never read or forge another user's
+/// consent through the public REST endpoint.
+model LegalConsent {
+  id           String   @id @default(cuid())
+  userId       String
+  documentType String
+  version      String
+  agreedAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, documentType, version])
+  @@index([userId])
 }
 
 model Account {

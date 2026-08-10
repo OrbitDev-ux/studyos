@@ -2,6 +2,7 @@
 
 import { AuthError } from "next-auth";
 import { hashPassword } from "@/features/auth/password";
+import { recordConsents, SIGNUP_REQUIRED_CONSENTS } from "@/features/legal/consent";
 import {
   emailSignInSchema,
   emailSignUpSchema,
@@ -124,6 +125,9 @@ export async function signUpWithEmail(
         },
       });
       await seedDefaultSubjects(user.id, tx);
+      // Record the required legal consents (약관 · 개인정보 처리방침) at their
+      // current versions — the schema already verified agreement server-side.
+      await recordConsents(tx, user.id, SIGNUP_REQUIRED_CONSENTS);
     });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {

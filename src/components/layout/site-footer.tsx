@@ -1,9 +1,14 @@
 import Link from "next/link";
 import { siteConfig } from "@/config/site";
+import { LEGAL_DOCUMENT_LIST } from "@/features/legal/documents";
 
+// All six legal documents (single source: features/legal/documents) plus the
+// contact link. Accessible from every marketing page via the shared footer.
 const FOOTER_LINKS = [
-  { href: "/terms", label: "이용약관" },
-  { href: "/privacy", label: "개인정보처리방침" },
+  ...LEGAL_DOCUMENT_LIST.map((doc) => ({
+    href: `/legal/${doc.slug}`,
+    label: doc.navLabel,
+  })),
   { href: "/contact", label: "문의하기" },
 ];
 

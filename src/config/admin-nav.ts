@@ -2,6 +2,7 @@ import {
   Bell,
   Bot,
   FileCode,
+  Scale,
   LayoutDashboard,
   ScrollText,
   Server,
@@ -47,4 +48,6 @@ export const adminNavItems: AdminNavItem[] = [
     capability: "manageSecurity",
   },
   { title: "시스템", href: "/admin/system", icon: Server, capability: "manageSystem" },
+  // No capability → visible to all admins; the page is read-only (view versions).
+  { title: "법적 문서", href: "/admin/legal", icon: Scale },
 ];

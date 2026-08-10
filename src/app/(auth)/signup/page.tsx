@@ -24,6 +24,17 @@ export default function SignUpPage() {
         <Button asChild variant="ghost" size="lg" className="w-full">
           <Link href="/demo">👀 StudyOS 둘러보기 (로그인 없이 체험)</Link>
         </Button>
+        <p className="text-muted-foreground text-center text-xs leading-relaxed">
+          게스트로 시작하면{" "}
+          <Link href="/legal/terms" className="underline">
+            이용약관
+          </Link>{" "}
+          및{" "}
+          <Link href="/legal/privacy" className="underline">
+            개인정보 처리방침
+          </Link>
+          에 동의하는 것으로 간주됩니다.
+        </p>
         <p className="text-muted-foreground text-center text-sm">
           이미 계정이 있으신가요?{" "}
           <Link href="/login" className="text-primary hover:underline">

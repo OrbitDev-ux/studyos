@@ -1,10 +1,12 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signUpWithEmail } from "@/features/auth/actions";
@@ -14,9 +16,13 @@ export function EmailSignUpForm() {
   const [error, setError] = useState<string | null>(null);
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<EmailSignUpValues>({ resolver: zodResolver(emailSignUpSchema) });
+  } = useForm<EmailSignUpValues>({
+    resolver: zodResolver(emailSignUpSchema),
+    defaultValues: { agreeTerms: false, agreePrivacy: false },
+  });
 
   async function onSubmit(values: EmailSignUpValues) {
     setError(null);
@@ -63,6 +69,72 @@ export function EmailSignUpForm() {
           <p className="text-destructive text-xs">{errors.password.message}</p>
         )}
       </div>
+
+      {/* 필수 약관 동의 — 서버(emailSignUpSchema)에서도 검증된다. */}
+      <div className="flex flex-col gap-2 pt-1">
+        <div className="flex items-start gap-2">
+          <Controller
+            control={control}
+            name="agreeTerms"
+            render={({ field }) => (
+              <Checkbox
+                id="signup-agree-terms"
+                checked={field.value}
+                onCheckedChange={(v) => field.onChange(v === true)}
+                aria-invalid={!!errors.agreeTerms}
+                className="mt-0.5"
+              />
+            )}
+          />
+          <Label
+            htmlFor="signup-agree-terms"
+            className="text-muted-foreground text-xs font-normal leading-relaxed"
+          >
+            (필수){" "}
+            <Link href="/legal/terms" target="_blank" className="text-foreground underline">
+              이용약관
+            </Link>
+            에 동의합니다.
+          </Label>
+        </div>
+        {errors.agreeTerms && (
+          <p className="text-destructive text-xs">{errors.agreeTerms.message}</p>
+        )}
+
+        <div className="flex items-start gap-2">
+          <Controller
+            control={control}
+            name="agreePrivacy"
+            render={({ field }) => (
+              <Checkbox
+                id="signup-agree-privacy"
+                checked={field.value}
+                onCheckedChange={(v) => field.onChange(v === true)}
+                aria-invalid={!!errors.agreePrivacy}
+                className="mt-0.5"
+              />
+            )}
+          />
+          <Label
+            htmlFor="signup-agree-privacy"
+            className="text-muted-foreground text-xs font-normal leading-relaxed"
+          >
+            (필수){" "}
+            <Link
+              href="/legal/privacy"
+              target="_blank"
+              className="text-foreground underline"
+            >
+              개인정보 처리방침
+            </Link>
+            에 동의합니다.
+          </Label>
+        </div>
+        {errors.agreePrivacy && (
+          <p className="text-destructive text-xs">{errors.agreePrivacy.message}</p>
+        )}
+      </div>
+
       {error && <p className="text-destructive text-xs">{error}</p>}
       <Button type="submit" disabled={isSubmitting} className="w-full">
         {isSubmitting ? "가입 중..." : "이메일로 회원가입"}
