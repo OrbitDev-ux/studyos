@@ -15,6 +15,7 @@ export function ExamResultCard({
   const orderedAnswers = orderedProblemIds
     .map((problemId) => answerByProblemId.get(problemId))
     .filter((answer) => answer !== undefined);
+  const essayCount = orderedAnswers.filter((a) => a.problem.type === "ESSAY").length;
 
   return (
     <div className="flex flex-col gap-4">
@@ -34,45 +35,85 @@ export function ExamResultCard({
             <p className="text-muted-foreground text-xs">소요 시간</p>
             <p className="text-lg font-medium">{Math.round(result.durationSec / 60)}분</p>
           </div>
+          {essayCount > 0 && (
+            <p className="text-muted-foreground w-full text-xs">
+              서술형 {essayCount}문항은 모범 답안과 비교해 스스로 확인하는 항목이며 점수에는
+              포함되지 않아요.
+            </p>
+          )}
         </CardContent>
       </Card>
 
       <div className="flex flex-col gap-2">
-        {orderedAnswers.map((answer, index) => (
-          <Card key={answer.id}>
-            <CardContent className="flex flex-col gap-2">
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-sm font-medium">
-                  {index + 1}. {answer.problem.prompt}
-                </p>
-                <Badge variant={answer.isCorrect ? "default" : "destructive"}>
-                  {answer.isCorrect ? "정답" : "오답"}
-                </Badge>
-              </div>
-              <div className="flex flex-col gap-1 text-sm">
-                {answer.problem.choices.map((choice) => (
-                  <p
-                    key={choice.id}
-                    className={cn(
-                      choice.isCorrect && "text-primary font-medium",
-                      choice.id === answer.selectedChoiceId &&
-                        !choice.isCorrect &&
-                        "text-destructive",
-                    )}
-                  >
-                    {choice.label}. {choice.content}
-                    {choice.id === answer.selectedChoiceId && " (내 답)"}
+        {orderedAnswers.map((answer, index) => {
+          const isEssay = answer.problem.type === "ESSAY";
+          return (
+            <Card key={answer.id}>
+              <CardContent className="flex flex-col gap-2">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-medium">
+                    {index + 1}. {answer.problem.prompt}
                   </p>
-                ))}
-              </div>
-              {answer.problem.explanation && (
-                <p className="text-muted-foreground text-xs">
-                  {answer.problem.explanation}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+                  {isEssay ? (
+                    <Badge variant="outline">서술형</Badge>
+                  ) : (
+                    <Badge variant={answer.isCorrect ? "default" : "destructive"}>
+                      {answer.isCorrect ? "정답" : "오답"}
+                    </Badge>
+                  )}
+                </div>
+
+                {isEssay ? (
+                  <div className="flex flex-col gap-2 text-sm">
+                    {answer.answerText && (
+                      <div className="bg-muted rounded-md p-2">
+                        <p className="text-muted-foreground text-xs">내 답안</p>
+                        <p className="whitespace-pre-wrap">{answer.answerText}</p>
+                      </div>
+                    )}
+                    {answer.problem.answerText && (
+                      <div className="bg-primary/5 rounded-md p-2">
+                        <p className="text-muted-foreground text-xs">모범 답안</p>
+                        <p className="whitespace-pre-wrap">{answer.problem.answerText}</p>
+                      </div>
+                    )}
+                    {answer.problem.scoringCriteria && (
+                      <div className="bg-muted rounded-md p-2">
+                        <p className="text-muted-foreground text-xs">핵심 채점 요소</p>
+                        <p className="text-muted-foreground whitespace-pre-wrap">
+                          {answer.problem.scoringCriteria}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1 text-sm">
+                    {answer.problem.choices.map((choice) => (
+                      <p
+                        key={choice.id}
+                        className={cn(
+                          choice.isCorrect && "text-primary font-medium",
+                          choice.id === answer.selectedChoiceId &&
+                            !choice.isCorrect &&
+                            "text-destructive",
+                        )}
+                      >
+                        {choice.label}. {choice.content}
+                        {choice.id === answer.selectedChoiceId && " (내 답)"}
+                      </p>
+                    ))}
+                  </div>
+                )}
+
+                {answer.problem.explanation && (
+                  <p className="text-muted-foreground text-xs">
+                    {answer.problem.explanation}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

@@ -8,7 +8,7 @@ import { requireCurrentUser } from "@/lib/session";
 // generateMockExam's AI call regularly runs past Vercel's default
 // serverless timeout — Server Actions inherit the invoking route's
 // maxDuration, so it has to be set here rather than in the action file.
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export default async function MockExamPage() {
   const user = await requireCurrentUser();

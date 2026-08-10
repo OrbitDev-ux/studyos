@@ -5,6 +5,7 @@ import { generateStructured } from "@/features/ai/client";
 import { getActivePromptContent } from "@/features/ai/prompt-service";
 import { PROMPT_TYPES } from "@/features/ai/prompt-registry";
 import { buildMockExamGenerationPrompt } from "@/features/ai/prompts/mock-exam-generation";
+import { buildProblemGenerationPrompt } from "@/features/ai/prompts/problem-generation";
 import {
   mockExamGenerationFormSchema,
   submitExamSchema,
@@ -43,11 +44,13 @@ export async function generateMockExam(
     count: parsed.count,
   });
 
-  // AI cost protection — same per-user quota gate as problem generation.
+  // AI cost protection — same per-user quota gate as problem generation. Both
+  // the MC and (optional) 서술형 calls run inside ONE reservation.
   const ip = getClientIp(await headers());
-  let problems;
+  let mcProblems;
+  let essayProblems;
   try {
-    ({ problems } = await withGenerationQuota(
+    ({ mcProblems, essayProblems } = await withGenerationQuota(
       {
         userId: user.id,
         timezone: user.timezone,
@@ -57,12 +60,28 @@ export async function generateMockExam(
         state: accessStateFor(user),
         trialStartedAt: trialStartedDate(user),
       },
-      async () =>
-        generateStructured({
+      async () => {
+        const mc = await generateStructured({
           system: await getActivePromptContent(PROMPT_TYPES.MOCK_EXAM_GENERATION),
           prompt,
           schema: aiProblemSetSchema,
-        }),
+        });
+        const essay =
+          parsed.essayCount > 0
+            ? await generateStructured({
+                system: await getActivePromptContent(PROMPT_TYPES.PROBLEM_GENERATION),
+                prompt: buildProblemGenerationPrompt({
+                  subjectName: subject.name,
+                  difficulty: "MEDIUM",
+                  type: "ESSAY",
+                  count: parsed.essayCount,
+                }),
+                schema: aiProblemSetSchema,
+                timeoutMs: 40_000,
+              })
+            : { problems: [] };
+        return { mcProblems: mc.problems, essayProblems: essay.problems };
+      },
     ));
   } catch (err) {
     const payload = generationErrorPayload(err);
@@ -82,9 +101,10 @@ export async function generateMockExam(
     });
 
     let order = 0;
-    for (const item of problems) {
-      // Mock exams are OMR-graded (multiple choice only) — skip any item the
-      // AI returned without choices instead of creating an unanswerable question.
+    // Auto-graded MC questions first (OMR).
+    for (const item of mcProblems) {
+      // Skip any item the AI returned without choices instead of creating an
+      // unanswerable OMR question.
       if (!item.choices || item.choices.length === 0) continue;
 
       const problem = await tx.problem.create({
@@ -102,6 +122,26 @@ export async function generateMockExam(
               isCorrect: choice.isCorrect,
             })),
           },
+        },
+      });
+      await tx.examQuestion.create({
+        data: { examId: exam.id, problemId: problem.id, order },
+      });
+      order += 1;
+    }
+
+    // 서술형 questions last — self-reviewed, excluded from the auto-graded score.
+    for (const item of essayProblems) {
+      const problem = await tx.problem.create({
+        data: {
+          userId: user.id,
+          subjectId: subject.id,
+          type: "ESSAY",
+          difficulty: "MEDIUM",
+          prompt: item.prompt,
+          explanation: item.explanation,
+          answerText: item.answerText || null,
+          scoringCriteria: item.scoringCriteria || null,
         },
       });
       await tx.examQuestion.create({
@@ -131,13 +171,17 @@ export async function submitExam(examId: string, input: SubmitExamInput) {
     parsed.answers.map((answer) => [answer.problemId, answer]),
   );
 
+  // Only auto-gradable questions (MC / short-answer) count toward the score;
+  // 서술형 is self-reviewed and excluded from scoring.
+  const gradedCount = exam.questions.filter((q) => q.problem.type !== "ESSAY").length;
+
   const result = await prisma.$transaction(async (tx) => {
     const examResult = await tx.examResult.create({
       data: {
         examId: exam.id,
         userId: user.id,
         score: 0,
-        totalCount: exam.questions.length,
+        totalCount: gradedCount,
         correctCount: 0,
         durationSec: parsed.durationSec,
       },
@@ -147,6 +191,23 @@ export async function submitExam(examId: string, input: SubmitExamInput) {
     for (const question of exam.questions) {
       const problem = question.problem;
       const answer = answerByProblemId.get(problem.id);
+
+      // 서술형: store the answer for self-review only — never graded, so it does
+      // not touch the score, the ProblemAttempt accuracy log, or the review
+      // schedule (which would otherwise be corrupted by an ungraded item).
+      if (problem.type === "ESSAY") {
+        await tx.examAnswer.create({
+          data: {
+            examResultId: examResult.id,
+            problemId: problem.id,
+            selectedChoiceId: null,
+            answerText: answer?.text ?? null,
+            isCorrect: false,
+          },
+        });
+        continue;
+      }
+
       const selectedChoice =
         problem.type === "MULTIPLE_CHOICE"
           ? problem.choices.find((choice) => choice.id === answer?.choiceId)
@@ -216,8 +277,8 @@ export async function submitExam(examId: string, input: SubmitExamInput) {
       }
     }
 
-    const totalCount = exam.questions.length;
-    const score = totalCount === 0 ? 0 : Math.round((correctCount / totalCount) * 100);
+    // Score over the auto-graded questions only (essays excluded).
+    const score = gradedCount === 0 ? 0 : Math.round((correctCount / gradedCount) * 100);
 
     return tx.examResult.update({
       where: { id: examResult.id },

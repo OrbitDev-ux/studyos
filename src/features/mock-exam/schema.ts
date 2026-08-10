@@ -8,6 +8,8 @@ export const mockExamGenerationFormSchema = z.object({
     .int()
     .min(5, "5문항 이상 입력해주세요")
     .max(50, "최대 50문항까지 가능합니다"),
+  /** Optional 서술형 문항 수 — auto-graded MC + self-reviewed essays. */
+  essayCount: z.coerce.number().int().min(0).max(10, "서술형은 최대 10문항").default(0),
   timeLimitMinutes: z.coerce
     .number()
     .int()

@@ -59,6 +59,7 @@ export function ExamSetupForm({
       subjectId: subjects[0]?.id ?? "",
       style: "",
       count: 10,
+      essayCount: 0,
       timeLimitMinutes: 30,
     },
   });
@@ -138,7 +139,7 @@ export function ExamSetupForm({
 
           <div className="flex gap-3">
             <div className="flex flex-1 flex-col gap-1.5">
-              <Label htmlFor="exam-count">문항 수</Label>
+              <Label htmlFor="exam-count">객관식 문항</Label>
               <Input
                 id="exam-count"
                 type="number"
@@ -150,6 +151,22 @@ export function ExamSetupForm({
                 <p className="text-destructive text-xs">{errors.count.message}</p>
               )}
             </div>
+            <div className="flex flex-1 flex-col gap-1.5">
+              <Label htmlFor="exam-essay">서술형 문항</Label>
+              <Input
+                id="exam-essay"
+                type="number"
+                min={0}
+                max={10}
+                {...register("essayCount")}
+              />
+              {errors.essayCount && (
+                <p className="text-destructive text-xs">{errors.essayCount.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex gap-3">
             <div className="flex flex-1 flex-col gap-1.5">
               <Label htmlFor="exam-time">제한 시간(분)</Label>
               <Input
