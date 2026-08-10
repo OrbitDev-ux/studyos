@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useRef, useState, useTransition } from "react";
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +23,12 @@ export function TakeExamView({
   const [startedAt] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, startTransition] = useTransition();
+  // Guards against a double submission: the manual 제출 button and the timer's
+  // onExpire both call handleSubmit, and they can race (click at 0:01 + expiry).
+  // Without this, two submitExam calls create duplicate ExamResult + duplicate
+  // ProblemAttempt rows (inflating learning stats). Reset on failure so the
+  // keep-your-answers retry path still works.
+  const submittedRef = useRef(false);
 
   const mcQuestions = useMemo(
     () => exam.questions.filter((q) => q.problem.type === "MULTIPLE_CHOICE"),
@@ -34,6 +40,10 @@ export function TakeExamView({
   );
 
   const handleSubmit = useCallback(() => {
+    // Idempotency guard — see submittedRef above. A second call (double-click or
+    // click racing the timer expiry) is ignored while one submission is live.
+    if (submittedRef.current) return;
+    submittedRef.current = true;
     setError(null);
     startTransition(async () => {
       try {
@@ -54,7 +64,9 @@ export function TakeExamView({
         router.push(`/mock-exam/${exam.id}/result?resultId=${result.examResultId}`);
       } catch {
         // Keep the in-progress answers so a network blip doesn't lose the
-        // exam attempt — the user can just press submit again.
+        // exam attempt — the user can just press submit again. Release the guard
+        // so that retry is allowed (a successful submit navigates away instead).
+        submittedRef.current = false;
         setError("제출에 실패했습니다. 답안은 유지되어 있으니 다시 제출해주세요.");
       }
     });

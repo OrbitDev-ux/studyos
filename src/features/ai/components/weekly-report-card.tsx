@@ -15,6 +15,10 @@ export function WeeklyReportCard({ initialContent }: { initialContent: string | 
     startTransition(async () => {
       try {
         const result = await generateWeeklyReport();
+        if ("error" in result) {
+          setError(result.error);
+          return;
+        }
         setContent(result.content);
       } catch {
         setError("리포트 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");

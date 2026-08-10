@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import type { Difficulty, QuestionType } from "@/generated/prisma/client";
-import { generateStructured } from "@/features/ai/client";
+import { generateStructured, aiErrorResult } from "@/features/ai/client";
 import { getActivePromptContent } from "@/features/ai/prompt-service";
 import { PROMPT_TYPES } from "@/features/ai/prompt-registry";
 import { buildProblemGenerationPrompt } from "@/features/ai/prompts/problem-generation";
@@ -138,6 +138,10 @@ type ItemResult = { ok?: true } & Partial<GenerationErrorPayload>;
 function aiCatch(err: unknown): ItemResult {
   const payload = generationErrorPayload(err);
   if (payload) return payload;
+  // Surface the accurate AI failure message (e.g. a transient rate limit) rather
+  // than a generic one — never the provider's raw text.
+  const aiPayload = aiErrorResult(err);
+  if (aiPayload) return { error: aiPayload.error };
   console.error("study-book item action failed:", err);
   return { error: "AI 요청에 실패했어요. 잠시 후 다시 시도해주세요." };
 }

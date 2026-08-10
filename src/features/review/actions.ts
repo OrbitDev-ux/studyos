@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { buildAnswerExplanationPrompt } from "@/features/ai/prompts/answer-explanation";
 import { buildWrongAnswerDnaPrompt } from "@/features/ai/prompts/wrong-answer-dna";
-import { generateStructured } from "@/features/ai/client";
+import { generateStructured, aiErrorResult } from "@/features/ai/client";
 import { getActivePromptContent } from "@/features/ai/prompt-service";
 import { PROMPT_TYPES } from "@/features/ai/prompt-registry";
 import { wrongAnswerDnaSchema, type WrongAnswerDna } from "@/features/review/dna";
@@ -15,28 +15,37 @@ import { requireCurrentUser } from "@/lib/session";
 
 export async function requestAiExplanation(
   wrongAnswerId: string,
-): Promise<{ explanation: string }> {
+): Promise<{ explanation: string } | { error: string }> {
   const user = await requireCurrentUser();
   const wrongAnswer = await prisma.wrongAnswer.findFirst({
     where: { id: wrongAnswerId, userId: user.id },
     include: { problem: { include: { choices: true } } },
   });
-  if (!wrongAnswer) throw new Error("오답 기록을 찾을 수 없습니다.");
+  if (!wrongAnswer) return { error: "오답 기록을 찾을 수 없습니다." };
 
   const correctAnswer =
     wrongAnswer.problem.type === "MULTIPLE_CHOICE"
       ? (wrongAnswer.problem.choices.find((choice) => choice.isCorrect)?.content ?? "")
       : (wrongAnswer.problem.answerText ?? "");
 
-  const { explanation } = await generateStructured({
-    system: await getActivePromptContent(PROMPT_TYPES.ANSWER_EXPLANATION),
-    prompt: buildAnswerExplanationPrompt({
-      prompt: wrongAnswer.problem.prompt,
-      correctAnswer,
-    }),
-    schema: aiExplanationSchema,
-    useThinking: true,
-  });
+  let explanation: string;
+  try {
+    ({ explanation } = await generateStructured({
+      system: await getActivePromptContent(PROMPT_TYPES.ANSWER_EXPLANATION),
+      prompt: buildAnswerExplanationPrompt({
+        prompt: wrongAnswer.problem.prompt,
+        correctAnswer,
+      }),
+      schema: aiExplanationSchema,
+      useThinking: true,
+    }));
+  } catch (err) {
+    // Return an accurate, client-safe message (thrown Server Action errors are
+    // masked in production) — most commonly a transient Gemini 429 rate limit.
+    const payload = aiErrorResult(err);
+    if (payload) return { error: payload.error };
+    throw err;
+  }
 
   await prisma.wrongAnswer.update({
     where: { id: wrongAnswer.id },
@@ -56,20 +65,20 @@ export async function requestAiExplanation(
  */
 export async function analyzeWrongAnswerDna(
   wrongAnswerId: string,
-): Promise<WrongAnswerDna> {
+): Promise<WrongAnswerDna | { error: string }> {
   const user = await requireCurrentUser();
 
   // Plan gate (server-authoritative backstop; the UI also hides this for
   // non-entitled plans). 오답 DNA is a PRO+ feature.
   if (!canUseFeature(accessStateFor(user), "WRONG_ANSWER_DNA")) {
-    throw new Error("오답 DNA는 PRO 플랜에서 사용할 수 있어요.");
+    return { error: "오답 DNA는 PRO 플랜에서 사용할 수 있어요." };
   }
 
   const wrongAnswer = await prisma.wrongAnswer.findFirst({
     where: { id: wrongAnswerId, userId: user.id },
     include: { problem: { include: { choices: true, subject: true } } },
   });
-  if (!wrongAnswer) throw new Error("오답 기록을 찾을 수 없습니다.");
+  if (!wrongAnswer) return { error: "오답 기록을 찾을 수 없습니다." };
 
   // Already analyzed → return the stored diagnosis instead of paying for a
   // second AI call.
@@ -94,18 +103,25 @@ export async function analyzeWrongAnswerDna(
     select: { answerText: true },
   });
 
-  const dna = await generateStructured({
-    system: await getActivePromptContent(PROMPT_TYPES.WRONG_ANSWER_DNA),
-    prompt: buildWrongAnswerDnaPrompt({
-      prompt: problem.prompt,
-      userAnswer: lastWrongAttempt?.answerText ?? null,
-      correctAnswer,
-      subject: problem.subject?.name ?? "미지정",
-      unit: problem.unit,
-    }),
-    schema: wrongAnswerDnaSchema,
-    useThinking: true,
-  });
+  let dna: WrongAnswerDna;
+  try {
+    dna = await generateStructured({
+      system: await getActivePromptContent(PROMPT_TYPES.WRONG_ANSWER_DNA),
+      prompt: buildWrongAnswerDnaPrompt({
+        prompt: problem.prompt,
+        userAnswer: lastWrongAttempt?.answerText ?? null,
+        correctAnswer,
+        subject: problem.subject?.name ?? "미지정",
+        unit: problem.unit,
+      }),
+      schema: wrongAnswerDnaSchema,
+      useThinking: true,
+    });
+  } catch (err) {
+    const payload = aiErrorResult(err);
+    if (payload) return { error: payload.error };
+    throw err;
+  }
 
   await prisma.wrongAnswer.update({
     where: { id: wrongAnswer.id },

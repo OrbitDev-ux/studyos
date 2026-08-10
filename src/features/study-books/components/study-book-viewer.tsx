@@ -418,7 +418,10 @@ function ChapterItem({
             {menu}
           </div>
           <p className="text-sm font-medium whitespace-pre-wrap">{item.problem!.prompt}</p>
-          <SolveProblemPanel problem={item.problem!} />
+          {/* Key by problem.id: 난이도 변경/재생성으로 이 아이템의 problemId가
+              바뀌면 패널을 remount해 이전 문제의 풀이/정답 상태가 새 문제에
+              남지 않도록 한다(item.id는 그대로라 key만으로는 리셋되지 않음). */}
+          <SolveProblemPanel key={item.problem!.id} problem={item.problem!} />
           {err && <p className="text-destructive text-xs">{err}</p>}
         </CardContent>
       </Card>

@@ -75,6 +75,10 @@ export function WrongAnswerActions({
     startExplaining(async () => {
       try {
         const res = await requestAiExplanation(wrongAnswer.id);
+        if ("error" in res) {
+          setError(res.error);
+          return;
+        }
         setExplanation(res.explanation);
       } catch (err) {
         unstable_rethrow(err);
@@ -87,7 +91,12 @@ export function WrongAnswerActions({
     setError(null);
     startAnalyzing(async () => {
       try {
-        setDna(await analyzeWrongAnswerDna(wrongAnswer.id));
+        const res = await analyzeWrongAnswerDna(wrongAnswer.id);
+        if ("error" in res) {
+          setError(res.error);
+          return;
+        }
+        setDna(res);
       } catch (err) {
         unstable_rethrow(err);
         setError("오답 원인 분석에 실패했습니다. 잠시 후 다시 시도해주세요.");
