@@ -5,14 +5,17 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { submitProblemAnswer } from "@/features/problems/actions";
-import type { getProblems } from "@/features/problems/queries";
 import { cn } from "@/lib/utils";
 
-export function SolveProblemPanel({
-  problem,
-}: {
-  problem: Awaited<ReturnType<typeof getProblems>>[number];
-}) {
+/** The minimal problem shape this panel needs — structural so it can be reused
+ * by any surface (problems list, study-book viewer) without a shared row type. */
+export type SolvableProblem = {
+  id: string;
+  type: "MULTIPLE_CHOICE" | "SHORT_ANSWER";
+  choices: { id: string; label: string; content: string; isCorrect: boolean }[];
+};
+
+export function SolveProblemPanel({ problem }: { problem: SolvableProblem }) {
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [answerText, setAnswerText] = useState("");
   const [result, setResult] = useState<{

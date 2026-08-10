@@ -7,6 +7,7 @@ import { getSocialNotificationCount } from "@/features/social/queries";
 import { getCurrentAdmin } from "@/lib/admin/context";
 import { getMaintenance } from "@/lib/maintenance";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -26,10 +27,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Friend requests + unread DMs → the "친구" sidebar badge.
   const socialCount = await getSocialNotificationCount(session.user.id);
 
+  // Show the upgrade CTA to everyone except PREMIUM. Cheap PK lookup.
+  const planRow = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { plan: true },
+  });
+  const showUpgrade = planRow?.plan !== "PREMIUM";
+
   return (
     <SidebarProvider>
       <PresenceHeartbeat />
-      <AppSidebar user={session.user} socialCount={socialCount} />
+      <AppSidebar user={session.user} socialCount={socialCount} showUpgrade={showUpgrade} />
       <SidebarInset>
         <Header />
         <main className="flex flex-1 flex-col gap-4 p-4 md:p-6">{children}</main>

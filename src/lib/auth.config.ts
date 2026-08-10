@@ -8,6 +8,7 @@ const PROTECTED_PATHS = [
   "/subjects",
   "/stats",
   "/problems",
+  "/study-books",
   "/review",
   "/mock-exam",
   "/social",

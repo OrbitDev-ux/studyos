@@ -33,7 +33,7 @@ import {
  * short (never wraps the Gemini call); it works behind PgBouncer txn pooling.
  */
 
-export type GenerationKind = "problem" | "mock-exam";
+export type GenerationKind = "problem" | "mock-exam" | "study-book";
 
 /** Transient guards (independent of plan) — abuse protection for every plan. */
 const ABUSE_PER_MINUTE = 6;
@@ -68,7 +68,14 @@ export class FeatureLimitError extends Error {
 }
 
 export function kindToFeature(kind: GenerationKind): MeteredFeature {
-  return kind === "problem" ? "AI_PROBLEM_GENERATION" : "MOCK_EXAM_GENERATION";
+  switch (kind) {
+    case "problem":
+      return "AI_PROBLEM_GENERATION";
+    case "mock-exam":
+      return "MOCK_EXAM_GENERATION";
+    case "study-book":
+      return "STUDY_BOOK_GENERATION";
+  }
 }
 
 /** Structured, client-safe payload for a generation rejection (or null if the

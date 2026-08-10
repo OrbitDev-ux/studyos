@@ -4,6 +4,7 @@ import { PROBLEM_GENERATION_SYSTEM_PROMPT } from "@/features/ai/prompts/problem-
 import { WEEKLY_REPORT_SYSTEM_PROMPT } from "@/features/ai/prompts/report-generation";
 import { WEAKNESS_ANALYSIS_SYSTEM_PROMPT } from "@/features/ai/prompts/weakness-analysis";
 import { WRONG_ANSWER_DNA_SYSTEM_PROMPT } from "@/features/ai/prompts/wrong-answer-dna";
+import { STUDY_BOOK_GENERATION_SYSTEM_PROMPT } from "@/features/ai/prompts/study-book-generation";
 
 // The single source of truth for which prompts exist. Each entry defines a
 // built-in prompt type, its human labels, and the default content used to
@@ -18,6 +19,7 @@ export const PROMPT_TYPES = {
   WEAKNESS_ANALYSIS: "weakness_analysis",
   WEEKLY_REPORT: "weekly_report",
   WRONG_ANSWER_DNA: "wrong_answer_dna",
+  STUDY_BOOK_GENERATION: "study_book_generation",
 } as const;
 
 export type PromptType = (typeof PROMPT_TYPES)[keyof typeof PROMPT_TYPES];
@@ -65,6 +67,13 @@ export const PROMPT_REGISTRY: PromptDefinition[] = [
     title: "주간 리포트",
     description: "학습 데이터로 주간 리포트를 생성하는 시스템 프롬프트.",
     defaultContent: WEEKLY_REPORT_SYSTEM_PROMPT,
+  },
+  {
+    type: PROMPT_TYPES.STUDY_BOOK_GENERATION,
+    title: "나만의 교재 생성",
+    description:
+      "개인 지침·학습 데이터를 반영해 맞춤형 교재(개념·예제·문제·해설)를 생성하는 시스템 프롬프트.",
+    defaultContent: STUDY_BOOK_GENERATION_SYSTEM_PROMPT,
   },
 ];
 

@@ -27,6 +27,16 @@ describe("entitlements — limits", () => {
     expect(getUsageWindow("PREMIUM", "MOCK_EXAM_GENERATION")).toBe("unlimited");
     expect(getUsageWindow("TRIAL", "AI_PROBLEM_GENERATION")).toBe("day");
   });
+
+  it("study book limits + window per state", () => {
+    expect(getFeatureLimit("TRIAL", "STUDY_BOOK_GENERATION")).toBe(1);
+    expect(getFeatureLimit("PRO", "STUDY_BOOK_GENERATION")).toBe(5);
+    expect(getFeatureLimit("PREMIUM", "STUDY_BOOK_GENERATION")).toBeNull();
+    expect(getFeatureLimit("TRIAL_EXPIRED", "STUDY_BOOK_GENERATION")).toBe(0);
+    expect(getUsageWindow("TRIAL", "STUDY_BOOK_GENERATION")).toBe("trial");
+    expect(getUsageWindow("PRO", "STUDY_BOOK_GENERATION")).toBe("month");
+    expect(getUsageWindow("PREMIUM", "STUDY_BOOK_GENERATION")).toBe("unlimited");
+  });
 });
 
 describe("entitlements — access", () => {

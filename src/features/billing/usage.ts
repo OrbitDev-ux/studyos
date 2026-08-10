@@ -31,6 +31,7 @@ export type PlanSummary = {
   features: {
     aiProblemGeneration: MeteredUsage;
     mockExamGeneration: MeteredUsage;
+    studyBookGeneration: MeteredUsage;
     advancedAnalytics: boolean;
     weaknessAnalysis: boolean;
     wrongAnswerDna: boolean;
@@ -65,10 +66,12 @@ export async function getPlanSummary(userId: string): Promise<PlanSummary> {
 
   const problemStart = usageWindowStart(state, "problem", winCtx, now);
   const mockStart = usageWindowStart(state, "mock-exam", winCtx, now);
+  const bookStart = usageWindowStart(state, "study-book", winCtx, now);
 
-  const [problemUsed, mockUsed] = await Promise.all([
+  const [problemUsed, mockUsed, bookUsed] = await Promise.all([
     problemStart ? countGenerationUsage(userId, "problem", problemStart) : Promise.resolve(0),
     mockStart ? countGenerationUsage(userId, "mock-exam", mockStart) : Promise.resolve(0),
+    bookStart ? countGenerationUsage(userId, "study-book", bookStart) : Promise.resolve(0),
   ]);
 
   return {
@@ -85,6 +88,10 @@ export async function getPlanSummary(userId: string): Promise<PlanSummary> {
       mockExamGeneration: {
         limit: getFeatureLimit(state, "MOCK_EXAM_GENERATION"),
         used: mockUsed,
+      },
+      studyBookGeneration: {
+        limit: getFeatureLimit(state, "STUDY_BOOK_GENERATION"),
+        used: bookUsed,
       },
       advancedAnalytics: canUseFeature(state, "ADVANCED_ANALYTICS"),
       weaknessAnalysis: canUseFeature(state, "WEAKNESS_ANALYSIS"),

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Sparkles } from "lucide-react";
 import type { Session } from "next-auth";
 import { UserMenu } from "@/components/layout/user-menu";
 import {
@@ -22,9 +23,12 @@ import { siteConfig } from "@/config/site";
 export function AppSidebar({
   user,
   socialCount = 0,
+  showUpgrade = false,
 }: {
   user: Session["user"];
   socialCount?: number;
+  /** Show the "업그레이드하기" CTA (hidden for PREMIUM users). */
+  showUpgrade?: boolean;
 }) {
   const pathname = usePathname();
 
@@ -69,6 +73,23 @@ export function AppSidebar({
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
+        {showUpgrade && (
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname.startsWith("/pricing")}
+                tooltip="업그레이드하기"
+                className="text-primary"
+              >
+                <Link href="/pricing">
+                  <Sparkles />
+                  <span>업그레이드하기</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        )}
         <UserMenu user={user} />
       </SidebarFooter>
     </Sidebar>

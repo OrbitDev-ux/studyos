@@ -18,6 +18,7 @@ import type { AccessState } from "@/features/billing/subscription";
 export const FEATURES = {
   AI_PROBLEM_GENERATION: "AI_PROBLEM_GENERATION",
   MOCK_EXAM_GENERATION: "MOCK_EXAM_GENERATION",
+  STUDY_BOOK_GENERATION: "STUDY_BOOK_GENERATION",
   BASIC_ANALYTICS: "BASIC_ANALYTICS",
   ADVANCED_ANALYTICS: "ADVANCED_ANALYTICS",
   WEAKNESS_ANALYSIS: "WEAKNESS_ANALYSIS",
@@ -35,6 +36,7 @@ export type FeatureKey = (typeof FEATURES)[keyof typeof FEATURES];
 export const METERED_FEATURES = [
   "AI_PROBLEM_GENERATION",
   "MOCK_EXAM_GENERATION",
+  "STUDY_BOOK_GENERATION",
 ] as const;
 export type MeteredFeature = (typeof METERED_FEATURES)[number];
 
@@ -70,7 +72,7 @@ type Entitlement = {
 
 export const ACCESS_ENTITLEMENTS: Record<AccessState, Entitlement> = {
   TRIAL: {
-    limits: { AI_PROBLEM_GENERATION: 10, MOCK_EXAM_GENERATION: 2 },
+    limits: { AI_PROBLEM_GENERATION: 10, MOCK_EXAM_GENERATION: 2, STUDY_BOOK_GENERATION: 1 },
     basicAnalytics: true,
     advancedAnalytics: false,
     weakness: "basic",
@@ -84,7 +86,7 @@ export const ACCESS_ENTITLEMENTS: Record<AccessState, Entitlement> = {
   TRIAL_EXPIRED: {
     // Generation blocked; existing data stays viewable (those reads aren't gated
     // here). Ads OFF — the upgrade prompt replaces them.
-    limits: { AI_PROBLEM_GENERATION: 0, MOCK_EXAM_GENERATION: 0 },
+    limits: { AI_PROBLEM_GENERATION: 0, MOCK_EXAM_GENERATION: 0, STUDY_BOOK_GENERATION: 0 },
     basicAnalytics: true,
     advancedAnalytics: false,
     weakness: "basic",
@@ -96,7 +98,7 @@ export const ACCESS_ENTITLEMENTS: Record<AccessState, Entitlement> = {
     ads: false,
   },
   PRO: {
-    limits: { AI_PROBLEM_GENERATION: 50, MOCK_EXAM_GENERATION: 10 },
+    limits: { AI_PROBLEM_GENERATION: 50, MOCK_EXAM_GENERATION: 10, STUDY_BOOK_GENERATION: 5 },
     basicAnalytics: true,
     advancedAnalytics: true,
     weakness: "detailed",
@@ -108,7 +110,7 @@ export const ACCESS_ENTITLEMENTS: Record<AccessState, Entitlement> = {
     ads: false,
   },
   PREMIUM: {
-    limits: { AI_PROBLEM_GENERATION: null, MOCK_EXAM_GENERATION: null },
+    limits: { AI_PROBLEM_GENERATION: null, MOCK_EXAM_GENERATION: null, STUDY_BOOK_GENERATION: null },
     basicAnalytics: true,
     advancedAnalytics: true,
     weakness: "advanced",
@@ -132,8 +134,9 @@ export function isUnlimited(limit: Limit): boolean {
 
 /** Which window a metered feature's limit is counted over, for this state. */
 export function getUsageWindow(state: AccessState, feature: MeteredFeature): UsageWindow {
+  // Daily quota for problem generation; MOCK_EXAM + STUDY_BOOK reset per
+  // trial (during trial), per month on PRO, and are uncapped on PREMIUM.
   if (feature === "AI_PROBLEM_GENERATION") return "day";
-  // MOCK_EXAM_GENERATION
   switch (state) {
     case "PRO":
       return "month";
