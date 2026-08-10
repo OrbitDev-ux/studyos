@@ -43,9 +43,12 @@ export function PlanOverrideForm({ view }: { view: OverrideView }) {
     return (
       <div className="rounded-lg border p-4">
         <p className="text-muted-foreground text-sm">
-          관리자 이메일(<span className="font-mono">{view.adminEmail}</span>)과 동일한
-          StudyOS 계정이 없습니다. 같은 이메일로 로그인/가입하면 본인 계정의 플랜을
-          테스트용으로 오버라이드할 수 있어요.
+          StudyOS 앱에 로그인되어 있지 않습니다. 오버라이드는 <b>현재 앱에 로그인한
+          계정</b>에 적용되므로, 테스트할 계정으로{" "}
+          <a href="/login" className="underline" target="_blank" rel="noreferrer">
+            앱에 로그인
+          </a>
+          한 뒤 이 페이지를 새로고침하세요.
         </p>
       </div>
     );
@@ -88,6 +91,10 @@ export function PlanOverrideForm({ view }: { view: OverrideView }) {
 
   return (
     <div className="flex flex-col gap-5">
+      <p className="text-muted-foreground text-xs">
+        적용 대상(현재 앱 로그인 계정):{" "}
+        <span className="font-mono">{view.userEmail}</span>
+      </p>
       {/* Real vs override vs effective — clearly separated */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StateBox label="실제 구독 (변경 안 됨)">

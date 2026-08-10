@@ -12,6 +12,7 @@ import {
 } from "@/features/billing/subscription";
 import { requireAdmin } from "@/lib/admin/context";
 import { ADMIN_ACTIONS, logAdminActivity } from "@/lib/admin/activity";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -24,8 +25,10 @@ import { prisma } from "@/lib/prisma";
  *
  * SECURITY:
  *  - requireAdmin() gates every action server-side (admin session required).
- *  - The target user is ALWAYS resolved from the admin's own email — there is no
- *    userId parameter, so a request can never target another user (no IDOR).
+ *  - The target is ALWAYS the CURRENT StudyOS app-session user (auth()), resolved
+ *    server-side — there is no userId parameter, so a request can never target
+ *    another user (no IDOR). This applies the override to exactly the account the
+ *    admin is browsing StudyOS with (not an email-matched guess).
  *  - Real billing columns (plan/subscriptionStatus/trial*) are never written.
  */
 
@@ -37,6 +40,7 @@ export type OverrideView =
   | {
       hasUser: true;
       adminEmail: string;
+      userEmail: string;
       realPlan: Plan;
       realAccessState: AccessState;
       realStatus: string;
@@ -46,11 +50,15 @@ export type OverrideView =
       effectiveAccessState: AccessState;
     };
 
-/** The admin's OWN StudyOS user (matched by email, case-insensitive). Null when
- * the admin has no StudyOS account under the same email. */
-async function findOwnUser(email: string) {
-  return prisma.user.findFirst({
-    where: { email: { equals: email, mode: "insensitive" } },
+/** The CURRENT StudyOS app-session user (Auth.js). Null when the admin is not
+ * also logged into the StudyOS app in this browser. Requires an admin session
+ * first (requireAdmin at the call site) — this only resolves WHICH user. */
+async function findAppSessionUser() {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) return null;
+  return prisma.user.findUnique({
+    where: { id: userId },
     select: {
       id: true,
       email: true,
@@ -66,7 +74,7 @@ async function findOwnUser(email: string) {
 
 export async function getMyOverrideState(): Promise<OverrideView> {
   const admin = await requireAdmin();
-  const user = await findOwnUser(admin.email);
+  const user = await findAppSessionUser();
   if (!user) return { hasUser: false, adminEmail: admin.email };
 
   const realInput = {
@@ -83,6 +91,7 @@ export async function getMyOverrideState(): Promise<OverrideView> {
   return {
     hasUser: true,
     adminEmail: admin.email,
+    userEmail: user.email,
     realPlan: user.plan,
     realAccessState: resolveAccessState(realInput),
     realStatus: effectiveStatus(realInput),
@@ -102,11 +111,11 @@ export async function savePlanOverride(input: {
   const parsed = saveSchema.safeParse(input);
   if (!parsed.success) return { error: "올바른 플랜을 선택해주세요." };
 
-  const user = await findOwnUser(admin.email);
+  const user = await findAppSessionUser();
   if (!user) {
     return {
       error:
-        "관리자 이메일과 동일한 StudyOS 계정이 없어요. 같은 이메일로 로그인/가입 후 사용하세요.",
+        "StudyOS 앱에 로그인되어 있지 않아요. 오버라이드할 계정으로 앱에 로그인한 뒤 다시 시도하세요.",
     };
   }
 
@@ -147,8 +156,8 @@ export async function disablePlanOverride(): Promise<
   { ok: true } | { error: string }
 > {
   const admin = await requireAdmin();
-  const user = await findOwnUser(admin.email);
-  if (!user) return { error: "StudyOS 계정을 찾을 수 없어요." };
+  const user = await findAppSessionUser();
+  if (!user) return { error: "StudyOS 앱에 로그인되어 있지 않아요." };
 
   const before = {
     enabled: user.adminPlanOverrideEnabled,
