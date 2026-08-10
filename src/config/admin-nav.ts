@@ -1,6 +1,7 @@
 import {
   Bell,
   Bot,
+  CreditCard,
   FileCode,
   Scale,
   LayoutDashboard,
@@ -50,4 +51,6 @@ export const adminNavItems: AdminNavItem[] = [
   { title: "시스템", href: "/admin/system", icon: Server, capability: "manageSystem" },
   // No capability → visible to all admins; the page is read-only (view versions).
   { title: "법적 문서", href: "/admin/legal", icon: Scale },
+  // Self-only plan test override — every admin may test their own account.
+  { title: "플랜 테스트", href: "/admin/entitlement", icon: CreditCard },
 ];

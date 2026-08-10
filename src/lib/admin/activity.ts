@@ -30,6 +30,8 @@ export const ADMIN_ACTIONS = {
   PROMPT_TOGGLE: "prompt_toggle",
   PROMPT_DELETE: "prompt_delete",
   SETTING_UPDATE: "setting_update",
+  PLAN_OVERRIDE_SET: "plan_override_set",
+  PLAN_OVERRIDE_DISABLE: "plan_override_disable",
   ERROR: "error",
 } as const;
 
@@ -61,6 +63,8 @@ export const ACTION_LABELS: Record<string, string> = {
   prompt_toggle: "프롬프트 활성화 전환",
   prompt_delete: "프롬프트 삭제",
   setting_update: "설정 변경",
+  plan_override_set: "플랜 오버라이드 설정",
+  plan_override_disable: "플랜 오버라이드 해제",
   error: "오류",
 };
 

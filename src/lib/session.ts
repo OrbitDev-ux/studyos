@@ -16,6 +16,10 @@ export type CurrentUser = {
   /** ISO strings from Supabase; null only for rows created before the backfill. */
   trialStartedAt: string | null;
   trialEndsAt: string | null;
+  /** Admin-only TEST plan override (features/billing/admin-override). Flows into
+   * accessStateFor so every entitlement check reflects it. Never affects billing. */
+  adminPlanOverride: Plan | null;
+  adminPlanOverrideEnabled: boolean;
 };
 
 export async function requireCurrentUser(): Promise<CurrentUser> {
@@ -28,7 +32,7 @@ export async function requireCurrentUser(): Promise<CurrentUser> {
   const { data, error } = await supabase
     .from("User")
     .select(
-      "id, name, email, image, timezone, school, plan, subscriptionStatus, trialStartedAt, trialEndsAt, bannedAt",
+      "id, name, email, image, timezone, school, plan, subscriptionStatus, trialStartedAt, trialEndsAt, adminPlanOverride, adminPlanOverrideEnabled, bannedAt",
     )
     .eq("id", session.user.id)
     .single();

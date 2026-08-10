@@ -12,13 +12,23 @@ import {
  * resolvers. The AccessState is always computed from the DB plan + trial dates
  * + the server clock — never from anything the client sends.
  */
-type SubUser = Pick<CurrentUser, "plan" | "trialStartedAt" | "trialEndsAt">;
+type SubUser = Pick<
+  CurrentUser,
+  | "plan"
+  | "trialStartedAt"
+  | "trialEndsAt"
+  | "adminPlanOverride"
+  | "adminPlanOverrideEnabled"
+>;
 
 export function subscriptionInputFor(user: SubUser): SubscriptionInput {
   return {
     plan: user.plan,
     trialStartedAt: user.trialStartedAt,
     trialEndsAt: user.trialEndsAt,
+    // Admin test override (server-authoritative; never from the client).
+    adminPlanOverride: user.adminPlanOverride,
+    adminPlanOverrideEnabled: user.adminPlanOverrideEnabled,
   };
 }
 

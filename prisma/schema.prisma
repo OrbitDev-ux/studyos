@@ -52,6 +52,14 @@ model User {
   subscriptionStatus SubscriptionStatus @default(TRIALING)
   trialStartedAt     DateTime?          @default(now())
   trialEndsAt        DateTime?
+  /// Admin-only TEST override of the effective plan (features/billing/
+  /// admin-override). Does NOT touch real billing: when
+  /// adminPlanOverrideEnabled is true, entitlement resolution uses
+  /// adminPlanOverride instead of `plan`. Only an admin can set these on THEIR
+  /// OWN user row (email-matched), and UPDATE is REVOKEd from the Supabase anon
+  /// role in the migration so a client can never self-grant a plan.
+  adminPlanOverride         Plan?
+  adminPlanOverrideEnabled  Boolean @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

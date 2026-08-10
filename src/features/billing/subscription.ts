@@ -17,7 +17,28 @@ export type SubscriptionInput = {
   plan: Plan;
   trialStartedAt: Date | string | null;
   trialEndsAt: Date | string | null;
+  /**
+   * Admin-only TEST override (features/billing/admin-override). When
+   * `adminPlanOverrideEnabled` is true, entitlement resolution uses
+   * `adminPlanOverride` as the plan INSTEAD of the real billing `plan` — the
+   * real subscription/billing data is never changed. Optional so existing
+   * callers/tests that don't set them behave exactly as before.
+   */
+  adminPlanOverride?: Plan | null;
+  adminPlanOverrideEnabled?: boolean | null;
 };
+
+/**
+ * The plan that actually governs entitlements: the admin test override when
+ * enabled, else the real billing plan. Priority is System Security > Real
+ * Billing > Admin Override — security gates (e.g. ban) run before any
+ * entitlement check, so they are unaffected by this.
+ */
+export function effectivePlan(input: SubscriptionInput): Plan {
+  return input.adminPlanOverrideEnabled && input.adminPlanOverride
+    ? input.adminPlanOverride
+    : input.plan;
+}
 
 function coerce(value: Date | string | null): Date | null {
   if (value == null) return null;
@@ -53,14 +74,18 @@ export function trialDaysRemaining(
   return ms <= 0 ? 0 : Math.ceil(ms / DAY_MS);
 }
 
-/** The authoritative access state used for every entitlement check. */
+/** The authoritative access state used for every entitlement check. Honors the
+ * admin test override (effectivePlan) — never the raw billing plan directly. */
 export function resolveAccessState(
   input: SubscriptionInput,
   now: Date = new Date(),
 ): AccessState {
-  if (input.plan === "PRO") return "PRO";
-  if (input.plan === "PREMIUM") return "PREMIUM";
-  return isTrialExpired(input, now) ? "TRIAL_EXPIRED" : "TRIAL";
+  const plan = effectivePlan(input);
+  if (plan === "PRO") return "PRO";
+  if (plan === "PREMIUM") return "PREMIUM";
+  // TRIAL (real or overridden): trial-expiry is evaluated against the trial
+  // dates, forcing plan=TRIAL so the (override-agnostic) isTrialExpired applies.
+  return isTrialExpired({ ...input, plan: "TRIAL" }, now) ? "TRIAL_EXPIRED" : "TRIAL";
 }
 
 /** Effective lifecycle status for API/UI (computed, not just the stored value). */

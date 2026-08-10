@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  effectivePlan,
   effectiveStatus,
   isTrialExpired,
   resolveAccessState,
@@ -72,5 +73,78 @@ describe("subscription — trial resolution", () => {
     };
     expect(resolveAccessState(input, NOW)).toBe("TRIAL");
     expect(trialDaysRemaining(input, NOW)).toBe(5);
+  });
+});
+
+describe("subscription — admin plan override", () => {
+  it("uses the override plan for entitlement resolution only when enabled", () => {
+    // Real TRIAL + Override PREMIUM → PREMIUM
+    expect(
+      resolveAccessState(
+        trial({ adminPlanOverride: "PREMIUM", adminPlanOverrideEnabled: true }),
+        NOW,
+      ),
+    ).toBe("PREMIUM");
+    // Real PRO + Override TRIAL → TRIAL (trial dates still active)
+    expect(
+      resolveAccessState(
+        { ...trial(), plan: "PRO", adminPlanOverride: "TRIAL", adminPlanOverrideEnabled: true },
+        NOW,
+      ),
+    ).toBe("TRIAL");
+    // Real PREMIUM + Override OFF → PREMIUM (real plan)
+    expect(
+      resolveAccessState(
+        { ...trial(), plan: "PREMIUM", adminPlanOverride: "TRIAL", adminPlanOverrideEnabled: false },
+        NOW,
+      ),
+    ).toBe("PREMIUM");
+    // TRIAL → PRO / PRO → PREMIUM
+    expect(
+      resolveAccessState(
+        trial({ adminPlanOverride: "PRO", adminPlanOverrideEnabled: true }),
+        NOW,
+      ),
+    ).toBe("PRO");
+  });
+
+  it("an enabled TRIAL override still honors trial expiry", () => {
+    // Real PRO overridden to TRIAL, but the trial window is past → TRIAL_EXPIRED
+    expect(
+      resolveAccessState(
+        {
+          plan: "PRO",
+          trialStartedAt: new Date(NOW.getTime() - 10 * DAY),
+          trialEndsAt: new Date(NOW.getTime() - DAY),
+          adminPlanOverride: "TRIAL",
+          adminPlanOverrideEnabled: true,
+        },
+        NOW,
+      ),
+    ).toBe("TRIAL_EXPIRED");
+  });
+
+  it("effectivePlan reflects the override flag; missing fields = real plan", () => {
+    expect(effectivePlan(trial())).toBe("TRIAL");
+    expect(
+      effectivePlan(trial({ adminPlanOverride: "PREMIUM", adminPlanOverrideEnabled: true })),
+    ).toBe("PREMIUM");
+    // enabled but no plan set → falls back to real plan
+    expect(effectivePlan(trial({ adminPlanOverrideEnabled: true }))).toBe("TRIAL");
+    // plan set but disabled → real plan
+    expect(
+      effectivePlan(trial({ adminPlanOverride: "PREMIUM", adminPlanOverrideEnabled: false })),
+    ).toBe("TRIAL");
+  });
+
+  it("does NOT change the real billing lifecycle status (effectiveStatus)", () => {
+    // Override to PREMIUM but real plan is TRIAL → status still TRIALING
+    // (billing/subscription data is untouched by the override).
+    expect(
+      effectiveStatus(
+        trial({ adminPlanOverride: "PREMIUM", adminPlanOverrideEnabled: true }),
+        NOW,
+      ),
+    ).toBe("TRIALING");
   });
 });
