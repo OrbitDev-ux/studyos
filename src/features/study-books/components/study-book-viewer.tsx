@@ -3,13 +3,26 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
+  ArrowDown,
+  ArrowUp,
   ChevronLeft,
   ChevronRight,
   Loader2,
+  MoreVertical,
   Pencil,
+  Plus,
   RefreshCw,
+  Sparkles,
   Trash2,
+  WandSparkles,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +57,15 @@ import {
   regenerateChapter,
   updateStudyBook,
 } from "@/features/study-books/actions";
+import {
+  addProblemToChapter,
+  addWeaknessProblem,
+  changeItemDifficulty,
+  deleteBookItem,
+  generateSimilarProblem,
+  moveBookItem,
+  regenerateItemExplanation,
+} from "@/features/study-books/item-actions";
 import type { getStudyBook, StudyBookProgress } from "@/features/study-books/queries";
 import { cn } from "@/lib/utils";
 
@@ -94,6 +116,15 @@ export function StudyBookViewer({
     startTransition(async () => {
       await deleteStudyBook(book.id);
       router.push("/study-books");
+    });
+  }
+  function runChapterAi(fn: () => Promise<{ error?: string } | void>) {
+    if (!chapter) return;
+    setRegenError(null);
+    startTransition(async () => {
+      const res = await fn();
+      if (res && "error" in res && res.error) setRegenError(res.error);
+      else router.refresh();
     });
   }
 
@@ -198,20 +229,40 @@ export function StudyBookViewer({
               <h2 className="text-lg font-semibold">
                 {index + 1}. {chapter.title}
               </h2>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={handleRegenerate}
-                disabled={pending}
-              >
-                {pending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="size-4" />
-                )}
-                챕터 재생성
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={pending}
+                  onClick={() => runChapterAi(() => addProblemToChapter(book.id, chapter.id))}
+                >
+                  <Plus className="size-4" /> 문제 추가
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={pending}
+                  onClick={() => runChapterAi(() => addWeaknessProblem(book.id, chapter.id))}
+                >
+                  <WandSparkles className="size-4" /> 취약점 보완
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={handleRegenerate}
+                  disabled={pending}
+                >
+                  {pending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="size-4" />
+                  )}
+                  챕터 재생성
+                </Button>
+              </div>
             </div>
             {regenError && <p className="text-destructive text-xs">{regenError}</p>}
 
@@ -229,7 +280,7 @@ export function StudyBookViewer({
             )}
 
             {chapter.items.map((item, i) => (
-              <ChapterItem key={item.id} item={item} number={i + 1} />
+              <ChapterItem key={item.id} item={item} number={i + 1} bookId={book.id} />
             ))}
 
             {chapter.reviewPoints && (
@@ -276,20 +327,99 @@ export function StudyBookViewer({
   );
 }
 
-function ChapterItem({ item, number }: { item: Item; number: number }) {
+function ChapterItem({
+  item,
+  number,
+  bookId,
+}: {
+  item: Item;
+  number: number;
+  bookId: string;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [err, setErr] = useState<string | null>(null);
   const label = KIND_LABEL[item.kind] ?? item.kind;
+  const isProblem = !!item.problem;
+
+  function run(fn: () => Promise<{ error?: string } | void>) {
+    setErr(null);
+    startTransition(async () => {
+      const res = await fn();
+      if (res && "error" in res && res.error) setErr(res.error);
+      else router.refresh();
+    });
+  }
+
+  const menu = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground size-7 shrink-0"
+          disabled={pending}
+          aria-label="문제 메뉴"
+        >
+          {pending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <MoreVertical className="size-4" />
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {isProblem && (
+          <>
+            <DropdownMenuItem onClick={() => run(() => generateSimilarProblem(bookId, item.id))}>
+              <Sparkles className="size-4" /> 비슷한 문제 만들기
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => run(() => changeItemDifficulty(bookId, item.id, "easier"))}
+            >
+              더 쉽게
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => run(() => changeItemDifficulty(bookId, item.id, "harder"))}
+            >
+              더 어렵게
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => run(() => regenerateItemExplanation(bookId, item.id))}
+            >
+              해설 다시 생성
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+        <DropdownMenuItem onClick={() => run(() => moveBookItem(bookId, item.id, "up"))}>
+          <ArrowUp className="size-4" /> 위로
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => run(() => moveBookItem(bookId, item.id, "down"))}>
+          <ArrowDown className="size-4" /> 아래로
+        </DropdownMenuItem>
+        <DropdownMenuItem variant="destructive" onClick={() => run(() => deleteBookItem(bookId, item.id))}>
+          <Trash2 className="size-4" /> 삭제
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   // Problem item → reuse the shared solving panel (records to Learning OS).
-  if (item.problem) {
+  if (isProblem) {
     return (
       <Card>
         <CardContent className="flex flex-col gap-3">
-          <div className="flex items-center gap-2">
-            <Badge variant="outline">{label}</Badge>
-            <span className="text-muted-foreground text-xs">문제 {number}</span>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">{label}</Badge>
+              <span className="text-muted-foreground text-xs">문제 {number}</span>
+            </div>
+            {menu}
           </div>
-          <p className="text-sm font-medium whitespace-pre-wrap">{item.problem.prompt}</p>
-          <SolveProblemPanel problem={item.problem} />
+          <p className="text-sm font-medium whitespace-pre-wrap">{item.problem!.prompt}</p>
+          <SolveProblemPanel problem={item.problem!} />
+          {err && <p className="text-destructive text-xs">{err}</p>}
         </CardContent>
       </Card>
     );
@@ -299,10 +429,14 @@ function ChapterItem({ item, number }: { item: Item; number: number }) {
   return (
     <Card className="bg-muted/30">
       <CardContent className="flex flex-col gap-2">
-        <Badge variant="outline" className="self-start">
-          {label}
-        </Badge>
+        <div className="flex items-start justify-between gap-2">
+          <Badge variant="outline" className="self-start">
+            {label}
+          </Badge>
+          {menu}
+        </div>
         <p className="text-sm leading-relaxed whitespace-pre-wrap">{item.content}</p>
+        {err && <p className="text-destructive text-xs">{err}</p>}
       </CardContent>
     </Card>
   );
