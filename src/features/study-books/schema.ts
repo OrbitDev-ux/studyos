@@ -14,6 +14,8 @@ export const studyBookFormSchema = z.object({
   unitId: z.string().min(1, "단원을 선택해주세요"),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),
   type: z.enum(STUDY_BOOK_TYPE_IDS),
+  /** The QuestionType the book's problems use (defaults to 객관식). */
+  problemType: z.enum(["MULTIPLE_CHOICE", "SHORT_ANSWER", "ESSAY"]).default("MULTIPLE_CHOICE"),
   // Capped so one generation reliably finishes inside the serverless/AI timeout
   // (see generate.ts timeoutMs). Larger books can be grown later via per-chapter
   // regeneration rather than one oversized call.

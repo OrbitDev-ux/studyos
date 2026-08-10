@@ -13,6 +13,7 @@ import {
 } from "@/features/review/actions";
 import { ERROR_TYPE_LABEL, toErrorType, type WrongAnswerDna } from "@/features/review/dna";
 import type { getWrongAnswers } from "@/features/review/queries";
+import { SolveProblemPanel } from "@/features/problems/components/solve-problem-panel";
 import { cn } from "@/lib/utils";
 
 export function WrongAnswerActions({
@@ -99,9 +100,15 @@ export function WrongAnswerActions({
       ? !!selectedChoiceId
       : answerText.trim().length > 0;
 
+  const isEssay = problem.type === "ESSAY";
+
   return (
     <div className="flex flex-col gap-3">
-      {problem.type === "MULTIPLE_CHOICE" ? (
+      {isEssay ? (
+        // Essays reuse the shared solver (self-assessment against the model
+        // answer) rather than the exact-match retry input.
+        <SolveProblemPanel problem={problem} source="review" />
+      ) : problem.type === "MULTIPLE_CHOICE" ? (
         <div className="flex flex-col gap-1.5">
           {problem.choices.map((choice) => {
             const isSelected = selectedChoiceId === choice.id;
@@ -139,31 +146,32 @@ export function WrongAnswerActions({
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        {result === null ? (
-          <Button
-            type="button"
-            size="sm"
-            disabled={!canSubmit || isSubmitting}
-            onClick={handleRetry}
-          >
-            다시 풀기
-          </Button>
-        ) : (
-          !result.correct && (
+        {!isEssay &&
+          (result === null ? (
             <Button
               type="button"
               size="sm"
-              variant="outline"
-              onClick={() => {
-                setResult(null);
-                setSelectedChoiceId(null);
-                setAnswerText("");
-              }}
+              disabled={!canSubmit || isSubmitting}
+              onClick={handleRetry}
             >
-              한 번 더 시도
+              다시 풀기
             </Button>
-          )
-        )}
+          ) : (
+            !result.correct && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setResult(null);
+                  setSelectedChoiceId(null);
+                  setAnswerText("");
+                }}
+              >
+                한 번 더 시도
+              </Button>
+            )
+          ))}
         <Button
           type="button"
           size="sm"

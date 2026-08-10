@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { DIFFICULTY_LABEL } from "@/features/problems/constants";
+import { DIFFICULTY_LABEL, QUESTION_TYPE_LABEL } from "@/features/problems/constants";
 import {
   listGrades,
   listSubjects,
@@ -50,6 +50,7 @@ export function CreateStudyBookDialog({ trigger }: { trigger: ReactNode }) {
   );
   const [difficulty, setDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">("MEDIUM");
   const [type, setType] = useState<string>(STUDY_BOOK_TYPES[0].id);
+  const [problemType, setProblemType] = useState<string>("MULTIPLE_CHOICE");
   const [chapterCount, setChapterCount] = useState(3);
   const [problemsPerChapter, setProblemsPerChapter] = useState(3);
   const [customInstructions, setCustomInstructions] = useState("");
@@ -83,6 +84,7 @@ export function CreateStudyBookDialog({ trigger }: { trigger: ReactNode }) {
         unitId,
         difficulty,
         type: type as (typeof STUDY_BOOK_TYPES)[number]["id"],
+        problemType: problemType as "MULTIPLE_CHOICE" | "SHORT_ANSWER" | "ESSAY",
         chapterCount,
         problemsPerChapter,
         customInstructions: customInstructions.trim() || undefined,
@@ -155,6 +157,13 @@ export function CreateStudyBookDialog({ trigger }: { trigger: ReactNode }) {
                   value={difficulty}
                   onChange={(v) => setDifficulty(v as "EASY" | "MEDIUM" | "HARD")}
                   options={Object.entries(DIFFICULTY_LABEL).map(([id, name]) => ({ id, name }))}
+                />
+              </Field>
+              <Field label="문제 유형">
+                <SelectBox
+                  value={problemType}
+                  onChange={setProblemType}
+                  options={Object.entries(QUESTION_TYPE_LABEL).map(([id, name]) => ({ id, name }))}
                 />
               </Field>
               <div className="grid grid-cols-2 gap-2">

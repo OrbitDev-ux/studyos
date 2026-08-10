@@ -8,5 +8,6 @@ export const DIFFICULTY_LABEL: Record<Difficulty, string> = {
 
 export const QUESTION_TYPE_LABEL: Record<QuestionType, string> = {
   MULTIPLE_CHOICE: "객관식",
-  SHORT_ANSWER: "주관식",
+  SHORT_ANSWER: "단답형",
+  ESSAY: "서술형",
 };

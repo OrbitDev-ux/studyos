@@ -17,6 +17,8 @@ import {
   type StudyBookUpdateValues,
 } from "@/features/study-books/schema";
 import { isWrongReviewType, studyBookTypeLabel } from "@/features/study-books/types";
+import { questionTypeInstruction } from "@/features/ai/prompts/problem-generation";
+import type { QuestionType } from "@/generated/prisma/client";
 import { getStudyBookLearningContext } from "@/features/study-books/learning-context";
 import {
   generateBookChapters,
@@ -80,6 +82,7 @@ export async function createStudyBook(
     unit: unitName,
     difficultyLabel: DIFFICULTY_LABEL[parsed.difficulty],
     typeLabel: studyBookTypeLabel(parsed.type),
+    problemTypeInstruction: questionTypeInstruction(parsed.problemType),
     chapterCount: parsed.chapterCount,
     problemsPerChapter: parsed.problemsPerChapter,
     customInstructions: parsed.customInstructions?.trim() || null,
@@ -113,6 +116,7 @@ export async function createStudyBook(
     unit: unitName,
     difficulty: parsed.difficulty,
     type: parsed.type,
+    problemType: parsed.problemType,
     customInstructions: promptInput.customInstructions,
     chapters,
   });
@@ -179,7 +183,8 @@ export async function regenerateChapter(
 
   const subject = await resolveSubject(user.id, book.subjectName);
   const learning = await getStudyBookLearningContext(user.id, subject.id);
-  const problemsPerChapter = Math.min(Math.max(chapter._count.items || 5, 1), 8);
+  const problemsPerChapter = Math.min(Math.max(chapter._count.items || 5, 1), 5);
+  const problemType = book.problemType as QuestionType;
 
   const promptInput: StudyBookPromptInput = {
     title: book.title,
@@ -188,6 +193,7 @@ export async function regenerateChapter(
     unit: book.unit,
     difficultyLabel: DIFFICULTY_LABEL[book.difficulty],
     typeLabel: studyBookTypeLabel(book.type),
+    problemTypeInstruction: questionTypeInstruction(problemType),
     chapterCount: 1,
     problemsPerChapter,
     customInstructions: book.customInstructions?.trim() || null,
@@ -215,6 +221,7 @@ export async function regenerateChapter(
     subjectId: subject.id,
     unit: book.unit,
     difficulty: book.difficulty,
+    problemType,
   });
 
   revalidatePath(`/study-books/${bookId}`);

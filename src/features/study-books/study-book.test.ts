@@ -18,6 +18,7 @@ const base: StudyBookPromptInput = {
   unit: "분수의 곱셈",
   difficultyLabel: "보통",
   typeLabel: "개념 + 문제",
+  problemTypeInstruction: "객관식 문제로, 보기(choices)는 정확히 4개...",
   chapterCount: 3,
   problemsPerChapter: 4,
   customInstructions: null,

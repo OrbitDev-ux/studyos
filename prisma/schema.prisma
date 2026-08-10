@@ -282,6 +282,9 @@ model StudyBook {
   unit               String?
   difficulty         Difficulty
   type               String
+  /// Which QuestionType the book's problems use (MULTIPLE_CHOICE default,
+  /// SHORT_ANSWER, or ESSAY) — separate from the book `type` (개념서 등).
+  problemType        String     @default("MULTIPLE_CHOICE")
   customInstructions String?    @db.Text
   /// "generating" | "ready" | "failed"
   status             String     @default("generating")
@@ -338,6 +341,10 @@ model StudyBookItem {
 enum QuestionType {
   MULTIPLE_CHOICE
   SHORT_ANSWER
+  /// 서술형 — requires the student to write out a process / reasoning / analysis.
+  /// Not auto-graded (self-assessed against the model answer); still a normal
+  /// Problem stored/scored through the shared Learning-OS path.
+  ESSAY
 }
 
 enum Difficulty {
@@ -392,9 +399,13 @@ model Problem {
   difficulty   Difficulty
   unit         String?
   prompt       String       @db.Text
-  /// Canonical answer for SHORT_ANSWER problems; MULTIPLE_CHOICE uses Choice.isCorrect instead.
+  /// Canonical answer for SHORT_ANSWER; the MODEL answer for ESSAY.
+  /// MULTIPLE_CHOICE uses Choice.isCorrect instead.
   answerText   String?
   explanation  String?      @db.Text
+  /// ESSAY only: key scoring points / partial-credit criteria shown to the
+  /// student for self-assessment. Null for MC / short-answer.
+  scoringCriteria String?   @db.Text
   isFavorite   Boolean      @default(false)
   createdAt    DateTime     @default(now())
 

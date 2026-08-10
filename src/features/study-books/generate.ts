@@ -1,5 +1,5 @@
 import "server-only";
-import type { Difficulty, Prisma } from "@/generated/prisma/client";
+import type { Difficulty, Prisma, QuestionType } from "@/generated/prisma/client";
 import { generateStructured } from "@/features/ai/client";
 import { getActivePromptContent } from "@/features/ai/prompt-service";
 import { PROMPT_TYPES } from "@/features/ai/prompt-registry";
@@ -67,10 +67,19 @@ export async function generateBookChapters(
 }
 
 /** Build the nested chapter/item/problem create payload for one AI chapter. */
+type ChapterCtx = {
+  userId: string;
+  subjectId: string;
+  unit: string | null;
+  difficulty: Difficulty;
+  /** The QuestionType every problem in the book uses. */
+  problemType: QuestionType;
+};
+
 function chapterCreateData(
   chapter: AiBookChapter,
   order: number,
-  ctx: { userId: string; subjectId: string; unit: string | null; difficulty: Difficulty },
+  ctx: ChapterCtx,
 ): Prisma.StudyBookChapterCreateWithoutBookInput {
   const items: Prisma.StudyBookItemCreateWithoutChapterInput[] = [];
   let itemOrder = 0;
@@ -79,8 +88,9 @@ function chapterCreateData(
     items.push({ kind: "example", order: itemOrder++, content: example });
   }
 
+  const isMc = ctx.problemType === "MULTIPLE_CHOICE";
   for (const problem of chapter.problems) {
-    const isMc = !!problem.choices && problem.choices.length > 0;
+    const hasChoices = isMc && !!problem.choices && problem.choices.length > 0;
     items.push({
       kind: problem.tier,
       order: itemOrder++,
@@ -90,12 +100,14 @@ function chapterCreateData(
           userId: ctx.userId,
           subjectId: ctx.subjectId,
           unit: ctx.unit,
-          type: isMc ? "MULTIPLE_CHOICE" : "SHORT_ANSWER",
+          type: ctx.problemType,
           difficulty: tierDifficulty(ctx.difficulty, problem.tier),
           prompt: problem.prompt,
           explanation: problem.explanation,
+          // SHORT_ANSWER: answer; ESSAY: model answer + scoring criteria.
           answerText: problem.answerText || null,
-          ...(isMc
+          scoringCriteria: problem.scoringCriteria || null,
+          ...(hasChoices
             ? {
                 choices: {
                   create: problem.choices!.map((c) => ({
@@ -129,6 +141,7 @@ export type PersistBookInput = {
   unit: string | null;
   difficulty: Difficulty;
   type: string;
+  problemType: QuestionType;
   customInstructions: string | null;
   chapters: AiBookChapter[];
 };
@@ -145,6 +158,7 @@ export async function persistNewBook(input: PersistBookInput): Promise<string> {
       unit: input.unit,
       difficulty: input.difficulty,
       type: input.type,
+      problemType: input.problemType,
       customInstructions: input.customInstructions,
       status: "ready",
       chapters: {
@@ -154,6 +168,7 @@ export async function persistNewBook(input: PersistBookInput): Promise<string> {
             subjectId: input.subjectId,
             unit: input.unit,
             difficulty: input.difficulty,
+            problemType: input.problemType,
           }),
         ),
       },
@@ -168,7 +183,7 @@ export async function replaceChapterContent(
   chapterId: string,
   order: number,
   chapter: AiBookChapter,
-  ctx: { userId: string; subjectId: string; unit: string | null; difficulty: Difficulty },
+  ctx: ChapterCtx,
 ): Promise<void> {
   const data = chapterCreateData(chapter, order, ctx);
   await prisma.$transaction([

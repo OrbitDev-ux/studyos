@@ -35,6 +35,8 @@ export type StudyBookPromptInput = {
   unit: string | null;
   difficultyLabel: string;
   typeLabel: string;
+  /** Per-problem instruction for the book's QuestionType (from questionTypeInstruction). */
+  problemTypeInstruction: string;
   chapterCount: number;
   problemsPerChapter: number;
   /** Raw user personal instructions (untrusted). Null/empty when not provided. */
@@ -70,7 +72,7 @@ export function buildStudyBookPrompt(input: StudyBookPromptInput): string {
     `- chapters 배열에는 반드시 정확히 ${input.chapterCount}개의 챕터 객체를 담으세요(더 적거나 많으면 안 됩니다). 각 챕터는 서로 다른 소주제를 다룹니다.`,
     `- 각 챕터마다 ${input.problemsPerChapter}개 내외의 문제(problems)를 포함하세요.`,
     "- 각 챕터: concept(개념 설명) → examples(예제) → problems(연습/응용/심화). problem.tier로 난이도 단계를 표시하세요.",
-    "- 객관식 문제는 보기(choices) 4개와 정답 하나(isCorrect: true)를, 주관식은 answerText를 채우세요.",
+    `- 모든 문제는 다음 유형 규칙을 따르세요: ${input.problemTypeInstruction}`,
     "- 모든 문제에 한국어 해설(explanation)을 포함하세요.",
     "- 개념과 문제는 한국 교육과정 수준과 정확성을 지키세요.",
     input.isWrongReview

@@ -11,7 +11,7 @@ export const problemGenerationFormSchema = z.object({
   subjectId: z.string().min(1, "과목을 선택해주세요"),
   unitId: z.string().min(1, "단원을 선택해주세요"),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),
-  type: z.enum(["MULTIPLE_CHOICE", "SHORT_ANSWER"]),
+  type: z.enum(["MULTIPLE_CHOICE", "SHORT_ANSWER", "ESSAY"]),
   count: z.coerce
     .number()
     .int()
@@ -33,7 +33,10 @@ export const aiProblemSchema = z.object({
   prompt: z.string().min(1),
   explanation: z.string().min(1),
   choices: z.array(aiChoiceSchema).optional(),
+  /** SHORT_ANSWER: the answer. ESSAY: the MODEL answer (모범 답안). */
   answerText: z.string().optional(),
+  /** ESSAY only: key scoring points / partial-credit criteria (핵심 채점 요소). */
+  scoringCriteria: z.string().optional(),
 });
 
 export const aiProblemSetSchema = z.object({

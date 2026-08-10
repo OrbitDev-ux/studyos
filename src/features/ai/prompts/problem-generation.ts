@@ -5,6 +5,26 @@ export const PROBLEM_GENERATION_SYSTEM_PROMPT =
   "당신은 한국 고등학생을 위한 문제 출제 전문가입니다. 각 문제는 명확한 정답이 있어야 하며, " +
   "정답과 오답을 모두 자연스럽고 그럴듯하게 작성합니다.";
 
+/**
+ * Per-type generation instruction, shared by every generator (problem set, study
+ * book, etc.) so all features produce the same shape for each QuestionType.
+ * ESSAY explicitly must NOT be a choice/short-answer item.
+ */
+export function questionTypeInstruction(type: QuestionType): string {
+  switch (type) {
+    case "MULTIPLE_CHOICE":
+      return "객관식 문제로, 보기(choices)는 정확히 4개(A, B, C, D)를 만들고 그중 하나만 isCorrect: true로 표시하세요. answerText와 scoringCriteria는 비워두세요.";
+    case "SHORT_ANSWER":
+      return "단답형 문제로, choices는 비워두고 answerText에 정답을 간결하게 적으세요. scoringCriteria는 비워두세요.";
+    case "ESSAY":
+      return (
+        "서술형 문제로, 학생이 풀이 과정·계산 과정·근거·개념 설명·비교/분석 중 하나 이상을 자신의 말로 서술하도록 요구하세요. " +
+        "choices는 비워두고, answerText에는 '모범 답안'(문장형 예시 답안)을, scoringCriteria에는 '핵심 채점 요소'(부분 점수 기준 포함, 줄바꿈으로 구분)를 작성하세요. " +
+        "단순히 정답만 짧게 쓰는 문제나 객관식으로 만들지 마세요."
+      );
+  }
+}
+
 export function buildProblemGenerationPrompt({
   subjectName,
   unit,
@@ -20,10 +40,7 @@ export function buildProblemGenerationPrompt({
 }): string {
   const unitLine = unit ? ` "${unit}" 단원` : "";
 
-  const typeInstruction =
-    type === "MULTIPLE_CHOICE"
-      ? "객관식 문제로, 보기는 정확히 4개(A, B, C, D)를 만들고 그중 하나만 isCorrect: true로 표시해주세요."
-      : "주관식 문제로, choices는 비워두고 answerText에 정답을 간결하게 적어주세요.";
+  const typeInstruction = questionTypeInstruction(type);
 
   return `${subjectName} 과목${unitLine}에 대한 ${QUESTION_TYPE_LABEL[type]} 문제를 ${count}개 생성해주세요.
 

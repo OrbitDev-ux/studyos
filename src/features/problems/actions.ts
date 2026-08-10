@@ -139,6 +139,7 @@ export async function generateProblems(
         prompt: problem.prompt,
         explanation: problem.explanation,
         answerText: problem.answerText || null,
+        scoringCriteria: problem.scoringCriteria || null,
       });
       if (problemError) throw problemError;
       insertedProblemIds.push(problemId);
@@ -210,7 +211,7 @@ export async function deleteProblem(problemId: string) {
  */
 export async function submitProblemAnswer(
   problemId: string,
-  answer: { choiceId?: string; text?: string },
+  answer: { choiceId?: string; text?: string; selfCorrect?: boolean },
   opts?: { source?: Extract<AttemptSource, "practice" | "review">; durationMs?: number },
 ): Promise<{ correct: boolean; explanation: string | null }> {
   const user = await requireCurrentUser();
@@ -231,10 +232,14 @@ export async function submitProblemAnswer(
         )
       : undefined;
 
+  // ESSAY has no auto-grade: the student self-assesses against the model answer
+  // (answer.selfCorrect). MC grades by choice; SHORT_ANSWER by normalized match.
   const correct =
     problem.type === "MULTIPLE_CHOICE"
       ? (selectedChoice?.isCorrect ?? false)
-      : normalizeAnswer(answer.text ?? "") === normalizeAnswer(problem.answerText ?? "");
+      : problem.type === "ESSAY"
+        ? (answer.selfCorrect ?? false)
+        : normalizeAnswer(answer.text ?? "") === normalizeAnswer(problem.answerText ?? "");
 
   // The user's answer in readable form, for the attempt log / 오답 DNA.
   const userAnswerText =
