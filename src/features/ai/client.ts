@@ -15,12 +15,20 @@ export async function generateStructured<T>({
   prompt,
   schema,
   useThinking = false,
+  timeoutMs = 30_000,
+  retryAttempts = 2,
 }: {
   system: string;
   prompt: string;
   schema: ZodType<T>;
   /** Enable thinking for reasoning-heavy tasks (analysis, explanations). */
   useThinking?: boolean;
+  /** Per-request SDK timeout. Heavier generations (e.g. study books) need more
+   * than the 30s default, which otherwise aborts the request mid-generation. */
+  timeoutMs?: number;
+  /** SDK retry attempts. Use 1 (no retry) for long single-shot generations so
+   * a timeout doesn't multiply into >2× the wall time and blow the function limit. */
+  retryAttempts?: number;
 }): Promise<T> {
   const { aiEnabled, aiModel } = await getAllSettings();
   if (!aiEnabled) {
@@ -43,8 +51,8 @@ export async function generateStructured<T>({
       // slow or transient Gemini failure doesn't hang a Server Action
       // indefinitely or fail on the first blip.
       httpOptions: {
-        timeout: 30_000,
-        retryOptions: { attempts: 2 },
+        timeout: timeoutMs,
+        retryOptions: { attempts: retryAttempts },
       },
     },
   });

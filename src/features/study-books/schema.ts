@@ -14,8 +14,11 @@ export const studyBookFormSchema = z.object({
   unitId: z.string().min(1, "단원을 선택해주세요"),
   difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),
   type: z.enum(STUDY_BOOK_TYPE_IDS),
-  chapterCount: z.coerce.number().int().min(1, "1개 이상").max(6, "최대 6개"),
-  problemsPerChapter: z.coerce.number().int().min(1, "1개 이상").max(8, "최대 8개"),
+  // Capped so one generation reliably finishes inside the serverless/AI timeout
+  // (see generate.ts timeoutMs). Larger books can be grown later via per-chapter
+  // regeneration rather than one oversized call.
+  chapterCount: z.coerce.number().int().min(1, "1개 이상").max(4, "최대 4개"),
+  problemsPerChapter: z.coerce.number().int().min(1, "1개 이상").max(5, "최대 5개"),
   /** Personal instructions — style guidance only; bounded to limit prompt size. */
   customInstructions: z.string().trim().max(1000).optional(),
 });

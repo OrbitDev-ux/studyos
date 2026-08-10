@@ -67,7 +67,8 @@ export function buildStudyBookPrompt(input: StudyBookPromptInput): string {
 
   const rules = [
     "[교재 생성 규칙]",
-    `- 총 ${input.chapterCount}개 챕터를 만들고, 챕터마다 약 ${input.problemsPerChapter}개의 문제를 포함하세요.`,
+    `- chapters 배열에는 반드시 정확히 ${input.chapterCount}개의 챕터 객체를 담으세요(더 적거나 많으면 안 됩니다). 각 챕터는 서로 다른 소주제를 다룹니다.`,
+    `- 각 챕터마다 ${input.problemsPerChapter}개 내외의 문제(problems)를 포함하세요.`,
     "- 각 챕터: concept(개념 설명) → examples(예제) → problems(연습/응용/심화). problem.tier로 난이도 단계를 표시하세요.",
     "- 객관식 문제는 보기(choices) 4개와 정답 하나(isCorrect: true)를, 주관식은 answerText를 채우세요.",
     "- 모든 문제에 한국어 해설(explanation)을 포함하세요.",
@@ -102,7 +103,9 @@ export function buildStudyBookPrompt(input: StudyBookPromptInput): string {
   return [rules, settings, learning, userSection]
     .filter(Boolean)
     .join("\n\n")
-    .concat("\n\n지정된 JSON 스키마(chapters[])로만 응답하세요.");
+    .concat(
+      `\n\n지정된 JSON 스키마로만 응답하되, chapters 배열의 길이는 정확히 ${input.chapterCount}이어야 합니다.`,
+    );
 }
 
 /** Prompt for regenerating a single chapter (chapter-scoped). */

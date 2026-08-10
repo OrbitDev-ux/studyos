@@ -93,9 +93,15 @@ export async function createStudyBook(
   try {
     chapters = await generateBookChapters(guardCtx(user, ip), promptInput);
   } catch (err) {
+    // Quota/limit → structured payload (with upgrade info).
     const payload = generationErrorPayload(err);
     if (payload) return payload;
-    throw err;
+    // Non-quota failure (AI timeout / model error / off-schema output). Surface
+    // an actionable message rather than a generic throw; the form is preserved.
+    console.error("study-book generation failed:", err);
+    return {
+      error: "교재 생성에 실패했어요. 잠시 후 다시 시도하거나 챕터·문항 수를 줄여보세요.",
+    };
   }
 
   const bookId = await persistNewBook({

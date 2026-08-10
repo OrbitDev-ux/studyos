@@ -55,6 +55,12 @@ export async function generateBookChapters(
         prompt,
         schema: aiBookSchema,
         useThinking: true,
+        // Book generation is far heavier than a single problem set: the shared
+        // 30s default aborts it mid-generation. Give it a long single-shot
+        // window (no retry) that still stays under the serverless function
+        // limit; generation size is capped in the form schema to fit this.
+        timeoutMs: 50_000,
+        retryAttempts: 1,
       }),
   );
   return chapters;

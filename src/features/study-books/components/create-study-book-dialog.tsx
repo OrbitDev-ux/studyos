@@ -51,7 +51,7 @@ export function CreateStudyBookDialog({ trigger }: { trigger: ReactNode }) {
   const [difficulty, setDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">("MEDIUM");
   const [type, setType] = useState<string>(STUDY_BOOK_TYPES[0].id);
   const [chapterCount, setChapterCount] = useState(3);
-  const [problemsPerChapter, setProblemsPerChapter] = useState(4);
+  const [problemsPerChapter, setProblemsPerChapter] = useState(3);
   const [customInstructions, setCustomInstructions] = useState("");
 
   const subjectOptions = listSubjects(gradeId);
@@ -162,7 +162,7 @@ export function CreateStudyBookDialog({ trigger }: { trigger: ReactNode }) {
                   <Input
                     type="number"
                     min={1}
-                    max={6}
+                    max={4}
                     value={chapterCount}
                     onChange={(e) => setChapterCount(Number(e.target.value))}
                   />
@@ -171,7 +171,7 @@ export function CreateStudyBookDialog({ trigger }: { trigger: ReactNode }) {
                   <Input
                     type="number"
                     min={1}
-                    max={8}
+                    max={5}
                     value={problemsPerChapter}
                     onChange={(e) => setProblemsPerChapter(Number(e.target.value))}
                   />

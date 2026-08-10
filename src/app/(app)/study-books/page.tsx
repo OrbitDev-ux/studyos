@@ -13,7 +13,7 @@ import { getStudyBooks, getStudyBookProgress } from "@/features/study-books/quer
 import { requireCurrentUser } from "@/lib/session";
 
 // Book generation runs a long AI call in the create Server Action.
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export default async function StudyBooksPage() {
   const user = await requireCurrentUser();
