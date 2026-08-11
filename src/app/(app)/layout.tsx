@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { Header } from "@/components/layout/header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { ToastProvider } from "@/components/ui/toast";
 import { PresenceHeartbeat } from "@/features/profile/components/presence-heartbeat";
 import { getSocialNotificationCount } from "@/features/social/queries";
 import { getCurrentAdmin } from "@/lib/admin/context";
@@ -35,13 +36,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const showUpgrade = planRow?.plan !== "PREMIUM";
 
   return (
-    <SidebarProvider>
-      <PresenceHeartbeat />
-      <AppSidebar user={session.user} socialCount={socialCount} showUpgrade={showUpgrade} />
-      <SidebarInset>
-        <Header />
-        <main className="flex flex-1 flex-col gap-4 p-4 md:p-6">{children}</main>
-      </SidebarInset>
-    </SidebarProvider>
+    // App-wide toast context. Without it, any client component that calls
+    // useToast() (e.g. the 문제은행 card) throws "useToast must be used within a
+    // ToastProvider" during render — which the route error boundary would catch.
+    <ToastProvider>
+      <SidebarProvider>
+        <PresenceHeartbeat />
+        <AppSidebar user={session.user} socialCount={socialCount} showUpgrade={showUpgrade} />
+        <SidebarInset>
+          <Header />
+          <main className="flex flex-1 flex-col gap-4 p-4 md:p-6">{children}</main>
+        </SidebarInset>
+      </SidebarProvider>
+    </ToastProvider>
   );
 }
