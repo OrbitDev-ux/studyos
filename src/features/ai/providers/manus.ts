@@ -91,7 +91,12 @@ export class ManusProvider implements AIProvider {
 
   async generate(input: GenerateInput): Promise<unknown> {
     const key = this.apiKey();
-    const deadline = Date.now() + input.timeoutMs;
+    // Manus is an autonomous AGENT, far slower than a direct LLM call (a 2-item
+    // generation measured ~28s). The caller's timeoutMs was tuned for Gemini, so
+    // use most of the serverless window instead (Vercel caps functions at ~60s on
+    // the Hobby plan) — otherwise even a small generation times out mid-poll.
+    const budget = Math.min(Math.max(input.timeoutMs, 50_000), 55_000);
+    const deadline = Date.now() + budget;
 
     // 1) Create the task. Manus has no separate system field, so the StudyOS
     // system prompt is prepended to the content (minimal wrapping only). The
