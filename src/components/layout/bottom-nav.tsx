@@ -1,0 +1,52 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { bottomNavItems } from "@/config/nav";
+import { cn } from "@/lib/utils";
+
+/**
+ * 모바일 하단 바텀 네비게이션.
+ * 데스크톱(md+)에서는 사이드바가 대신하므로 숨긴다. 각 탭은 최소 44px 터치 타깃.
+ */
+export function BottomNav({ socialCount = 0 }: { socialCount?: number }) {
+  const pathname = usePathname();
+
+  return (
+    <nav
+      aria-label="주요 메뉴"
+      className="bg-background/95 fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur md:hidden"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      <ul className="flex items-stretch">
+        {bottomNavItems.map((item) => {
+          const active =
+            pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const badge = item.href === "/social" ? socialCount : 0;
+          return (
+            <li key={item.href} className="flex-1">
+              <Link
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "relative flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[0.65rem] font-medium transition-colors",
+                  active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <span className="relative">
+                  <item.icon className="size-5" />
+                  {badge > 0 && (
+                    <span className="bg-primary text-primary-foreground absolute -top-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.6rem] leading-none">
+                      {badge > 99 ? "99+" : badge}
+                    </span>
+                  )}
+                </span>
+                {item.title}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}

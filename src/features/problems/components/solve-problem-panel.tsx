@@ -1,6 +1,7 @@
 "use client";
 
 import { unstable_rethrow } from "next/navigation";
+import { ArrowRight, Check, X } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,13 +23,22 @@ export type SolvableProblem = {
   scoringCriteria?: string | null;
 };
 
+/** Progress within a solving session (1-based). */
+export type SolveProgress = { index: number; total: number };
+
 export function SolveProblemPanel({
   problem,
   source,
+  progress,
+  nextProblemId,
 }: {
   problem: SolvableProblem;
   /** Where this solve came from — "review" for 오답노트 retries. */
   source?: "practice" | "review";
+  /** 현재 몇 번째 / 총 몇 문제. 표시용. */
+  progress?: SolveProgress;
+  /** 채점 후 "다음 문제"로 스크롤할 대상 문제 id. 없으면 마지막 문제로 간주. */
+  nextProblemId?: string | null;
 }) {
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [answerText, setAnswerText] = useState("");
@@ -62,10 +72,58 @@ export function SolveProblemPanel({
     });
   }
 
+  function goToNext() {
+    if (!nextProblemId) return;
+    const el = document.getElementById(`problem-${nextProblemId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      // 접근성: 다음 카드로 포커스를 옮겨 키보드/스크린리더 흐름을 이어준다.
+      el.setAttribute("tabindex", "-1");
+      el.focus({ preventScroll: true });
+    }
+  }
+
+  const hasNext = !!nextProblemId;
+
+  // 진행률 표시(있을 때만). 채점 흐름 어디서든 재사용.
+  const progressLine = progress ? (
+    <div className="flex items-center gap-2">
+      <span className="text-muted-foreground text-xs font-medium tabular-nums">
+        {progress.index} / {progress.total}
+      </span>
+      <div className="bg-muted h-1 flex-1 overflow-hidden rounded-full">
+        <div
+          className="bg-primary h-full rounded-full transition-all"
+          style={{ width: `${(progress.index / progress.total) * 100}%` }}
+        />
+      </div>
+    </div>
+  ) : null;
+
+  // 채점 후 "다음 문제" / 마지막 문제 안내. 최소 44px 터치 타깃.
+  const nextCta =
+    result !== null ? (
+      hasNext ? (
+        <Button
+          type="button"
+          size="lg"
+          className="self-start"
+          onClick={goToNext}
+          data-icon="inline-end"
+        >
+          다음 문제
+          <ArrowRight className="size-4 transition-transform group-hover/button:translate-x-0.5" />
+        </Button>
+      ) : (
+        <p className="text-muted-foreground text-xs">모든 문제를 풀었어요. 수고했어요! 🎉</p>
+      )
+    ) : null;
+
   // ── ESSAY: write → reveal model answer / criteria → self-assess ──
   if (isEssay) {
     return (
       <div className="flex flex-col gap-3">
+        {progressLine}
         <Textarea
           rows={5}
           placeholder="풀이 과정과 답을 서술해보세요."
@@ -77,7 +135,7 @@ export function SolveProblemPanel({
         {!revealed ? (
           <Button
             type="button"
-            size="sm"
+            size="lg"
             className="self-start"
             disabled={answerText.trim().length === 0}
             onClick={() => setRevealed(true)}
@@ -87,8 +145,8 @@ export function SolveProblemPanel({
         ) : (
           <div className="flex flex-col gap-3">
             {problem.answerText && (
-              <div className="bg-primary/5 rounded-md p-3 text-sm">
-                <p className="text-muted-foreground mb-1 text-xs font-medium">모범 답안</p>
+              <div className="bg-success/10 border-success/20 rounded-md border p-3 text-sm">
+                <p className="text-success mb-1 text-xs font-medium">모범 답안</p>
                 <p className="whitespace-pre-wrap">{problem.answerText}</p>
               </div>
             )}
@@ -111,10 +169,12 @@ export function SolveProblemPanel({
                 <p className="text-muted-foreground text-xs">
                   내 답안을 모범 답안과 비교해 스스로 채점해주세요.
                 </p>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
-                    size="sm"
+                    size="lg"
+                    variant="success"
+                    className="px-5"
                     disabled={isPending}
                     onClick={() => submit({ text: answerText, selfCorrect: true })}
                   >
@@ -122,8 +182,9 @@ export function SolveProblemPanel({
                   </Button>
                   <Button
                     type="button"
-                    size="sm"
+                    size="lg"
                     variant="outline"
+                    className="px-5"
                     disabled={isPending}
                     onClick={() => submit({ text: answerText, selfCorrect: false })}
                   >
@@ -132,16 +193,24 @@ export function SolveProblemPanel({
                 </div>
               </div>
             ) : (
-              <p
-                className={cn(
-                  "text-sm font-medium",
-                  result.correct ? "text-primary" : "text-destructive",
-                )}
-              >
-                {result.correct
-                  ? "학습 기록에 반영되었어요!"
-                  : "복습 목록에 추가했어요. 다시 연습해봐요."}
-              </p>
+              <div className="animate-in fade-in slide-in-from-bottom-1 flex flex-col gap-2 duration-200">
+                <p
+                  className={cn(
+                    "flex items-center gap-1.5 text-sm font-medium",
+                    result.correct ? "text-success" : "text-destructive",
+                  )}
+                >
+                  {result.correct ? (
+                    <Check className="animate-in zoom-in-50 size-4 duration-300" />
+                  ) : (
+                    <X className="size-4" />
+                  )}
+                  {result.correct
+                    ? "학습 기록에 반영되었어요!"
+                    : "복습 목록에 추가했어요. 다시 연습해봐요."}
+                </p>
+                {nextCta}
+              </div>
             )}
           </div>
         )}
@@ -156,6 +225,7 @@ export function SolveProblemPanel({
 
   return (
     <div className="flex flex-col gap-3">
+      {progressLine}
       {isMc ? (
         <div className="flex flex-col gap-1.5">
           {problem.choices.map((choice) => {
@@ -168,22 +238,31 @@ export function SolveProblemPanel({
                 disabled={revealedResult}
                 onClick={() => setSelectedChoiceId(choice.id)}
                 className={cn(
-                  "rounded-md border px-3 py-2 text-left text-sm transition-colors",
+                  "flex min-h-11 items-center gap-2 rounded-md border px-3 py-2 text-left text-sm transition-colors",
                   isSelected && !revealedResult && "border-primary bg-primary/5",
-                  revealedResult && choice.isCorrect && "border-primary bg-primary/10 font-medium",
+                  revealedResult && choice.isCorrect && "border-success bg-success/10 font-medium",
                   revealedResult &&
                     isSelected &&
                     !choice.isCorrect &&
                     "border-destructive bg-destructive/5",
                 )}
               >
-                {choice.label}. {choice.content}
+                {revealedResult && choice.isCorrect && (
+                  <Check className="text-success size-4 shrink-0" />
+                )}
+                {revealedResult && isSelected && !choice.isCorrect && (
+                  <X className="text-destructive size-4 shrink-0" />
+                )}
+                <span>
+                  {choice.label}. {choice.content}
+                </span>
               </button>
             );
           })}
         </div>
       ) : (
         <Input
+          className="h-11"
           placeholder="정답 입력"
           value={answerText}
           onChange={(event) => setAnswerText(event.target.value)}
@@ -194,26 +273,30 @@ export function SolveProblemPanel({
       {result === null ? (
         <Button
           type="button"
-          size="sm"
+          size="lg"
           className="self-start"
           disabled={!canSubmit || isPending}
-          onClick={() => submit({ choiceId: selectedChoiceId ?? undefined, text: answerText || undefined })}
+          onClick={() =>
+            submit({ choiceId: selectedChoiceId ?? undefined, text: answerText || undefined })
+          }
         >
           제출
         </Button>
       ) : (
-        <div className="flex flex-col gap-1.5">
+        <div className="animate-in fade-in slide-in-from-bottom-1 flex flex-col gap-2 duration-200">
           <p
             className={cn(
-              "text-sm font-medium",
-              result.correct ? "text-primary" : "text-destructive",
+              "flex items-center gap-1.5 text-sm font-medium",
+              result.correct ? "text-success" : "text-destructive",
             )}
           >
+            {result.correct ? <Check className="size-4" /> : <X className="size-4" />}
             {result.correct ? "정답입니다!" : "오답입니다. 오답노트에 저장되었어요."}
           </p>
           {result.explanation && (
             <p className="text-muted-foreground text-xs">{result.explanation}</p>
           )}
+          {nextCta}
         </div>
       )}
 

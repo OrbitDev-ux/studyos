@@ -44,8 +44,13 @@ export function ProblemList({
         <p className="text-muted-foreground text-sm">표시할 문제가 없습니다.</p>
       ) : (
         <div className="flex flex-col gap-3">
-          {filteredProblems.map((problem) => (
-            <ProblemCard key={problem.id} problem={problem} />
+          {filteredProblems.map((problem, i) => (
+            <ProblemCard
+              key={problem.id}
+              problem={problem}
+              progress={{ index: i + 1, total: filteredProblems.length }}
+              nextProblemId={filteredProblems[i + 1]?.id ?? null}
+            />
           ))}
         </div>
       )}

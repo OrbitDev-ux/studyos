@@ -4,6 +4,7 @@ import { DIFFICULTY_LABEL } from "@/features/problems/constants";
 import { WrongAnswerActions } from "@/features/review/components/wrong-answer-actions";
 import { ERROR_TYPE_LABEL, toErrorType } from "@/features/review/dna";
 import type { getWrongAnswers } from "@/features/review/queries";
+import { SubjectChip } from "@/features/subjects/components/subject-chip";
 
 export function WrongAnswerCard({
   wrongAnswer,
@@ -20,15 +21,7 @@ export function WrongAnswerCard({
         <div className="flex items-start justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             {problem.subject && (
-              <span
-                className="rounded-full px-2 py-0.5 text-xs"
-                style={{
-                  backgroundColor: `${problem.subject.color}1a`,
-                  color: problem.subject.color,
-                }}
-              >
-                {problem.subject.name}
-              </span>
+              <SubjectChip name={problem.subject.name} color={problem.subject.color} />
             )}
             <Badge variant="outline">{DIFFICULTY_LABEL[problem.difficulty]}</Badge>
             {wrongAnswer.errorType && (

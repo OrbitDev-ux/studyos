@@ -2,30 +2,30 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { DeleteProblemButton } from "@/features/problems/components/delete-problem-button";
 import { FavoriteButton } from "@/features/problems/components/favorite-button";
-import { SolveProblemPanel } from "@/features/problems/components/solve-problem-panel";
+import {
+  SolveProblemPanel,
+  type SolveProgress,
+} from "@/features/problems/components/solve-problem-panel";
 import { DIFFICULTY_LABEL } from "@/features/problems/constants";
+import { SubjectChip } from "@/features/subjects/components/subject-chip";
 import type { getProblems } from "@/features/problems/queries";
 
 export function ProblemCard({
   problem,
+  progress,
+  nextProblemId,
 }: {
   problem: Awaited<ReturnType<typeof getProblems>>[number];
+  progress?: SolveProgress;
+  nextProblemId?: string | null;
 }) {
   return (
-    <Card>
+    <Card id={`problem-${problem.id}`} className="scroll-mt-20 outline-none">
       <CardContent className="flex flex-col gap-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             {problem.subject && (
-              <span
-                className="rounded-full px-2 py-0.5 text-xs"
-                style={{
-                  backgroundColor: `${problem.subject.color}1a`,
-                  color: problem.subject.color,
-                }}
-              >
-                {problem.subject.name}
-              </span>
+              <SubjectChip name={problem.subject.name} color={problem.subject.color} />
             )}
             <Badge variant="outline">{DIFFICULTY_LABEL[problem.difficulty]}</Badge>
             {problem.unit && (
@@ -40,7 +40,11 @@ export function ProblemCard({
 
         <p className="text-sm font-medium">{problem.prompt}</p>
 
-        <SolveProblemPanel problem={problem} />
+        <SolveProblemPanel
+          problem={problem}
+          progress={progress}
+          nextProblemId={nextProblemId}
+        />
       </CardContent>
     </Card>
   );

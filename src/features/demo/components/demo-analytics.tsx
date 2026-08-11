@@ -12,6 +12,16 @@ function formatMinutes(total: number): string {
   return h > 0 ? `${h}시간 ${m}분` : `${m}분`;
 }
 
+// 브랜드 차트 팔레트(globals.css --chart-1~5)를 실제로 렌더에 연결한다.
+// 요일별 막대를 팔레트로 순환시켜 토큰이 화면에 반영되는지 검증한다.
+const CHART_BARS = [
+  "bg-chart-1",
+  "bg-chart-2",
+  "bg-chart-3",
+  "bg-chart-4",
+  "bg-chart-5",
+] as const;
+
 export function DemoAnalytics() {
   const { totalSolved } = useDemo();
   const maxMinutes = Math.max(...DEMO_WEEKLY_STUDY.map((d) => d.minutes));
@@ -39,11 +49,11 @@ export function DemoAnalytics() {
         </CardHeader>
         <CardContent>
           <div className="flex h-40 items-end justify-between gap-2">
-            {DEMO_WEEKLY_STUDY.map((d) => (
+            {DEMO_WEEKLY_STUDY.map((d, i) => (
               <div key={d.day} className="flex flex-1 flex-col items-center gap-1.5">
                 <div className="flex w-full flex-1 items-end">
                   <div
-                    className="bg-primary/80 w-full rounded-t"
+                    className={`${CHART_BARS[i % CHART_BARS.length]} w-full rounded-t transition-all`}
                     style={{ height: `${Math.round((d.minutes / maxMinutes) * 100)}%` }}
                     title={`${d.minutes}분`}
                   />

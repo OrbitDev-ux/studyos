@@ -1,6 +1,7 @@
 import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { SubjectChip } from "@/features/subjects/components/subject-chip";
 import { cn } from "@/lib/utils";
 
 /**
@@ -38,9 +39,7 @@ export function ProductPreview() {
           <Card className="border-0 shadow-none sm:border sm:shadow-sm">
             <CardContent className="flex flex-col gap-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 text-xs text-indigo-500">
-                  수학
-                </span>
+                <SubjectChip name="수학" color="#6366f1" />
                 <Badge variant="outline">보통</Badge>
                 <span className="text-muted-foreground text-xs">이차함수</span>
               </div>
@@ -56,19 +55,20 @@ export function ProductPreview() {
                     className={cn(
                       "flex items-center justify-between rounded-md border px-3 py-2 text-left text-sm",
                       choice.isCorrect
-                        ? "border-primary bg-primary/10 font-medium"
+                        ? "border-success bg-success/10 font-medium"
                         : "text-muted-foreground",
                     )}
                   >
                     <span>
                       {choice.label} {choice.content}
                     </span>
-                    {choice.isCorrect && <Check className="text-primary size-4" />}
+                    {choice.isCorrect && <Check className="text-success size-4" />}
                   </div>
                 ))}
               </div>
 
-              <p className="text-primary text-sm font-medium">
+              <p className="text-success flex items-center gap-1.5 text-sm font-medium">
+                <Check className="size-4" />
                 정답입니다! x = 2에서 최솟값 -1을 가져요.
               </p>
             </CardContent>

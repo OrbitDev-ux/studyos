@@ -1,22 +1,27 @@
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
+import { BookMarked, Dna, Sparkles, type LucideIcon } from "lucide-react";
 import { ProductPreview } from "@/components/marketing/product-preview";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { siteConfig } from "@/config/site";
 
-const FEATURES = [
+const FEATURES: { title: string; description: string; icon: LucideIcon }[] = [
   {
     title: "AI 문제 생성",
     description: "과목과 단원만 정하면 AI가 난이도별 문제를 바로 만들어줘요.",
+    icon: Sparkles,
   },
   {
-    title: "오답노트 자동 분석",
-    description: "틀린 문제를 모아 취약 단원과 개선 방향을 AI가 분석해요.",
+    title: "오답 DNA 분석",
+    description:
+      "틀린 문제의 '왜 틀렸는지'까지 유형화해, 반복되는 실수 패턴을 짚어줍니다.",
+    icon: Dna,
   },
   {
-    title: "학습 리포트",
-    description: "공부시간·Todo·모의고사 데이터를 바탕으로 주간 리포트를 받아보세요.",
+    title: "나만의 교재",
+    description:
+      "내 취약점에 맞춰 진화하는 교재. 풀수록 나에게 최적화된 한 권이 완성돼요.",
+    icon: BookMarked,
   },
 ];
 
@@ -42,10 +47,10 @@ export default function LandingPage() {
           플랫폼입니다.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
-          <Button asChild size="lg" className="h-11 px-6 text-base">
+          <Button asChild size="lg" className="px-6 text-base">
             <Link href="/signup">무료로 시작하기</Link>
           </Button>
-          <Button asChild size="lg" variant="outline" className="h-11 px-6 text-base">
+          <Button asChild size="lg" variant="outline" className="px-6 text-base">
             <Link href="/demo">👀 로그인 없이 둘러보기</Link>
           </Button>
         </div>
@@ -59,7 +64,10 @@ export default function LandingPage() {
         <div className="grid gap-4 sm:grid-cols-3">
           {FEATURES.map((feature) => (
             <Card key={feature.title}>
-              <CardContent className="flex flex-col gap-1.5">
+              <CardContent className="flex flex-col gap-2.5">
+                <span className="bg-primary/10 text-primary flex size-9 items-center justify-center rounded-lg">
+                  <feature.icon className="size-4.5" />
+                </span>
                 <h2 className="text-sm font-semibold">{feature.title}</h2>
                 <p className="text-muted-foreground text-sm">{feature.description}</p>
               </CardContent>

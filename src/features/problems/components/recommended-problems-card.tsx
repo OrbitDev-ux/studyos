@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { getRecentProblems } from "@/features/problems/queries";
+import { SubjectChip } from "@/features/subjects/components/subject-chip";
 
 export function RecommendedProblemsCard({
   problems,
@@ -26,15 +27,11 @@ export function RecommendedProblemsCard({
             {problems.map((problem) => (
               <li key={problem.id} className="flex items-center gap-2 text-sm">
                 {problem.subject && (
-                  <span
-                    className="shrink-0 rounded-full px-2 py-0.5 text-xs"
-                    style={{
-                      backgroundColor: `${problem.subject.color}1a`,
-                      color: problem.subject.color,
-                    }}
-                  >
-                    {problem.subject.name}
-                  </span>
+                  <SubjectChip
+                    name={problem.subject.name}
+                    color={problem.subject.color}
+                    className="shrink-0"
+                  />
                 )}
                 <span className="truncate">{problem.prompt}</span>
               </li>

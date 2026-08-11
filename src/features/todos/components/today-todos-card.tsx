@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { quickAddTodo } from "@/features/todos/actions";
 import { TodoCheckbox } from "@/features/todos/components/todo-checkbox";
 import type { getTodayTodos } from "@/features/todos/queries";
+import { SubjectChip } from "@/features/subjects/components/subject-chip";
 import { cn } from "@/lib/utils";
 
 export function TodayTodosCard({
@@ -40,15 +41,11 @@ export function TodayTodosCard({
                   {todo.title}
                 </span>
                 {todo.subject && (
-                  <span
-                    className="ml-auto rounded-full px-2 py-0.5 text-xs"
-                    style={{
-                      backgroundColor: `${todo.subject.color}1a`,
-                      color: todo.subject.color,
-                    }}
-                  >
-                    {todo.subject.name}
-                  </span>
+                  <SubjectChip
+                    name={todo.subject.name}
+                    color={todo.subject.color}
+                    className="ml-auto"
+                  />
                 )}
               </li>
             ))}

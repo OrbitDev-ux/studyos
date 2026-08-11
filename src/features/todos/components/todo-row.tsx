@@ -5,6 +5,7 @@ import { DeleteTodoButton } from "@/features/todos/components/delete-todo-button
 import { TodoCheckbox } from "@/features/todos/components/todo-checkbox";
 import { TodoFormDialog } from "@/features/todos/components/todo-form-dialog";
 import type { getAllTodos } from "@/features/todos/queries";
+import { SubjectChip } from "@/features/subjects/components/subject-chip";
 import { formatDateOnly, formatShortKoreanDate } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
@@ -34,15 +35,11 @@ export function TodoRow({
         </span>
       </div>
       {todo.subject && (
-        <span
-          className="shrink-0 rounded-full px-2 py-0.5 text-xs"
-          style={{
-            backgroundColor: `${todo.subject.color}1a`,
-            color: todo.subject.color,
-          }}
-        >
-          {todo.subject.name}
-        </span>
+        <SubjectChip
+          name={todo.subject.name}
+          color={todo.subject.color}
+          className="shrink-0"
+        />
       )}
       <TodoFormDialog
         subjects={subjects}

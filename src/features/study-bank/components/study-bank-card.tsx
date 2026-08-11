@@ -23,6 +23,7 @@ import { FavoriteButton } from "@/features/problems/components/favorite-button";
 import { SolveProblemPanel } from "@/features/problems/components/solve-problem-panel";
 import { DIFFICULTY_LABEL, QUESTION_TYPE_LABEL } from "@/features/problems/constants";
 import type { BankProblem } from "@/features/study-bank/queries";
+import { SubjectChip } from "@/features/subjects/components/subject-chip";
 
 export function StudyBankCard({
   problem,
@@ -51,15 +52,7 @@ export function StudyBankCard({
         <div className="flex items-start justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1.5">
             {problem.subject && (
-              <span
-                className="rounded-full px-2 py-0.5 text-xs"
-                style={{
-                  backgroundColor: `${problem.subject.color}1a`,
-                  color: problem.subject.color,
-                }}
-              >
-                {problem.subject.name}
-              </span>
+              <SubjectChip name={problem.subject.name} color={problem.subject.color} />
             )}
             <Badge variant="outline">{DIFFICULTY_LABEL[problem.difficulty]}</Badge>
             <Badge variant="secondary">{QUESTION_TYPE_LABEL[problem.type]}</Badge>
@@ -135,15 +128,7 @@ function ProblemDetail({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-1.5">
         {problem.subject && (
-          <span
-            className="rounded-full px-2 py-0.5 text-xs"
-            style={{
-              backgroundColor: `${problem.subject.color}1a`,
-              color: problem.subject.color,
-            }}
-          >
-            {problem.subject.name}
-          </span>
+          <SubjectChip name={problem.subject.name} color={problem.subject.color} />
         )}
         <Badge variant="outline">{DIFFICULTY_LABEL[problem.difficulty]}</Badge>
         <Badge variant="secondary">{QUESTION_TYPE_LABEL[problem.type]}</Badge>

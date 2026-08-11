@@ -49,7 +49,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
-import { SolveProblemPanel } from "@/features/problems/components/solve-problem-panel";
+import {
+  SolveProblemPanel,
+  type SolveProgress,
+} from "@/features/problems/components/solve-problem-panel";
 import { DIFFICULTY_LABEL } from "@/features/problems/constants";
 import { studyBookTypeLabel } from "@/features/study-books/types";
 import {
@@ -180,11 +183,32 @@ export function StudyBookViewer({
         </div>
       </div>
 
+      {/* 차별점 서사 — 일반 AI 챗봇과 다른 이유를 즉시 이해시킨다. */}
+      <div className="border-primary/20 bg-primary/5 flex items-start gap-3 rounded-xl border p-3.5">
+        <span className="bg-primary/12 text-primary flex size-8 shrink-0 items-center justify-center rounded-lg">
+          <WandSparkles className="size-4" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-medium">이 교재는 당신의 취약점에 맞춰 진화합니다</p>
+          <p className="text-muted-foreground text-xs">
+            틀린 문제와 &lsquo;나만의 교재 지침&rsquo;을 반영해 챕터를 다시 생성할수록,
+            당신에게 최적화된 한 권이 완성돼요.
+          </p>
+        </div>
+      </div>
+
       {/* Progress (from shared Learning-OS data) */}
       <Card>
         <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Stat label="학습률" value={`${progress.learningRatePercent}%`}>
-            <Progress value={progress.learningRatePercent} className="h-1.5" />
+            <Progress
+              value={progress.learningRatePercent}
+              className={cn(
+                "h-1.5",
+                progress.learningRatePercent >= 100 &&
+                  "[&>[data-slot=progress-indicator]]:bg-success",
+              )}
+            />
           </Stat>
           <Stat label="정답률" value={`${progress.accuracyPercent}%`} />
           <Stat
@@ -279,9 +303,31 @@ export function StudyBookViewer({
               </Card>
             )}
 
-            {chapter.items.map((item, i) => (
-              <ChapterItem key={item.id} item={item} number={i + 1} bookId={book.id} />
-            ))}
+            {(() => {
+              // 챕터 내 "문제" 아이템만 모아 진행률/다음 문제 이동을 구성한다.
+              const problemItems = chapter.items.filter((it) => !!it.problem);
+              return chapter.items.map((item, i) => {
+                const pIdx = item.problem
+                  ? problemItems.findIndex((p) => p.id === item.id)
+                  : -1;
+                return (
+                  <ChapterItem
+                    key={item.id}
+                    item={item}
+                    number={i + 1}
+                    bookId={book.id}
+                    progress={
+                      pIdx >= 0
+                        ? { index: pIdx + 1, total: problemItems.length }
+                        : undefined
+                    }
+                    nextProblemId={
+                      pIdx >= 0 ? (problemItems[pIdx + 1]?.problem?.id ?? null) : null
+                    }
+                  />
+                );
+              });
+            })()}
 
             {chapter.reviewPoints && (
               <Card className="border-primary/20">
@@ -331,10 +377,14 @@ function ChapterItem({
   item,
   number,
   bookId,
+  progress,
+  nextProblemId,
 }: {
   item: Item;
   number: number;
   bookId: string;
+  progress?: SolveProgress;
+  nextProblemId?: string | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -408,7 +458,7 @@ function ChapterItem({
   // Problem item → reuse the shared solving panel (records to Learning OS).
   if (isProblem) {
     return (
-      <Card>
+      <Card id={`problem-${item.problem!.id}`} className="scroll-mt-20 outline-none">
         <CardContent className="flex flex-col gap-3">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2">
@@ -421,7 +471,12 @@ function ChapterItem({
           {/* Key by problem.id: 난이도 변경/재생성으로 이 아이템의 problemId가
               바뀌면 패널을 remount해 이전 문제의 풀이/정답 상태가 새 문제에
               남지 않도록 한다(item.id는 그대로라 key만으로는 리셋되지 않음). */}
-          <SolveProblemPanel key={item.problem!.id} problem={item.problem!} />
+          <SolveProblemPanel
+            key={item.problem!.id}
+            problem={item.problem!}
+            progress={progress}
+            nextProblemId={nextProblemId}
+          />
           {err && <p className="text-destructive text-xs">{err}</p>}
         </CardContent>
       </Card>

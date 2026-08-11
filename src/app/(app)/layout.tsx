@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/layout/app-sidebar";
+import { BottomNav } from "@/components/layout/bottom-nav";
 import { Header } from "@/components/layout/header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ToastProvider } from "@/components/ui/toast";
 import { PresenceHeartbeat } from "@/features/profile/components/presence-heartbeat";
+import { getNotifications } from "@/features/notifications/queries";
 import { getSocialNotificationCount } from "@/features/social/queries";
 import { getCurrentAdmin } from "@/lib/admin/context";
 import { getMaintenance } from "@/lib/maintenance";
@@ -26,7 +28,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   // Friend requests + unread DMs → the "친구" sidebar badge.
-  const socialCount = await getSocialNotificationCount(session.user.id);
+  // Notification feed (review due + social) → the header bell.
+  const [socialCount, notifications] = await Promise.all([
+    getSocialNotificationCount(session.user.id),
+    getNotifications(session.user.id),
+  ]);
 
   // Show the upgrade CTA to everyone except PREMIUM. Cheap PK lookup.
   const planRow = await prisma.user.findUnique({
@@ -44,8 +50,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <PresenceHeartbeat />
         <AppSidebar user={session.user} socialCount={socialCount} showUpgrade={showUpgrade} />
         <SidebarInset>
-          <Header />
-          <main className="flex flex-1 flex-col gap-4 p-4 md:p-6">{children}</main>
+          <Header notifications={notifications} />
+          <main className="flex flex-1 flex-col gap-4 p-4 pb-24 md:p-6 md:pb-6">
+            {children}
+          </main>
+          <BottomNav socialCount={socialCount} />
         </SidebarInset>
       </SidebarProvider>
     </ToastProvider>

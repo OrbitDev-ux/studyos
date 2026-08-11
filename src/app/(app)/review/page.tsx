@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Dna } from "lucide-react";
 import { WrongAnswerList } from "@/features/review/components/wrong-answer-list";
 import { getWrongAnswers } from "@/features/review/queries";
 import { AdSlot } from "@/features/ads/components/ad-slot";
@@ -19,6 +21,24 @@ export default async function ReviewPage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold tracking-tight">오답노트</h1>
+
+      {/* 차별점 연결 서사 — 오답이 어떻게 다음 학습으로 이어지는지 보여준다. */}
+      <div className="border-info/20 bg-info/8 flex items-start gap-3 rounded-xl border p-3.5">
+        <span className="bg-info/12 text-info flex size-8 shrink-0 items-center justify-center rounded-lg">
+          <Dna className="size-4" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-medium">오답은 그냥 쌓이지 않아요</p>
+          <p className="text-muted-foreground text-xs">
+            여기 기록된 오답은{" "}
+            <Link href="/stats" className="text-info font-medium hover:underline">
+              취약 단원 분석
+            </Link>
+            과 맞춤 문제 추천에 자동으로 반영됩니다.
+          </p>
+        </div>
+      </div>
+
       <AdSlot placement="review" show={showAds} />
       <WrongAnswerList wrongAnswers={wrongAnswers} canUseDna={canUseDna} />
     </div>

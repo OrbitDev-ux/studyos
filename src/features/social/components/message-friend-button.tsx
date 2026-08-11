@@ -15,10 +15,10 @@ export function MessageFriendButton({ friendUserId }: { friendUserId: string }) 
     <div className="flex items-center gap-2">
       <Button
         type="button"
-        size="icon-sm"
-        variant="ghost"
+        size="sm"
+        variant="outline"
         disabled={isPending}
-        aria-label="메시지 보내기"
+        aria-label="채팅 시작"
         onClick={() => {
           setError(null);
           startTransition(async () => {
@@ -32,6 +32,7 @@ export function MessageFriendButton({ friendUserId }: { friendUserId: string }) 
         }}
       >
         <MessageCircle className="size-4" />
+        채팅
       </Button>
       {error && <p className="text-destructive text-xs">{error}</p>}
     </div>
