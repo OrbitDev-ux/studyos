@@ -43,7 +43,8 @@ export function toManusSchema(node: unknown): unknown {
   const src = node as Record<string, unknown>;
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(src)) {
-    if (k === "$schema" || k === "minLength" || k === "minItems") continue;
+    // Strict validators (Manus/OpenAI-style) reject these meta/validation keys.
+    if (k === "$schema" || k === "minLength" || k === "minItems" || k === "default") continue;
     out[k] = toManusSchema(v);
   }
 
