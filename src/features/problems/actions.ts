@@ -207,6 +207,8 @@ export async function deleteProblem(problemId: string) {
   if (error) throw error;
 
   revalidatePath("/problems");
+  // Keep the 문제은행 list in sync after a delete (it reads live from the DB).
+  revalidatePath("/study-bank");
 }
 
 /**
@@ -227,11 +229,29 @@ export async function submitProblemAnswer(
   // SOLVING user, so shared problems flow through the normal Learning-OS path.
   const { data: problem } = await supabase
     .from("Problem")
-    .select("*, choices:Choice(*)")
+    .select("*, choices:Choice(*), subject:Subject(name)")
     .eq("id", problemId)
     .or(`userId.eq.${user.id},source.eq.${IMPORT_SOURCE}`)
     .maybeSingle();
   if (!problem) throw new Error("문제를 찾을 수 없습니다.");
+
+  // Attribute the attempt to the SOLVING user's own subject. For an owned
+  // problem that's already problem.subjectId; for a SHARED (imported) problem it
+  // belongs to the import account, so map it onto the solver's own Subject row of
+  // the same canonical name (upsert) — otherwise weakness/stats would split the
+  // attempt out under a subjectId the user doesn't own ("미지정 과목").
+  let attemptSubjectId = problem.subjectId ?? null;
+  const subjectName = (problem.subject as { name?: string } | null)?.name;
+  if (problem.userId !== user.id && subjectName) {
+    const color = DEFAULT_SUBJECTS.find((s) => s.name === subjectName)?.color;
+    const ownSubject = await prisma.subject.upsert({
+      where: { userId_name: { userId: user.id, name: subjectName } },
+      create: { userId: user.id, name: subjectName, color: color ?? SUBJECT_COLOR_PALETTE[0] },
+      update: {},
+      select: { id: true },
+    });
+    attemptSubjectId = ownSubject.id;
+  }
 
   const selectedChoice =
     problem.type === "MULTIPLE_CHOICE"
@@ -259,7 +279,7 @@ export async function submitProblemAnswer(
   await recordProblemAttempt({
     userId: user.id,
     problemId,
-    subjectId: problem.subjectId ?? null,
+    subjectId: attemptSubjectId,
     unit: problem.unit ?? null,
     difficulty: problem.difficulty,
     isCorrect: correct,
