@@ -26,6 +26,61 @@ type ManusMessage = {
   structured_output_result?: { success?: boolean; value?: unknown; error?: string | null };
 };
 
+/**
+ * Manus's structured_output_schema is strict (verified empirically): every
+ * object must set `additionalProperties: false` AND list every property in
+ * `required` — a JSON Schema with optional fields (or a missing
+ * additionalProperties) is rejected with HTTP 400. z.toJSONSchema emits optional
+ * fields exactly that way, so transform the schema here: make every object
+ * strict, list all properties as required, and make originally-optional fields
+ * nullable so the model may still omit them (as null). Meta keys Manus dislikes
+ * ($schema/minLength/minItems) are dropped. The StudyOS Zod schema is unchanged.
+ */
+export function toManusSchema(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(toManusSchema);
+  if (!node || typeof node !== "object") return node;
+
+  const src = node as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(src)) {
+    if (k === "$schema" || k === "minLength" || k === "minItems") continue;
+    out[k] = toManusSchema(v);
+  }
+
+  if (out.type === "object" && out.properties && typeof out.properties === "object") {
+    const props = out.properties as Record<string, Record<string, unknown>>;
+    const keys = Object.keys(props);
+    const originallyRequired = new Set(
+      Array.isArray(out.required) ? (out.required as string[]) : [],
+    );
+    for (const key of keys) {
+      if (!originallyRequired.has(key)) {
+        const p = props[key]!;
+        // Make the optional field nullable so it can be omitted (as null).
+        if (typeof p.type === "string") p.type = [p.type, "null"];
+      }
+    }
+    out.required = keys;
+    out.additionalProperties = false;
+  }
+  return out;
+}
+
+/** Recursively drop null values so originally-optional (non-nullable) Zod fields
+ * see `undefined` and validate — the mirror of toManusSchema's nullable widening. */
+export function stripNulls(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stripNulls);
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      if (v === null) continue;
+      out[k] = stripNulls(v);
+    }
+    return out;
+  }
+  return value;
+}
+
 /** Pure: find the structured_output_result value in a messages page. Exported
  * for unit tests. Returns { found, value } — value conforms to the schema even
  * when success is false (per the docs). */
@@ -107,7 +162,8 @@ export class ManusProvider implements AIProvider {
       timeoutMs: Math.min(30_000, input.timeoutMs),
       body: {
         message: { content: `${input.system}\n\n${input.prompt}` },
-        structured_output_schema: input.jsonSchema,
+        // Manus requires a STRICT schema (all-required + additionalProperties:false).
+        structured_output_schema: toManusSchema(input.jsonSchema),
         hide_in_task_list: true,
         locale: "ko",
       },
@@ -152,7 +208,9 @@ export class ManusProvider implements AIProvider {
       const list = await this.call(qs, { method: "GET", key, timeoutMs: 15_000 });
       const messages = Array.isArray(list.messages) ? (list.messages as ManusMessage[]) : [];
       const found = extractStructuredValue(messages);
-      if (found.found) return found.value;
+      // Strip nulls (from the nullable-widened optional fields) so the caller's
+      // Zod schema — which keeps those fields optional, not nullable — validates.
+      if (found.found) return stripNulls(found.value);
       if (list.has_more === true && typeof list.next_cursor === "string") {
         cursor = list.next_cursor;
       } else {

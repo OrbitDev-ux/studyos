@@ -1,6 +1,66 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { extractStructuredValue } from "@/features/ai/providers/manus";
+import {
+  extractStructuredValue,
+  stripNulls,
+  toManusSchema,
+} from "@/features/ai/providers/manus";
 import { activeProviderName } from "@/features/ai/providers";
+
+describe("toManusSchema (Manus strict structured-output schema)", () => {
+  it("makes every object strict: all props required + additionalProperties:false", () => {
+    const input = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      type: "object",
+      properties: {
+        prompt: { type: "string", minLength: 1 },
+        answerText: { type: "string" }, // optional (not in required)
+      },
+      required: ["prompt"],
+    };
+    const out = toManusSchema(input) as Record<string, unknown>;
+    expect(out.$schema).toBeUndefined(); // meta stripped
+    expect(out.additionalProperties).toBe(false);
+    expect(out.required).toEqual(["prompt", "answerText"]); // all required now
+    const props = out.properties as Record<string, Record<string, unknown>>;
+    expect(props.prompt!.minLength).toBeUndefined(); // meta stripped
+    expect(props.prompt!.type).toBe("string"); // originally required → unchanged
+    expect(props.answerText!.type).toEqual(["string", "null"]); // optional → nullable
+  });
+
+  it("recurses into nested arrays/objects", () => {
+    const input = {
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: { a: { type: "string" }, b: { type: "boolean" } },
+            required: ["a", "b"],
+          },
+        },
+      },
+      required: ["items"],
+    };
+    const out = toManusSchema(input) as Record<string, unknown>;
+    const nested = (out.properties as Record<string, Record<string, unknown>>).items!.items as Record<string, unknown>;
+    expect(nested.additionalProperties).toBe(false);
+    expect(nested.required).toEqual(["a", "b"]);
+  });
+});
+
+describe("stripNulls", () => {
+  it("removes null values so optional Zod fields see undefined", () => {
+    expect(
+      stripNulls({ prompt: "q", answerText: null, choices: null }),
+    ).toEqual({ prompt: "q" });
+  });
+  it("recurses arrays and nested objects", () => {
+    expect(
+      stripNulls({ problems: [{ prompt: "a", answerText: null }, { prompt: "b", answerText: "x" }] }),
+    ).toEqual({ problems: [{ prompt: "a" }, { prompt: "b", answerText: "x" }] });
+  });
+});
 
 describe("extractStructuredValue (Manus structured_output_result)", () => {
   it("returns the value from the structured_output_result event", () => {
