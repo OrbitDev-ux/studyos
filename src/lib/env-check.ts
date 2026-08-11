@@ -11,15 +11,24 @@ const REQUIRED: { key: string; breaks: string }[] = [
   { key: "AUTH_URL", breaks: "인증 콜백 + SEO 절대 URL(robots/sitemap/OpenGraph/JSON-LD)" },
   { key: "AUTH_GOOGLE_ID", breaks: "Google 로그인" },
   { key: "AUTH_GOOGLE_SECRET", breaks: "Google 로그인" },
-  { key: "GEMINI_API_KEY", breaks: "AI 전 기능(문제 생성/해설/오답 DNA/교재/모의고사)" },
   { key: "NEXT_PUBLIC_SUPABASE_URL", breaks: "Supabase SDK 접근" },
   { key: "NEXT_PUBLIC_SUPABASE_ANON_KEY", breaks: "Supabase SDK 접근" },
   { key: "ADMIN_SECRET", breaks: "관리자 부트스트랩 로그인" },
   { key: "ADMIN_SESSION_SECRET", breaks: "관리자 세션 서명" },
 ];
 
+/** The AI key required depends on the selected provider (AI_PROVIDER, default
+ * "manus"). Keeps the boot log accurate after the Gemini→Manus migration. */
+function requiredAiKey(): { key: string; breaks: string } {
+  const gemini = process.env.AI_PROVIDER?.trim().toLowerCase() === "gemini";
+  return gemini
+    ? { key: "GEMINI_API_KEY", breaks: "AI 전 기능 (AI_PROVIDER=gemini)" }
+    : { key: "MANUS_API_KEY", breaks: "AI 전 기능 (AI_PROVIDER=manus, 문제/해설/오답 DNA/교재/모의고사)" };
+}
+
 export function assertRequiredEnv(): void {
-  const missing = REQUIRED.filter((item) => !process.env[item.key]?.trim());
+  const required = [...REQUIRED, requiredAiKey()];
+  const missing = required.filter((item) => !process.env[item.key]?.trim());
   if (missing.length === 0) return;
 
   const lines = missing.map((item) => `  - ${item.key}: 미설정 → ${item.breaks}`);
