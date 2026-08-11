@@ -461,6 +461,10 @@ model Problem {
   studyBookItems StudyBookItem[]
 
   @@index([userId])
+  // Composite for the per-user problem lists ordered by recency (getProblems,
+  // 문제은행 own-scope, weak-problems pool): serves WHERE userId=? ORDER BY
+  // createdAt without a separate sort. userId-only lookups still use it (prefix).
+  @@index([userId, createdAt])
   @@index([subjectId])
   @@index([source])
 }

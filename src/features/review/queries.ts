@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 
 export function getWrongAnswers(userId: string) {
@@ -28,6 +29,9 @@ export function getDueReviews(userId: string, limit: number) {
   });
 }
 
-export function getDueReviewCount(userId: string): Promise<number> {
+/** Request-scoped memoized: the dashboard reads this both directly and via the
+ * daily-mission board in the same render. cache() collapses the duplicate count
+ * to one query per request (still fresh across requests — no stale data). */
+export const getDueReviewCount = cache((userId: string): Promise<number> => {
   return prisma.wrongAnswer.count({ where: dueReviewWhere(userId) });
-}
+});

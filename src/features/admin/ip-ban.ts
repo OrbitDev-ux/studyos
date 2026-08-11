@@ -18,14 +18,14 @@ export async function findActiveBan(ip: string): Promise<BlockedIp | null> {
   return ban;
 }
 
-/** Structured login-flow logging: [IP] → [BAN] (if any) → [LOGIN]. */
-export function logBanCheck(ip: string, ban: BlockedIp | null): void {
-  console.log(`[IP] ${ip}`);
-  if (ban) {
-    const expires = ban.permanent ? "permanent" : (ban.expiresAt?.toISOString() ?? "n/a");
-    console.log(`[BAN] Found | reason=${ban.reason ?? "-"} | expires=${expires}`);
-    console.log("[LOGIN] Blocked");
-  } else {
-    console.log("[LOGIN] Allowed");
-  }
+/**
+ * Log ONLY the security-relevant event: a blocked (banned) admin-login attempt.
+ * The routine allowed case is not logged (it fired on every attempt and was pure
+ * noise); every attempt is already persisted to AdminLoginAttempt for the audit
+ * trail. The raw IP is not printed here — it lives in that DB record.
+ */
+export function logBanCheck(_ip: string, ban: BlockedIp | null): void {
+  if (!ban) return;
+  const expires = ban.permanent ? "permanent" : (ban.expiresAt?.toISOString() ?? "n/a");
+  console.warn(`[admin-auth] blocked banned IP | reason=${ban.reason ?? "-"} | expires=${expires}`);
 }

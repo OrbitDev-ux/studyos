@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import {
   computeWeaknessUnits,
@@ -16,8 +17,14 @@ export type {
 const MAX_ATTEMPTS = 1000;
 
 /** Full per-unit weakness breakdown for a user, weakest first. Fetches the
- * attempt log + subject names, then delegates to the pure computeWeaknessUnits. */
-export async function getWeaknessBreakdown(userId: string): Promise<WeaknessUnit[]> {
+ * attempt log + subject names, then delegates to the pure computeWeaknessUnits.
+ *
+ * Wrapped in React `cache()` for REQUEST-scoped memoization: the dashboard reaches
+ * this three times in one render (getTopWeaknesses + the mission board + the weak-
+ * problems board), each of which would otherwise re-run the ~1000-row attempt
+ * fetch. cache() collapses them to a single query per request; it is NOT a
+ * cross-request cache, so the data is always fresh (no stale-data risk). */
+export const getWeaknessBreakdown = cache(async (userId: string): Promise<WeaknessUnit[]> => {
   const rows = (await prisma.problemAttempt.findMany({
     where: { userId },
     select: {
@@ -45,7 +52,7 @@ export async function getWeaknessBreakdown(userId: string): Promise<WeaknessUnit
   const subjectName = new Map(subjects.map((s) => [s.id, s.name]));
 
   return computeWeaknessUnits(rows, subjectName);
-}
+});
 
 /**
  * The top weak units for a compact surface (dashboard card). Prefers units with
