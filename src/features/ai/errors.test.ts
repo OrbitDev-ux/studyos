@@ -32,6 +32,22 @@ describe("classifyAiError", () => {
     expect(classifyAiError(new Error("model is overloaded")).code).toBe("unavailable");
   });
 
+  it("maps an invalid/disabled API key or account to 'auth' (permanent, not transient)", () => {
+    // The real failure observed in prod: 401 with an ACCOUNT_STATE_INVALID body.
+    const e = classifyAiError(
+      Object.assign(
+        new Error(
+          '{"error":{"code":401,"message":"The bound service account is deleted or disabled.","status":"UNAUTHENTICATED","reason":"ACCOUNT_STATE_INVALID"}}',
+        ),
+        { status: 401 },
+      ),
+    );
+    expect(e.code).toBe("auth");
+    expect(e.message).not.toMatch(/잠시 후/); // must not read as retryable
+    expect(classifyAiError(new Error("API key not valid")).code).toBe("auth");
+    expect(classifyAiError(Object.assign(new Error("x"), { status: 403 })).code).toBe("auth");
+  });
+
   it("falls back to 'failed' for unknown errors", () => {
     expect(classifyAiError(new Error("something else")).code).toBe("failed");
   });

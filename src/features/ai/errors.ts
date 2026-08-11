@@ -8,7 +8,7 @@ import { z } from "zod";
  * "check your plan and billing details", which must not reach the user or logs.
  */
 
-export type AiErrorCode = "rate" | "unavailable" | "disabled" | "failed";
+export type AiErrorCode = "rate" | "unavailable" | "disabled" | "auth" | "failed";
 
 /** A user-safe AI failure: a Korean message fit to show + a coarse `code`. */
 export class AiGenerationError extends Error {
@@ -45,6 +45,22 @@ export function classifyAiError(err: unknown): AiGenerationError {
     return new AiGenerationError(
       "unavailable",
       "AI 서버가 혼잡해요. 잠시 후 다시 시도해주세요.",
+    );
+  }
+  // Invalid / disabled API key or account (401/403, ACCOUNT_STATE_INVALID,
+  // "API key not valid", expired key). This is a PERMANENT config failure, not a
+  // transient one — surface it distinctly so it isn't hidden behind "잠시 후 다시
+  // 시도" (which implies retrying will help). Raw provider text is never shown.
+  if (
+    status === 401 ||
+    status === 403 ||
+    /UNAUTHENTICATED|PERMISSION_DENIED|ACCOUNT_STATE_INVALID|API key not valid|API_KEY_INVALID|permission denied/i.test(
+      raw,
+    )
+  ) {
+    return new AiGenerationError(
+      "auth",
+      "AI 서비스 설정에 문제가 있어요. 관리자에게 문의해주세요.",
     );
   }
   return new AiGenerationError("failed", "AI 요청에 실패했어요. 잠시 후 다시 시도해주세요.");

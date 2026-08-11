@@ -2,7 +2,7 @@
 
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
-import { generateStructured } from "@/features/ai/client";
+import { generateStructured, aiErrorResult } from "@/features/ai/client";
 import { getActivePromptContent } from "@/features/ai/prompt-service";
 import { PROMPT_TYPES } from "@/features/ai/prompt-registry";
 import { buildProblemGenerationPrompt } from "@/features/ai/prompts/problem-generation";
@@ -103,9 +103,15 @@ export async function generateProblems(
   } catch (err) {
     // Plan-limit / rate rejections are expected outcomes — return a structured
     // payload (with upgrade info) so it survives to the client (thrown Server
-    // Action errors are masked in production). Real failures rethrow.
+    // Action errors are masked in production).
     const payload = generationErrorPayload(err);
     if (payload) return payload;
+    // AI failures (rate limit, invalid key/account, overload, bad response): also
+    // return an accurate message instead of throwing (which prod masks to a
+    // generic "실패"). e.g. an invalid GEMINI_API_KEY now reads as an auth/config
+    // problem, not a transient one.
+    const aiPayload = aiErrorResult(err);
+    if (aiPayload) return { error: aiPayload.error };
     throw err;
   }
 
