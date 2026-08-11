@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MathText } from "@/components/ui/math-text";
 import type { getDueReviews } from "@/features/review/queries";
 
 export function TodayReviewCard({
@@ -28,11 +29,10 @@ export function TodayReviewCard({
             <p className="text-sm font-medium">복습 예정 {totalCount}개</p>
             <ul className="flex flex-col gap-1.5">
               {wrongAnswers.map((wrongAnswer) => (
-                <li
-                  key={wrongAnswer.id}
-                  className="text-muted-foreground truncate text-sm"
-                >
-                  {wrongAnswer.problem.prompt}
+                <li key={wrongAnswer.id} className="text-sm">
+                  <MathText className="text-muted-foreground block truncate">
+                    {wrongAnswer.problem.prompt}
+                  </MathText>
                 </li>
               ))}
             </ul>

@@ -5,6 +5,7 @@ import { NotebookPen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { MathText } from "@/components/ui/math-text";
 import { DIFFICULTY_LABEL } from "@/features/problems/constants";
 import {
   DEMO_ERROR_TYPE_LABEL,
@@ -25,21 +26,21 @@ function WrongAnswerItem({ item }: { item: DemoWrongAnswer }) {
           <Badge variant="destructive">{DEMO_ERROR_TYPE_LABEL[item.dna.type]}</Badge>
         </div>
 
-        <p className="text-sm font-medium whitespace-pre-wrap">{item.prompt}</p>
+        <MathText className="text-sm font-medium">{item.prompt}</MathText>
 
         <div className="grid gap-2 text-sm sm:grid-cols-2">
           <div className="bg-destructive/5 rounded-md p-2">
             <p className="text-muted-foreground text-xs">내 답</p>
-            <p className="text-destructive font-medium">{item.myAnswer}</p>
+            <MathText className="text-destructive font-medium">{item.myAnswer}</MathText>
           </div>
           <div className="bg-primary/5 rounded-md p-2">
             <p className="text-muted-foreground text-xs">정답</p>
-            <p className="text-primary font-medium">{item.correctAnswer}</p>
+            <MathText className="text-primary font-medium">{item.correctAnswer}</MathText>
           </div>
         </div>
 
         <div className="bg-muted text-muted-foreground rounded-md p-3 text-xs">
-          <p className="whitespace-pre-wrap">{item.explanation}</p>
+          <MathText>{item.explanation}</MathText>
         </div>
 
         {!showDna ? (

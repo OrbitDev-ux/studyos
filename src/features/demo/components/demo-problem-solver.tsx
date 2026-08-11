@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { MathText } from "@/components/ui/math-text";
 import { DIFFICULTY_LABEL } from "@/features/problems/constants";
 import type { DemoProblem } from "@/features/demo/data";
 import { useDemo } from "@/features/demo/state";
@@ -53,7 +54,7 @@ export function DemoProblemSolver({ problem }: { problem: DemoProblem }) {
           <Badge variant="outline">{DIFFICULTY_LABEL[problem.difficulty]}</Badge>
         </div>
 
-        <p className="text-sm font-medium whitespace-pre-wrap">{problem.prompt}</p>
+        <MathText className="text-sm font-medium">{problem.prompt}</MathText>
 
         {isMc ? (
           <div className="flex flex-col gap-1.5">
@@ -77,7 +78,7 @@ export function DemoProblemSolver({ problem }: { problem: DemoProblem }) {
                       "border-destructive bg-destructive/5",
                   )}
                 >
-                  {choice.label}. {choice.content}
+                  {choice.label}. <MathText>{choice.content}</MathText>
                 </button>
               );
             })}
@@ -114,7 +115,7 @@ export function DemoProblemSolver({ problem }: { problem: DemoProblem }) {
                 : `아쉬워요. 정답: ${correctChoiceContent} · 이 문제는 Demo 학습 데이터에 반영되었습니다.`}
             </p>
             <div className="bg-muted text-muted-foreground rounded-md p-3 text-xs">
-              <p className="whitespace-pre-wrap">{problem.explanation}</p>
+              <MathText>{problem.explanation}</MathText>
             </div>
             <p className="text-muted-foreground text-xs">
               이렇게 StudyOS가 여러분의 학습을 분석해요.{" "}

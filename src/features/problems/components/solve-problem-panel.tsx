@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { MathText } from "@/components/ui/math-text";
 import { submitProblemAnswer } from "@/features/problems/actions";
 import { cn } from "@/lib/utils";
 
@@ -147,21 +148,19 @@ export function SolveProblemPanel({
             {problem.answerText && (
               <div className="bg-success/10 border-success/20 rounded-md border p-3 text-sm">
                 <p className="text-success mb-1 text-xs font-medium">모범 답안</p>
-                <p className="whitespace-pre-wrap">{problem.answerText}</p>
+                <MathText>{problem.answerText}</MathText>
               </div>
             )}
             {problem.scoringCriteria && (
               <div className="bg-muted rounded-md p-3 text-sm">
                 <p className="text-muted-foreground mb-1 text-xs font-medium">핵심 채점 요소</p>
-                <p className="text-muted-foreground whitespace-pre-wrap">
-                  {problem.scoringCriteria}
-                </p>
+                <MathText className="text-muted-foreground">{problem.scoringCriteria}</MathText>
               </div>
             )}
             {problem.explanation && (
-              <p className="text-muted-foreground bg-muted rounded-md p-3 text-xs whitespace-pre-wrap">
+              <MathText className="text-muted-foreground bg-muted block rounded-md p-3 text-xs">
                 {problem.explanation}
-              </p>
+              </MathText>
             )}
 
             {result === null ? (
@@ -254,7 +253,7 @@ export function SolveProblemPanel({
                   <X className="text-destructive size-4 shrink-0" />
                 )}
                 <span>
-                  {choice.label}. {choice.content}
+                  {choice.label}. <MathText>{choice.content}</MathText>
                 </span>
               </button>
             );
@@ -294,7 +293,7 @@ export function SolveProblemPanel({
             {result.correct ? "정답입니다!" : "오답입니다. 오답노트에 저장되었어요."}
           </p>
           {result.explanation && (
-            <p className="text-muted-foreground text-xs">{result.explanation}</p>
+            <MathText className="text-muted-foreground text-xs">{result.explanation}</MathText>
           )}
           {nextCta}
         </div>

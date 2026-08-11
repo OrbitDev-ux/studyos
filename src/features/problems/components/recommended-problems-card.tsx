@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MathText } from "@/components/ui/math-text";
 import type { getRecentProblems } from "@/features/problems/queries";
 import { SubjectChip } from "@/features/subjects/components/subject-chip";
 
@@ -33,7 +34,7 @@ export function RecommendedProblemsCard({
                     className="shrink-0"
                   />
                 )}
-                <span className="truncate">{problem.prompt}</span>
+                <MathText className="block truncate">{problem.prompt}</MathText>
               </li>
             ))}
           </ul>

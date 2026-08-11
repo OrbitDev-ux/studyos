@@ -5,6 +5,7 @@ import { unstable_rethrow } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MathText } from "@/components/ui/math-text";
 import { submitProblemAnswer } from "@/features/problems/actions";
 import {
   analyzeWrongAnswerDna,
@@ -140,7 +141,7 @@ export function WrongAnswerActions({
                     "border-destructive bg-destructive/5",
                 )}
               >
-                {choice.label}. {choice.content}
+                {choice.label}. <MathText>{choice.content}</MathText>
               </button>
             );
           })}
@@ -238,14 +239,14 @@ export function WrongAnswerActions({
             </span>
             {dna.concept && <span className="font-medium">{dna.concept}</span>}
           </div>
-          <p className="text-muted-foreground whitespace-pre-wrap">{dna.reason}</p>
+          <MathText className="text-muted-foreground">{dna.reason}</MathText>
         </div>
       )}
 
       {explanation && (
-        <p className="text-muted-foreground bg-muted rounded-md p-3 text-xs whitespace-pre-wrap">
+        <MathText className="text-muted-foreground bg-muted block rounded-md p-3 text-xs">
           {explanation}
-        </p>
+        </MathText>
       )}
 
       {error && <p className="text-destructive text-xs">{error}</p>}

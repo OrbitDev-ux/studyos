@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MathText } from "@/components/ui/math-text";
 import { DEMO_EXAM } from "@/features/demo/data";
 import { cn } from "@/lib/utils";
 
@@ -121,7 +122,7 @@ export function DemoExams() {
           <Card key={q.id}>
             <CardContent className="flex flex-col gap-2">
               <p className="text-sm font-medium">
-                {qi + 1}. {q.prompt}
+                {qi + 1}. <MathText>{q.prompt}</MathText>
               </p>
               <div className="grid gap-1.5 sm:grid-cols-2">
                 {q.choices.map((choice) => {
@@ -138,7 +139,7 @@ export function DemoExams() {
                         isSelected && "border-primary bg-primary/5 font-medium",
                       )}
                     >
-                      {choice.label}. {choice.content}
+                      {choice.label}. <MathText>{choice.content}</MathText>
                     </button>
                   );
                 })}

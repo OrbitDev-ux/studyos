@@ -49,6 +49,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
+import { MathText } from "@/components/ui/math-text";
 import {
   SolveProblemPanel,
   type SolveProgress,
@@ -296,9 +297,9 @@ export function StudyBookViewer({
                   <CardTitle className="text-sm">개념</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                  <MathText className="text-sm leading-relaxed">
                     {chapter.concept}
-                  </p>
+                  </MathText>
                 </CardContent>
               </Card>
             )}
@@ -335,9 +336,9 @@ export function StudyBookViewer({
                   <CardTitle className="text-sm">복습 포인트</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-wrap">
+                  <MathText className="text-muted-foreground text-sm leading-relaxed">
                     {chapter.reviewPoints}
-                  </p>
+                  </MathText>
                 </CardContent>
               </Card>
             )}
@@ -467,7 +468,7 @@ function ChapterItem({
             </div>
             {menu}
           </div>
-          <p className="text-sm font-medium whitespace-pre-wrap">{item.problem!.prompt}</p>
+          <MathText className="text-sm font-medium">{item.problem!.prompt}</MathText>
           {/* Key by problem.id: 난이도 변경/재생성으로 이 아이템의 problemId가
               바뀌면 패널을 remount해 이전 문제의 풀이/정답 상태가 새 문제에
               남지 않도록 한다(item.id는 그대로라 key만으로는 리셋되지 않음). */}
@@ -493,7 +494,7 @@ function ChapterItem({
           </Badge>
           {menu}
         </div>
-        <p className="text-sm leading-relaxed whitespace-pre-wrap">{item.content}</p>
+        <MathText className="text-sm leading-relaxed">{item.content}</MathText>
         {err && <p className="text-destructive text-xs">{err}</p>}
       </CardContent>
     </Card>

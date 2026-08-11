@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { MathText } from "@/components/ui/math-text";
 import type { getExamResult } from "@/features/mock-exam/queries";
 import { cn } from "@/lib/utils";
 
@@ -52,7 +53,7 @@ export function ExamResultCard({
               <CardContent className="flex flex-col gap-2">
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-sm font-medium">
-                    {index + 1}. {answer.problem.prompt}
+                    {index + 1}. <MathText>{answer.problem.prompt}</MathText>
                   </p>
                   {isEssay ? (
                     <Badge variant="outline">서술형</Badge>
@@ -68,21 +69,21 @@ export function ExamResultCard({
                     {answer.answerText && (
                       <div className="bg-muted rounded-md p-2">
                         <p className="text-muted-foreground text-xs">내 답안</p>
-                        <p className="whitespace-pre-wrap">{answer.answerText}</p>
+                        <MathText>{answer.answerText}</MathText>
                       </div>
                     )}
                     {answer.problem.answerText && (
                       <div className="bg-primary/5 rounded-md p-2">
                         <p className="text-muted-foreground text-xs">모범 답안</p>
-                        <p className="whitespace-pre-wrap">{answer.problem.answerText}</p>
+                        <MathText>{answer.problem.answerText}</MathText>
                       </div>
                     )}
                     {answer.problem.scoringCriteria && (
                       <div className="bg-muted rounded-md p-2">
                         <p className="text-muted-foreground text-xs">핵심 채점 요소</p>
-                        <p className="text-muted-foreground whitespace-pre-wrap">
+                        <MathText className="text-muted-foreground">
                           {answer.problem.scoringCriteria}
-                        </p>
+                        </MathText>
                       </div>
                     )}
                   </div>
@@ -98,7 +99,7 @@ export function ExamResultCard({
                             "text-destructive",
                         )}
                       >
-                        {choice.label}. {choice.content}
+                        {choice.label}. <MathText>{choice.content}</MathText>
                         {choice.id === answer.selectedChoiceId && " (내 답)"}
                       </p>
                     ))}
@@ -106,9 +107,9 @@ export function ExamResultCard({
                 )}
 
                 {answer.problem.explanation && (
-                  <p className="text-muted-foreground text-xs">
+                  <MathText className="text-muted-foreground text-xs">
                     {answer.problem.explanation}
-                  </p>
+                  </MathText>
                 )}
               </CardContent>
             </Card>

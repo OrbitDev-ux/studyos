@@ -1,3 +1,4 @@
+import { MathText } from "@/components/ui/math-text";
 import { circledNumber } from "@/features/exam-paper/format";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +24,7 @@ export function ExamProblem({
     <li className={cn("exam-problem", fullWidth && "exam-problem--full")}>
       <div className="exam-problem-head">
         <p className="exam-problem-prompt" style={{ whiteSpace: "pre-line" }}>
-          <span className="exam-problem-no">{number}.</span> {prompt}
+          <span className="exam-problem-no">{number}.</span> <MathText>{prompt}</MathText>
         </p>
         <span className="exam-points" aria-label={`배점 ${points}점`}>
           [{points}점]
@@ -37,7 +38,7 @@ export function ExamProblem({
             </span>
             <span>
               <span className="sr-only">{index + 1}번 </span>
-              {choice}
+              <MathText>{choice}</MathText>
             </span>
           </li>
         ))}

@@ -1,3 +1,4 @@
+import { MathText } from "@/components/ui/math-text";
 import type { getMockExam } from "@/features/mock-exam/queries";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +16,7 @@ export function OmrSheet({
       {questions.map((question, index) => (
         <div key={question.id} className="rounded-lg border p-4">
           <p className="mb-3 text-sm font-medium">
-            {index + 1}. {question.problem.prompt}
+            {index + 1}. <MathText>{question.problem.prompt}</MathText>
           </p>
           <div className="flex flex-wrap gap-2">
             {question.problem.choices.map((choice) => {

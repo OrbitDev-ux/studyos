@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { DIFFICULTY_LABEL } from "@/features/problems/constants";
+import { MathText } from "@/components/ui/math-text";
+import { ProblemMeta } from "@/features/problems/components/problem-meta";
 import { WrongAnswerActions } from "@/features/review/components/wrong-answer-actions";
 import { ERROR_TYPE_LABEL, toErrorType } from "@/features/review/dna";
 import type { getWrongAnswers } from "@/features/review/queries";
@@ -23,7 +24,11 @@ export function WrongAnswerCard({
             {problem.subject && (
               <SubjectChip name={problem.subject.name} color={problem.subject.color} />
             )}
-            <Badge variant="outline">{DIFFICULTY_LABEL[problem.difficulty]}</Badge>
+            <ProblemMeta
+              difficulty={problem.difficulty}
+              type={problem.type}
+              unit={problem.unit}
+            />
             {wrongAnswer.errorType && (
               <Badge variant="destructive">
                 {ERROR_TYPE_LABEL[toErrorType(wrongAnswer.errorType)]}
@@ -33,7 +38,7 @@ export function WrongAnswerCard({
           {wrongAnswer.resolved && <Badge>해결됨</Badge>}
         </div>
 
-        <p className="text-sm font-medium">{problem.prompt}</p>
+        <MathText className="text-sm font-medium">{problem.prompt}</MathText>
 
         <WrongAnswerActions wrongAnswer={wrongAnswer} canUseDna={canUseDna} />
       </CardContent>

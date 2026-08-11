@@ -7,6 +7,7 @@ import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { MathText } from "@/components/ui/math-text";
 import { submitExam } from "@/features/mock-exam/actions";
 import { ExamTimer } from "@/features/mock-exam/components/exam-timer";
 import { OmrSheet } from "@/features/mock-exam/components/omr-sheet";
@@ -110,8 +111,9 @@ export function TakeExamView({
           {essayQuestions.map((question, index) => (
             <Card key={question.id}>
               <CardContent className="flex flex-col gap-2">
-                <p className="text-sm font-medium whitespace-pre-wrap">
-                  {mcQuestions.length + index + 1}. {question.problem.prompt}
+                <p className="text-sm font-medium">
+                  {mcQuestions.length + index + 1}.{" "}
+                  <MathText>{question.problem.prompt}</MathText>
                 </p>
                 <Textarea
                   rows={5}

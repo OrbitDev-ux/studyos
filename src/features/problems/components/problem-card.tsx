@@ -1,12 +1,12 @@
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { MathText } from "@/components/ui/math-text";
 import { DeleteProblemButton } from "@/features/problems/components/delete-problem-button";
 import { FavoriteButton } from "@/features/problems/components/favorite-button";
+import { ProblemMeta } from "@/features/problems/components/problem-meta";
 import {
   SolveProblemPanel,
   type SolveProgress,
 } from "@/features/problems/components/solve-problem-panel";
-import { DIFFICULTY_LABEL } from "@/features/problems/constants";
 import { SubjectChip } from "@/features/subjects/components/subject-chip";
 import type { getProblems } from "@/features/problems/queries";
 
@@ -27,10 +27,11 @@ export function ProblemCard({
             {problem.subject && (
               <SubjectChip name={problem.subject.name} color={problem.subject.color} />
             )}
-            <Badge variant="outline">{DIFFICULTY_LABEL[problem.difficulty]}</Badge>
-            {problem.unit && (
-              <span className="text-muted-foreground text-xs">{problem.unit}</span>
-            )}
+            <ProblemMeta
+              difficulty={problem.difficulty}
+              type={problem.type}
+              unit={problem.unit}
+            />
           </div>
           <div className="flex shrink-0 items-center gap-1">
             <FavoriteButton problemId={problem.id} isFavorite={problem.isFavorite} />
@@ -38,7 +39,7 @@ export function ProblemCard({
           </div>
         </div>
 
-        <p className="text-sm font-medium">{problem.prompt}</p>
+        <MathText className="text-sm font-medium">{problem.prompt}</MathText>
 
         <SolveProblemPanel
           problem={problem}

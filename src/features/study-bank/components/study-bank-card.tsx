@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/toast";
+import { MathText } from "@/components/ui/math-text";
 import { FavoriteButton } from "@/features/problems/components/favorite-button";
 import { SolveProblemPanel } from "@/features/problems/components/solve-problem-panel";
 import { DIFFICULTY_LABEL, QUESTION_TYPE_LABEL } from "@/features/problems/constants";
@@ -88,9 +89,9 @@ export function StudyBankCard({
           <p className="text-muted-foreground text-xs">🏷 {problem.unit}</p>
         )}
 
-        <p className="line-clamp-3 text-sm font-medium whitespace-pre-wrap">
+        <MathText className="line-clamp-3 block text-sm font-medium">
           {problem.prompt}
-        </p>
+        </MathText>
 
         <div className="mt-auto flex items-center gap-2 pt-1">
           <Dialog open={open} onOpenChange={setOpen}>
@@ -137,7 +138,7 @@ function ProblemDetail({
         )}
       </div>
 
-      <p className="text-sm font-medium whitespace-pre-wrap">{problem.prompt}</p>
+      <MathText className="text-sm font-medium">{problem.prompt}</MathText>
 
       {/* Reuses the existing solve panel → existing grading / ProblemAttempt /
           WrongAnswer / spaced-repetition path (no new solve system). */}
