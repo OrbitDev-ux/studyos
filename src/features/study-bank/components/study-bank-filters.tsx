@@ -41,9 +41,7 @@ export function StudyBankFilters({
     onNavigate?.();
   }
 
-  const units = params.subject
-    ? (facets.unitsBySubject[params.subject] ?? [])
-    : facets.allUnits;
+  const units = facets.allUnits;
 
   return (
     <div className="flex flex-col gap-4">
@@ -58,7 +56,9 @@ export function StudyBankFilters({
           <SelectContent>
             <SelectItem value={ALL}>전체</SelectItem>
             {facets.subjects.map((s) => (
-              <SelectItem key={s.id} value={s.id}>
+              // Value is the subject NAME so the filter matches shared (imported)
+              // problems too, which are owned by the system import account.
+              <SelectItem key={s.id} value={s.name}>
                 {s.name}
               </SelectItem>
             ))}

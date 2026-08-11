@@ -24,6 +24,7 @@ import {
   type GenerationErrorPayload,
 } from "@/features/ai/generation-guard";
 import { accessStateFor, trialStartedDate } from "@/features/billing/access";
+import { IMPORT_SOURCE } from "@/features/problems/import/types";
 import { DEFAULT_SUBJECTS, SUBJECT_COLOR_PALETTE } from "@/features/subjects/constants";
 import { getClientIp } from "@/lib/ip";
 import { prisma } from "@/lib/prisma";
@@ -221,11 +222,14 @@ export async function submitProblemAnswer(
   const user = await requireCurrentUser();
   const supabase = await createClient();
 
+  // Solvable if it is the user's OWN problem OR a shared imported bank problem
+  // (source = "import"). The attempt/wrong-answer are still recorded under the
+  // SOLVING user, so shared problems flow through the normal Learning-OS path.
   const { data: problem } = await supabase
     .from("Problem")
     .select("*, choices:Choice(*)")
     .eq("id", problemId)
-    .eq("userId", user.id)
+    .or(`userId.eq.${user.id},source.eq.${IMPORT_SOURCE}`)
     .maybeSingle();
   if (!problem) throw new Error("문제를 찾을 수 없습니다.");
 

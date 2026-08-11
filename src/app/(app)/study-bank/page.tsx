@@ -85,7 +85,11 @@ export default async function StudyBankPage({
             <>
               <div className="grid gap-3 sm:grid-cols-2">
                 {result.items.map((problem) => (
-                  <StudyBankCard key={problem.id} problem={problem} />
+                  <StudyBankCard
+                    key={problem.id}
+                    problem={problem}
+                    owned={problem.userId === user.id}
+                  />
                 ))}
               </div>
               <PaginationNav

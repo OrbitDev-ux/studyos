@@ -24,7 +24,15 @@ import { SolveProblemPanel } from "@/features/problems/components/solve-problem-
 import { DIFFICULTY_LABEL, QUESTION_TYPE_LABEL } from "@/features/problems/constants";
 import type { BankProblem } from "@/features/study-bank/queries";
 
-export function StudyBankCard({ problem }: { problem: BankProblem }) {
+export function StudyBankCard({
+  problem,
+  owned,
+}: {
+  problem: BankProblem;
+  /** Whether the current user owns this problem. Shared (imported) problems are
+   * owned by the system account → 저장(즐겨찾기) is hidden since it is per-owner. */
+  owned: boolean;
+}) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
 
@@ -57,7 +65,9 @@ export function StudyBankCard({ problem }: { problem: BankProblem }) {
             <Badge variant="secondary">{QUESTION_TYPE_LABEL[problem.type]}</Badge>
           </div>
           <div className="flex shrink-0 items-center gap-0.5">
-            <FavoriteButton problemId={problem.id} isFavorite={problem.isFavorite} />
+            {owned && (
+              <FavoriteButton problemId={problem.id} isFavorite={problem.isFavorite} />
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -100,7 +110,7 @@ export function StudyBankCard({ problem }: { problem: BankProblem }) {
               <DialogHeader>
                 <DialogTitle className="text-base">문제 상세</DialogTitle>
               </DialogHeader>
-              <ProblemDetail problem={problem} onSimilar={requestSimilar} />
+              <ProblemDetail problem={problem} owned={owned} onSimilar={requestSimilar} />
             </DialogContent>
           </Dialog>
           <Button type="button" size="sm" variant="outline" onClick={requestSimilar}>
@@ -114,9 +124,11 @@ export function StudyBankCard({ problem }: { problem: BankProblem }) {
 
 function ProblemDetail({
   problem,
+  owned,
   onSimilar,
 }: {
   problem: BankProblem;
+  owned: boolean;
   onSimilar: () => void;
 }) {
   return (
@@ -147,8 +159,12 @@ function ProblemDetail({
       <SolveProblemPanel problem={problem} />
 
       <div className="flex items-center gap-2 border-t pt-3">
-        <FavoriteButton problemId={problem.id} isFavorite={problem.isFavorite} />
-        <span className="text-muted-foreground text-xs">저장</span>
+        {owned && (
+          <>
+            <FavoriteButton problemId={problem.id} isFavorite={problem.isFavorite} />
+            <span className="text-muted-foreground text-xs">저장</span>
+          </>
+        )}
         <Button
           type="button"
           size="sm"

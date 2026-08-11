@@ -1,5 +1,6 @@
 import type { Choice, Problem, Subject } from "@/generated/prisma/client";
 import { createClient } from "@/lib/supabase/server";
+import { IMPORT_SOURCE } from "@/features/problems/import/types";
 import { PAGE_SIZE, type StudyBankParams } from "@/features/study-bank/search-params";
 
 /**
@@ -12,10 +13,10 @@ import { PAGE_SIZE, type StudyBankParams } from "@/features/study-bank/search-pa
 export type BankProblem = Problem & { choices: Choice[]; subject: Subject | null };
 
 export type StudyBankFacets = {
+  /** Subject options for the filter — value is the subject NAME (works across the
+   * user's own problems and shared imported ones, which use canonical names). */
   subjects: Pick<Subject, "id" | "name" | "color">[];
-  /** Distinct units per subjectId (for the cascading unit filter). */
-  unitsBySubject: Record<string, string[]>;
-  /** All distinct units (used when no subject is selected). */
+  /** All distinct units across the user's own + shared imported problems. */
   allUnits: string[];
 };
 
@@ -29,27 +30,21 @@ export async function getStudyBankFacets(userId: string): Promise<StudyBankFacet
       .select("id, name, color")
       .eq("userId", userId)
       .order("order", { ascending: true }),
+    // Units across the user's OWN problems AND shared (imported) bank problems.
     supabase
       .from("Problem")
-      .select("subjectId, unit")
-      .eq("userId", userId)
+      .select("unit")
+      .or(`userId.eq.${userId},source.eq.${IMPORT_SOURCE}`)
       .not("unit", "is", null),
   ]);
 
-  const unitsBySubject: Record<string, Set<string>> = {};
   const allUnits = new Set<string>();
-  for (const row of (unitRows ?? []) as { subjectId: string | null; unit: string | null }[]) {
-    if (!row.unit) continue;
-    allUnits.add(row.unit);
-    const key = row.subjectId ?? "";
-    (unitsBySubject[key] ??= new Set()).add(row.unit);
+  for (const row of (unitRows ?? []) as { unit: string | null }[]) {
+    if (row.unit) allUnits.add(row.unit);
   }
 
   return {
     subjects: (subjects ?? []) as Pick<Subject, "id" | "name" | "color">[],
-    unitsBySubject: Object.fromEntries(
-      Object.entries(unitsBySubject).map(([k, v]) => [k, [...v].sort()]),
-    ),
     allUnits: [...allUnits].sort(),
   };
 }
@@ -96,13 +91,31 @@ export async function getStudyBankProblems(
 
   let query = supabase
     .from("Problem")
-    .select("*, choices:Choice(*), subject:Subject(*)", { count: "exact" })
-    .eq("userId", userId);
+    .select("*, choices:Choice(*), subject:Subject(*)", { count: "exact" });
 
-  if (params.tab === "saved") query = query.eq("isFavorite", true);
-  if (wrongProblemIds) query = query.in("id", wrongProblemIds);
+  // Scope. "저장" is the user's OWN favorites (isFavorite is owner-specific). Every
+  // other tab shows the user's own problems PLUS shared imported bank problems.
+  if (params.tab === "saved") {
+    query = query.eq("userId", userId).eq("isFavorite", true);
+  } else if (wrongProblemIds) {
+    // Wrong-answer ids are already the user's; they may point at shared problems.
+    query = query.in("id", wrongProblemIds);
+  } else {
+    query = query.or(`userId.eq.${userId},source.eq.${IMPORT_SOURCE}`);
+  }
 
-  if (params.subject) query = query.eq("subjectId", params.subject);
+  // Subject filter is by NAME (resolve to the matching Subject ids). The scope
+  // above already restricts rows to own/shared, so ids of other users named the
+  // same are harmless. Works for shared problems (owned by the import account).
+  if (params.subject) {
+    const { data: subs } = await supabase
+      .from("Subject")
+      .select("id")
+      .eq("name", params.subject);
+    const ids = (subs ?? []).map((s) => s.id as string);
+    if (ids.length === 0) return emptyResult(params.page);
+    query = query.in("subjectId", ids);
+  }
   if (params.unit) query = query.eq("unit", params.unit);
   if (params.difficulty) query = query.eq("difficulty", params.difficulty);
   if (params.type) query = query.eq("type", params.type);

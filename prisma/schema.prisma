@@ -438,6 +438,16 @@ model Problem {
   /// student for self-assessment. Null for MC / short-answer.
   scoringCriteria String?   @db.Text
   isFavorite   Boolean      @default(false)
+  /// Normalized-content hash for the import pipeline's exact-duplicate detection
+  /// + idempotency (features/problems/import). NULL for user-generated problems;
+  /// set only on imported ones. `@unique` → Postgres allows many NULLs but keeps
+  /// non-null fingerprints unique, so a re-sent/duplicate import can't double-insert.
+  fingerprint   String?     @unique
+  /// Origin of the problem: null/"user" = made by a user via AI generation;
+  /// "import" = ingested into the shared 문제은행 via the import pipeline.
+  source        String?
+  /// The import batch this problem came in with (for tracing / import events).
+  importBatchId String?
   createdAt    DateTime     @default(now())
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -452,6 +462,7 @@ model Problem {
 
   @@index([userId])
   @@index([subjectId])
+  @@index([source])
 }
 
 model Choice {
