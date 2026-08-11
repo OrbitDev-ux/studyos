@@ -1,9 +1,17 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { BookMarked, Dna, Sparkles, type LucideIcon } from "lucide-react";
 import { ProductPreview } from "@/components/marketing/product-preview";
+import { FaqStructuredData } from "@/components/marketing/structured-data";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { FAQ_ITEMS } from "@/config/faq";
 import { siteConfig } from "@/config/site";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+  openGraph: { url: "/" },
+};
 
 const FEATURES: { title: string; description: string; icon: LucideIcon }[] = [
   {
@@ -75,6 +83,24 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
+
+      <section className="mx-auto w-full max-w-3xl px-4 pb-24 sm:px-6">
+        <h2 className="mb-6 text-center text-2xl font-semibold tracking-tight">
+          자주 묻는 질문
+        </h2>
+        <div className="flex flex-col gap-3">
+          {FAQ_ITEMS.map((item) => (
+            <Card key={item.question}>
+              <CardContent className="flex flex-col gap-1.5">
+                <h3 className="text-sm font-semibold">{item.question}</h3>
+                <p className="text-muted-foreground text-sm">{item.answer}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <FaqStructuredData />
     </main>
   );
 }

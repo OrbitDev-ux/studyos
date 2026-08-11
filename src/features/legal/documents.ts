@@ -36,6 +36,8 @@
  *  - 본 문서들은 법률 자문을 받은 결과가 아니다.
  */
 
+import { CONTACT_EMAIL } from "@/config/site";
+
 export const LEGAL_DOC_SLUGS = [
   "terms",
   "privacy",
@@ -77,8 +79,6 @@ export type LegalDocument = {
 
 /** 확정되지 않은 사업자/연락처 정보 placeholder. 완료 보고에서 명시한다. */
 const PLACEHOLDER = "[추후 입력]";
-/** 실제 존재하는 문의 채널(config/site.ts). */
-const CONTACT_EMAIL = "rivalshilank@gmail.com";
 
 const COMMON_EFFECTIVE = "2026-08-10";
 
@@ -350,15 +350,25 @@ const privacy: LegalDocument = {
       ],
     },
     {
+      id: "cookies-ads",
+      title: "8. 쿠키(Cookie) 및 온라인 맞춤형 광고",
+      paragraphs: [
+        "서비스는 무료 체험(Trial) 이용자에게 광고를 표시할 수 있으며, 이를 위해 Google AdSense 등 제3자 광고 서비스를 이용할 수 있습니다. 유료 구독(PRO/PREMIUM) 이용자에게는 광고가 표시되지 않습니다.",
+        "Google을 포함한 제3자 광고 사업자는 쿠키(Cookie)를 사용하여 이용자의 본 서비스 및 다른 웹사이트 방문 기록을 기반으로 맞춤형 광고를 제공할 수 있습니다. Google의 광고 쿠키는 이용자가 방문한 사이트 정보를 바탕으로 광고를 게재하는 데 사용됩니다.",
+        "이용자는 Google 광고 설정(https://www.google.com/settings/ads)에서 맞춤형 광고를 비활성화할 수 있으며, https://www.aboutads.info 를 통해 제3자 사업자의 맞춤형 광고 쿠키 사용을 개별적으로 거부할 수 있습니다. 또한 웹 브라우저 설정을 통해 쿠키 저장을 거부하거나 삭제할 수 있으나, 이 경우 일부 서비스 이용에 제한이 있을 수 있습니다.",
+        "Google의 광고 및 데이터 처리에 관한 자세한 내용은 Google 개인정보처리방침과 'Google 파트너 사이트나 앱 사용 시 Google의 정보 이용 방식' 안내를 참고하시기 바랍니다.",
+      ],
+    },
+    {
       id: "overseas",
-      title: "8. 개인정보의 국외 이전",
+      title: "9. 개인정보의 국외 이전",
       paragraphs: [
         "Google 로그인 및 AI 생성 처리는 국외(미국 등)에 소재한 Google의 인프라를 통해 이루어질 수 있으며, 이 경우 학습 컨텍스트 등 처리에 필요한 정보가 국외로 이전될 수 있습니다. 데이터베이스·호스팅 인프라의 소재 리전 및 국외 이전에 관한 세부 고지는 상용 출시 전 확정합니다.",
       ],
     },
     {
       id: "ai-data",
-      title: "9. AI 처리 시 전달되는 정보(개인정보 최소화)",
+      title: "10. AI 처리 시 전달되는 정보(개인정보 최소화)",
       paragraphs: [
         "AI 문제·교재 생성 및 오답·약점 분석 시, AI provider(Google Gemini)에는 생성에 필요한 최소한의 학습 컨텍스트만 전달됩니다.",
         "전달되는 정보는 과목·단원·문제 내용·이용자가 제출한 답안·정답·난이도·취약 개념 등 학습 관련 데이터에 한합니다.",
@@ -367,7 +377,7 @@ const privacy: LegalDocument = {
     },
     {
       id: "security",
-      title: "10. 개인정보 보호를 위한 조치",
+      title: "11. 개인정보 보호를 위한 조치",
       paragraphs: [
         "서비스는 실제로 적용하고 있는 아래의 보호조치를 취하고 있습니다. 문서에는 실제 구현된 조치만 기재합니다.",
       ],
@@ -381,21 +391,21 @@ const privacy: LegalDocument = {
     },
     {
       id: "rights",
-      title: "11. 이용자의 권리",
+      title: "12. 이용자의 권리",
       paragraphs: [
         "이용자는 언제든지 자신의 개인정보에 대한 열람·정정·삭제·처리정지 및 회원 탈퇴를 요청할 수 있습니다. 요청은 서비스 내 기능 또는 아래 문의처를 통해 접수할 수 있으며, 서비스는 관련 법령에 따라 지체 없이 처리합니다.",
       ],
     },
     {
       id: "minor",
-      title: "12. 미성년자의 개인정보",
+      title: "13. 미성년자의 개인정보",
       paragraphs: [
         "서비스는 특정 연령대에 한정되지 않으며 미성년자가 이용할 가능성이 있습니다. 미성년자의 개인정보 처리 및 법정대리인 동의에 관한 구체적 절차는 관련 법령에 따라 상용 출시 전 확정합니다. 현재 서비스는 별도의 연령 정보를 수집하지 않습니다.",
       ],
     },
     {
       id: "officer",
-      title: "13. 개인정보 보호책임자 및 문의",
+      title: "14. 개인정보 보호책임자 및 문의",
       paragraphs: [
         `개인정보 처리에 관한 문의, 열람·삭제 요청은 아래 연락처로 접수할 수 있습니다.`,
         `· 문의 이메일: ${CONTACT_EMAIL}`,
@@ -404,7 +414,7 @@ const privacy: LegalDocument = {
     },
     {
       id: "policy-change",
-      title: "14. 개인정보 처리방침의 변경",
+      title: "15. 개인정보 처리방침의 변경",
       paragraphs: [
         "본 방침은 법령·서비스 변경에 따라 개정될 수 있으며, 개정 시 변경 내용과 시행일을 본 페이지를 통해 안내합니다.",
         `본 방침은 ${COMMON_EFFECTIVE}부터 시행됩니다.`,
