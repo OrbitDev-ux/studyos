@@ -1,6 +1,6 @@
-import { timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
+import { authorizeImport } from "@/features/problems/import/auth";
 import { createPrismaImportRepository } from "@/features/problems/import/repository";
 import {
   buildImportCompletedEvent,
@@ -28,28 +28,29 @@ export const maxDuration = 60;
 // ~8 MB request cap (a 500-problem batch is well under this).
 const MAX_BODY_BYTES = 8 * 1024 * 1024;
 
-function tokenMatches(provided: string, expected: string): boolean {
-  const a = Buffer.from(provided);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
-
-function unauthorized() {
-  return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
-}
-
 export async function POST(request: NextRequest) {
-  const expected = process.env.PROBLEM_IMPORT_TOKEN;
-  if (!expected) {
-    // Feature not configured — do NOT leak details; just say it's unavailable.
-    return NextResponse.json({ error: "IMPORT_NOT_CONFIGURED" }, { status: 503 });
-  }
-
-  const auth = request.headers.get("authorization") ?? "";
-  const bearer = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
-  if (!bearer || !tokenMatches(bearer, expected)) {
-    return unauthorized();
+  // Auth is trimmed on BOTH sides (see authorizeImport) so env whitespace never
+  // causes a spurious 401. Diagnostics are LENGTHS ONLY — never the token.
+  const authResult = authorizeImport(
+    request.headers.get("authorization"),
+    process.env.PROBLEM_IMPORT_TOKEN,
+  );
+  if (!authResult.ok) {
+    if (authResult.reason === "not_configured") {
+      return NextResponse.json({ error: "IMPORT_NOT_CONFIGURED" }, { status: 503 });
+    }
+    console.warn(
+      "[import] auth rejected",
+      JSON.stringify({
+        tokenConfigured: true,
+        expectedLength: authResult.expectedLength,
+        providedLength: authResult.providedLength,
+        // Equal lengths + still rejected → the token VALUES differ (re-check the
+        // secret set on both sides). Different lengths → whitespace/wrong value.
+        lengthMatch: authResult.expectedLength === authResult.providedLength,
+      }),
+    );
+    return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
   }
 
   const contentLength = Number(request.headers.get("content-length") ?? "0");
