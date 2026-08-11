@@ -166,6 +166,8 @@ export async function generateProblems(
   }
 
   revalidatePath("/problems");
+  // New problems must also show up in the 문제은행 list immediately.
+  revalidatePath("/study-bank");
   return {};
 }
 
@@ -188,6 +190,8 @@ export async function toggleFavorite(problemId: string) {
   if (error) throw error;
 
   revalidatePath("/problems");
+  // Keep the 문제은행 "저장" tab / star state in sync without a manual refresh.
+  revalidatePath("/study-bank");
 }
 
 export async function deleteProblem(problemId: string) {
