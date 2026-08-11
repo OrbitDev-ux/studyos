@@ -59,8 +59,8 @@ export async function generateStructured<T>({
       model: aiModel,
     });
   } catch (err) {
-    // Never propagate the provider's raw error (Gemini 429 leaks billing text;
-    // Manus errors leak account info). Classify into a user-safe AiGenerationError.
+    // Never propagate the provider's raw error (e.g. Gemini's 429 body leaks
+    // billing text). Classify into a user-safe AiGenerationError.
     const classified = classifyAiError(err);
     console.error(
       `AI generate failed (${provider.name}, ${classified.code}):`,

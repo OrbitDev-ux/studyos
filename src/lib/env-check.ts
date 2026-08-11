@@ -18,12 +18,12 @@ const REQUIRED: { key: string; breaks: string }[] = [
 ];
 
 /** The AI key required depends on the selected provider (AI_PROVIDER, default
- * "manus"). Keeps the boot log accurate after the Gemini→Manus migration. */
+ * "groq"). Keeps the boot log accurate for the active AI provider. */
 function requiredAiKey(): { key: string; breaks: string } {
   const gemini = process.env.AI_PROVIDER?.trim().toLowerCase() === "gemini";
   return gemini
     ? { key: "GEMINI_API_KEY", breaks: "AI 전 기능 (AI_PROVIDER=gemini)" }
-    : { key: "MANUS_API_KEY", breaks: "AI 전 기능 (AI_PROVIDER=manus, 문제/해설/오답 DNA/교재/모의고사)" };
+    : { key: "GROQ_API_KEY", breaks: "AI 전 기능 (AI_PROVIDER=groq, 문제/해설/오답 DNA/교재/모의고사)" };
 }
 
 export function assertRequiredEnv(): void {

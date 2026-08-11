@@ -1,21 +1,21 @@
 import { GeminiProvider } from "@/features/ai/providers/gemini";
-import { ManusProvider } from "@/features/ai/providers/manus";
+import { GroqProvider } from "@/features/ai/providers/groq";
 import type { AIProvider } from "@/features/ai/providers/types";
 
 export type { AIProvider, GenerateInput } from "@/features/ai/providers/types";
 
-export type ProviderName = "manus" | "gemini";
+export type ProviderName = "groq" | "gemini";
 
 /**
- * Which AI provider to use, from AI_PROVIDER. Defaults to "manus" (current
- * release), with "gemini" one env flip away for when the Gemini key is valid.
+ * Which AI provider to use, from AI_PROVIDER. Defaults to "groq" (current
+ * provider), with "gemini" one env flip away for when a valid Gemini key exists.
  */
 export function activeProviderName(): ProviderName {
-  return process.env.AI_PROVIDER?.trim().toLowerCase() === "gemini" ? "gemini" : "manus";
+  return process.env.AI_PROVIDER?.trim().toLowerCase() === "gemini" ? "gemini" : "groq";
 }
 
 const instances: Record<ProviderName, AIProvider> = {
-  manus: new ManusProvider(),
+  groq: new GroqProvider(),
   gemini: new GeminiProvider(),
 };
 

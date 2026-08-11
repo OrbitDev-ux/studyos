@@ -17,7 +17,7 @@ export type GenerateInput = {
   jsonSchema: Record<string, unknown>;
   /** Per-request timeout budget (ms). */
   timeoutMs: number;
-  /** Reasoning-heavy hint (Gemini "thinking"; Manus ignores it). */
+  /** Reasoning-heavy hint (Gemini "thinking"; other providers may ignore it). */
   useThinking: boolean;
   /** SDK retry attempts (Gemini only). */
   retryAttempts: number;
