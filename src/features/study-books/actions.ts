@@ -62,7 +62,13 @@ export async function createStudyBook(
   values: StudyBookFormValues,
 ): Promise<{ bookId?: string } & Partial<GenerationErrorPayload>> {
   const user = await requireCurrentUser();
-  const parsed = studyBookFormSchema.parse(values);
+  // Server-authoritative validation (see problems/actions). Caps chapter/문항 수
+  // (챕터 최대 4 × 챕터당 최대 5) with a clear message instead of a masked throw.
+  const validation = studyBookFormSchema.safeParse(values);
+  if (!validation.success) {
+    return { error: validation.error.issues[0]?.message ?? "입력값이 올바르지 않습니다." };
+  }
+  const parsed = validation.data;
 
   const resolved = resolveTaxonomy({
     gradeId: parsed.gradeId,

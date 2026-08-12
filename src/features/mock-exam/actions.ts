@@ -31,7 +31,13 @@ export async function generateMockExam(
   values: MockExamGenerationFormValues,
 ): Promise<{ examId?: string } & Partial<GenerationErrorPayload>> {
   const user = await requireCurrentUser();
-  const parsed = mockExamGenerationFormSchema.parse(values);
+  // Server-authoritative validation (see problems/actions). Rejects invalid or
+  // oversized 문항 수 (객관식+서술형 합계 상한 포함) with a clear message.
+  const validation = mockExamGenerationFormSchema.safeParse(values);
+  if (!validation.success) {
+    return { error: validation.error.issues[0]?.message ?? "입력값이 올바르지 않습니다." };
+  }
+  const parsed = validation.data;
 
   const subject = await prisma.subject.findFirst({
     where: { id: parsed.subjectId, userId: user.id },

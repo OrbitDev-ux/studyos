@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { getMonthStart, getTodayRange } from "@/lib/date";
 import { prisma } from "@/lib/prisma";
+import { assertQuestionCount, InvalidCountError } from "@/features/ai/generation-limits";
 import type { AccessState } from "@/features/billing/subscription";
 import {
   getFeatureLimit,
@@ -82,7 +83,7 @@ export function kindToFeature(kind: GenerationKind): MeteredFeature {
  * error is not a quota/limit rejection and should propagate as a real failure). */
 export type GenerationErrorPayload = {
   error: string;
-  code: "FEATURE_LIMIT_REACHED" | "rate" | "concurrent";
+  code: "FEATURE_LIMIT_REACHED" | "rate" | "concurrent" | "invalid_count";
   feature?: MeteredFeature;
   limit?: number;
   used?: number;
@@ -90,6 +91,9 @@ export type GenerationErrorPayload = {
 };
 
 export function generationErrorPayload(err: unknown): GenerationErrorPayload | null {
+  if (err instanceof InvalidCountError) {
+    return { error: err.message, code: err.code };
+  }
   if (err instanceof FeatureLimitError) {
     return {
       error: err.message,
@@ -155,6 +159,11 @@ type ReserveContext = {
 };
 
 async function reserveGeneration(ctx: ReserveContext): Promise<string> {
+  // Central question-count ceiling (defense-in-depth). Rejects invalid/oversized
+  // requests before any reservation or AI call, even if a caller skipped the form
+  // schema. Per-surface schemas may cap lower; this is the global backstop.
+  assertQuestionCount(ctx.count);
+
   const feature = kindToFeature(ctx.kind);
   const limit: Limit = getFeatureLimit(ctx.state, feature);
   const windowStart = usageWindowStart(ctx.state, ctx.kind, ctx, new Date());

@@ -36,7 +36,14 @@ export async function generateProblems(
   values: ProblemGenerationFormValues,
 ): Promise<{ error?: string } | GenerationErrorPayload> {
   const user = await requireCurrentUser();
-  const parsed = problemGenerationFormSchema.parse(values);
+  // Server-authoritative validation (client can be bypassed / the action called
+  // directly). safeParse → a clear message instead of a prod-masked ZodError.
+  // Zod handles 문자열 숫자(coerce)·소수(int)·0·음수(min)·과도한 수(max) in one step.
+  const validation = problemGenerationFormSchema.safeParse(values);
+  if (!validation.success) {
+    return { error: validation.error.issues[0]?.message ?? "입력값이 올바르지 않습니다." };
+  }
+  const parsed = validation.data;
 
   // Server is the authoritative source for taxonomy: re-validate the whole
   // (grade → subject → unit) path against the static tree and derive canonical
