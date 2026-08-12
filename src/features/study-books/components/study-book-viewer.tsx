@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
@@ -11,6 +12,7 @@ import {
   MoreVertical,
   Pencil,
   Plus,
+  Printer,
   RefreshCw,
   Sparkles,
   Trash2,
@@ -147,6 +149,11 @@ export function StudyBookViewer({
           </p>
         </div>
         <div className="flex items-center gap-1">
+          <Button asChild variant="outline" size="sm" className="gap-1.5">
+            <Link href={`/study-books/${book.id}/print`}>
+              <Printer className="size-4" /> PDF · 인쇄
+            </Link>
+          </Button>
           <EditBookDialog
             bookId={book.id}
             initialTitle={book.title}
@@ -272,6 +279,11 @@ export function StudyBookViewer({
                   onClick={() => runChapterAi(() => addWeaknessProblem(book.id, chapter.id))}
                 >
                   <WandSparkles className="size-4" /> 취약점 보완
+                </Button>
+                <Button asChild variant="outline" size="sm" className="gap-1.5">
+                  <Link href={`/study-books/${book.id}/print?chapter=${chapter.id}`}>
+                    <Printer className="size-4" /> 이 챕터 PDF
+                  </Link>
                 </Button>
                 <Button
                   variant="outline"

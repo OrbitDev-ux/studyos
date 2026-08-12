@@ -563,3 +563,317 @@
     print-color-adjust: exact;
   }
 }
+
+/* ─── Study-book printable / PDF document (features/study-books print) ───
+   Same browser-print model as the exam paper: an A4 .book-paper that is the only
+   thing visible in @media print (window.print → 인쇄 / PDF 저장). Equations render
+   through the shared <MathText>/KaTeX, so分수·지수 등 print as real math. The global
+   @page (A4 + page counter) above is reused. */
+.book-doc-bg {
+  --book-ink: #111111;
+  --book-gray: #555555;
+  --book-gray-light: #888888;
+  --book-line: #111111;
+  --book-line-soft: #dcdcdc;
+  --book-fill: #f5f5f5;
+  --book-accent: #4f46e5;
+  background: #e9e9ee;
+  padding: 24px 12px;
+  display: flex;
+  justify-content: center;
+}
+.book-paper {
+  width: 210mm;
+  max-width: 100%;
+  min-height: 297mm;
+  box-sizing: border-box;
+  padding: 20mm 16mm;
+  background: #ffffff;
+  color: var(--book-ink);
+  box-shadow: 0 1px 12px rgba(0, 0, 0, 0.12);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+/* Cover */
+.book-cover {
+  min-height: 220mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  break-after: page;
+  page-break-after: always;
+}
+.book-cover-brand {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--book-gray-light);
+}
+.book-cover-title {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.book-cover-sub {
+  font-size: 15px;
+  color: var(--book-gray);
+}
+.book-cover-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.book-tag {
+  border: 1px solid var(--book-line-soft);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--book-gray);
+}
+
+/* Info boxes */
+.book-info {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.book-info-box {
+  border: 1px solid var(--book-line-soft);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.book-info-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--book-gray-light);
+}
+.book-info-value {
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Table of contents */
+.book-section-title {
+  font-size: 18px;
+  font-weight: 700;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--book-line);
+  margin-bottom: 10px;
+}
+.book-toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.book-toc-row {
+  display: flex;
+  gap: 10px;
+  padding: 6px 2px;
+  border-bottom: 1px solid var(--book-line-soft);
+  font-size: 14px;
+}
+.book-toc-no {
+  width: 24px;
+  color: var(--book-accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Chapter — each starts on a fresh page */
+.book-chapter {
+  break-before: page;
+  page-break-before: always;
+}
+.book-chapter-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--book-line);
+  break-after: avoid;
+}
+.book-block-label {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--book-accent);
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+}
+.book-prose {
+  display: block;
+  font-size: 13.5px;
+  line-height: 1.75;
+}
+.book-concept,
+.book-prose-item {
+  border-left: 3px solid var(--book-line-soft);
+  padding: 2px 0 2px 12px;
+  margin: 10px 0 14px;
+  break-inside: avoid;
+}
+
+/* Problem block — kept whole across page breaks */
+.book-problem {
+  margin: 12px 0 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--book-line-soft);
+  border-radius: 8px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.book-problem-prompt {
+  font-size: 14px;
+  font-weight: 500;
+}
+.book-problem-no {
+  font-weight: 700;
+}
+.book-choices {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.book-choice {
+  display: flex;
+  gap: 6px;
+  font-size: 13.5px;
+}
+.book-choice-mark {
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.book-answer {
+  margin-top: 10px;
+  padding: 6px 10px;
+  background: var(--book-fill);
+  border-radius: 6px;
+  font-size: 13px;
+}
+.book-explanation {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-left: 3px solid var(--book-accent);
+  font-size: 13px;
+  color: var(--book-gray);
+}
+.book-explanation .book-prose {
+  color: var(--book-gray);
+}
+.book-criteria {
+  margin-top: 4px;
+}
+.book-review {
+  margin-top: 14px;
+  padding: 8px 12px;
+  background: var(--book-fill);
+  border-radius: 8px;
+  break-inside: avoid;
+}
+
+/* Long block equations never overflow the page width */
+.book-paper .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.book-paper .katex {
+  white-space: normal;
+}
+
+/* Footers */
+.book-screen-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20mm;
+  padding-top: 8px;
+  border-top: 1px solid var(--book-line-soft);
+  font-size: 9px;
+  color: var(--book-gray-light);
+}
+.book-running-footer {
+  display: none;
+}
+
+/* Toolbar (screen only) */
+.book-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 210mm;
+  max-width: 100%;
+  margin: 0 auto 12px;
+}
+
+/* Responsive web preview: fit the viewport on small screens */
+@media screen and (max-width: 900px) {
+  .book-paper {
+    width: 100%;
+    min-height: 0;
+    padding: 20px 16px;
+    box-shadow: none;
+  }
+  .book-toolbar {
+    width: 100%;
+  }
+  .book-cover {
+    min-height: 0;
+    padding: 24px 0;
+  }
+  .book-info {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .book-cover-title {
+    font-size: 26px;
+  }
+}
+
+/* Print: isolate the book paper (hide the app shell), repeat a running footer */
+@media print {
+  .book-paper,
+  .book-paper *,
+  .book-running-footer,
+  .book-running-footer * {
+    visibility: visible;
+  }
+  .book-doc-bg {
+    background: #ffffff !important;
+    padding: 0;
+  }
+  .book-paper {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+  .book-screen-footer,
+  .book-toolbar {
+    display: none !important;
+  }
+  .book-running-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 4mm;
+    font-size: 9px;
+    color: #888888;
+  }
+}
