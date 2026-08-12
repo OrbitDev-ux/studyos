@@ -19,6 +19,7 @@ import { DailyMissionCard } from "@/features/learning/components/daily-mission-c
 import { getDailyMissionBoard } from "@/features/learning/mission-queries";
 import { WeakProblemsCard } from "@/features/learning/components/weak-problems-card";
 import { getWeakProblemBoard } from "@/features/learning/weak-problems-queries";
+import { MilestoneBanner } from "@/features/announcements/components/milestone-banner";
 import { OnboardingLauncher } from "@/features/onboarding/components/onboarding-launcher";
 import { getOnboardingState } from "@/features/onboarding/queries";
 import { TrialBanner } from "@/features/billing/components/trial-banner";
@@ -114,6 +115,8 @@ export default async function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
       <LoginExperience role="user" />
+
+      <MilestoneBanner />
 
       <TrialBanner summary={planSummary} />
 
