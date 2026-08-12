@@ -5,6 +5,7 @@ import {
   ClipboardList,
   Library,
   LayoutDashboard,
+  LifeBuoy,
   ListTodo,
   NotebookPen,
   Sparkles,
@@ -61,6 +62,10 @@ export const navGroups: NavGroup[] = [
       { title: "랭킹", href: "/ranking", icon: Trophy },
       { title: "배틀", href: "/battle", icon: Swords },
     ],
+  },
+  {
+    label: "지원",
+    items: [{ title: "문의하기", href: "/support", icon: LifeBuoy }],
   },
 ];
 
