@@ -32,7 +32,7 @@ export async function requireCurrentUser(): Promise<CurrentUser> {
   const { data, error } = await supabase
     .from("User")
     .select(
-      "id, name, email, image, timezone, school, plan, subscriptionStatus, trialStartedAt, trialEndsAt, adminPlanOverride, adminPlanOverrideEnabled, bannedAt",
+      "id, name, email, image, timezone, school, plan, subscriptionStatus, trialStartedAt, trialEndsAt, adminPlanOverride, adminPlanOverrideEnabled, bannedAt, passwordChangedAt",
     )
     .eq("id", session.user.id)
     .single();
@@ -43,6 +43,14 @@ export async function requireCurrentUser(): Promise<CurrentUser> {
   // this check the ban would have no effect at all.
   if ((data as { bannedAt: string | null }).bannedAt) {
     redirect("/suspended");
+  }
+
+  // Session invalidation: a password reset stamps passwordChangedAt, so any
+  // JWT session issued before then (e.g. on another device) is no longer valid.
+  const passwordChangedAt = (data as { passwordChangedAt: string | null }).passwordChangedAt;
+  const loginAt = session.user.loginAt;
+  if (passwordChangedAt && loginAt && loginAt < new Date(passwordChangedAt).getTime()) {
+    redirect("/login");
   }
 
   return data as CurrentUser;

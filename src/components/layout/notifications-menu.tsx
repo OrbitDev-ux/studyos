@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   BarChart3,
   Bell,
+  LifeBuoy,
   NotebookPen,
   Sparkles,
   Swords,
@@ -35,6 +36,7 @@ const NOTIFICATION_META: Record<
 > = {
   review_due: { icon: NotebookPen, tone: "text-info bg-info/12" },
   friend: { icon: Users, tone: "text-primary bg-primary/12" },
+  support_reply: { icon: LifeBuoy, tone: "text-primary bg-primary/12" },
   battle_result: { icon: Swords, tone: "text-warning-foreground bg-warning/15" },
   ai_generation_done: { icon: Sparkles, tone: "text-success bg-success/12" },
   weekly_report: { icon: BarChart3, tone: "text-primary bg-primary/12" },

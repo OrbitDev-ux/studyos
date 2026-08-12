@@ -1,5 +1,6 @@
 import { getDueReviewCount } from "@/features/review/queries";
 import { getSocialNotificationCount } from "@/features/social/queries";
+import { getUnreadSupportReplies } from "@/features/support/queries";
 import type { AppNotification } from "@/features/notifications/types";
 
 /**
@@ -14,12 +15,27 @@ import type { AppNotification } from "@/features/notifications/types";
  *  - weekly_report: 새 주간 리포트 발행 (features/ai)
  */
 export async function getNotifications(userId: string): Promise<AppNotification[]> {
-  const [dueCount, socialCount] = await Promise.all([
+  const [dueCount, socialCount, supportReplies] = await Promise.all([
     getDueReviewCount(userId),
     getSocialNotificationCount(userId),
+    getUnreadSupportReplies(userId),
   ]);
 
   const notifications: AppNotification[] = [];
+
+  if (supportReplies.length > 0) {
+    const first = supportReplies[0]!;
+    notifications.push({
+      id: "support_reply",
+      type: "support_reply",
+      title:
+        supportReplies.length === 1
+          ? "문의에 새로운 답변이 등록되었습니다"
+          : `문의 답변 ${supportReplies.length}건이 등록되었습니다`,
+      description: supportReplies.length === 1 ? first.title : "내 문의에서 확인하세요.",
+      href: supportReplies.length === 1 ? `/support/${first.id}` : "/support",
+    });
+  }
 
   if (dueCount > 0) {
     notifications.push({

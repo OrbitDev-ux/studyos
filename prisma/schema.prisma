@@ -20,6 +20,10 @@ model User {
   password      String?
   timezone      String    @default("Asia/Seoul")
   school        String?
+  /// Set whenever the password changes (reset or future change flow). Sessions
+  /// issued before this instant are treated as invalid by requireCurrentUser
+  /// (JWT is stateless, so this is how a reset revokes older web sessions).
+  passwordChangedAt DateTime?
   /// Short profile status message ("상태 메시지"), shown on the profile card.
   /// Display nickname reuses `name` and avatar reuses `image` — no duplicate
   /// user table, per the profile system's extend-don't-duplicate design.
@@ -88,6 +92,92 @@ model User {
   battleParticipations BattleParticipant[]
 
   legalConsents LegalConsent[]
+
+  passwordResetTokens PasswordResetToken[]
+  supportTickets      SupportTicket[]
+  supportMessages     SupportMessage[]
+}
+
+/// Password reset tokens. The raw token is emailed to the user and NEVER stored;
+/// only its SHA-256 hash is persisted, so a DB leak can't be used to reset
+/// accounts. Short-lived (see features/auth/reset), single-use (usedAt), and
+/// deleted/superseded on use. Prisma-only table: REVOKEd from the Supabase anon
+/// role in its migration so the public REST endpoint can never read/forge one.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  /// SHA-256 hex of the random token. Unique so a lookup is by hash, not userId.
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  /// Requesting IP — used only for rate limiting; never returned to any client.
+  requestIp String?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+enum SupportTicketType {
+  BUG
+  FEATURE_REQUEST
+  PAYMENT
+  ACCOUNT
+  LEARNING
+  OTHER
+}
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  ANSWERED
+  CLOSED
+}
+
+/// In-app support ticket. A conversation thread between a user and admins,
+/// reusing the existing User + admin systems (no external helpdesk). Ownership
+/// is enforced server-side by userId on every read/write.
+model SupportTicket {
+  id     String              @id @default(cuid())
+  userId String
+  type   SupportTicketType
+  title  String
+  status SupportTicketStatus @default(OPEN)
+  /// Internal admin-only note. NEVER included in any user-facing response.
+  adminNote String? @db.Text
+  /// Last time the user opened the thread — used to derive "unread admin reply"
+  /// for the notifications feed without a separate read-state table.
+  userLastReadAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages SupportMessage[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([updatedAt])
+}
+
+/// One message in a support ticket thread. `authorRole` distinguishes user vs
+/// admin (admins live in a separate AdminUser table, so senderId is the User id
+/// for user messages and null for admin messages).
+model SupportMessage {
+  id         String   @id @default(cuid())
+  ticketId   String
+  /// "user" | "admin"
+  authorRole String
+  /// The User id for user messages; null for admin messages.
+  senderId   String?
+  content    String   @db.Text
+  createdAt  DateTime @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender User?         @relation(fields: [senderId], references: [id], onDelete: SetNull)
+
+  @@index([ticketId])
 }
 
 /// A record that a user agreed to a specific legal document at a specific

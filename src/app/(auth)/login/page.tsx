@@ -25,6 +25,14 @@ export default function LoginPage() {
             </p>
           </div>
           <EmailSignInForm />
+          <div className="text-center">
+            <Link
+              href="/forgot-password"
+              className="text-muted-foreground hover:text-foreground text-xs hover:underline"
+            >
+              비밀번호를 잊으셨나요? · 계정 찾기
+            </Link>
+          </div>
           <div className="flex items-center gap-3">
             <span className="bg-border h-px flex-1" />
             <span className="text-muted-foreground text-xs">또는</span>

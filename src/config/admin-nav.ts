@@ -3,6 +3,7 @@ import {
   Bot,
   CreditCard,
   FileCode,
+  LifeBuoy,
   Scale,
   LayoutDashboard,
   ScrollText,
@@ -27,6 +28,7 @@ export type AdminNavItem = {
 export const adminNavItems: AdminNavItem[] = [
   { title: "대시보드", href: "/admin", icon: LayoutDashboard, exact: true },
   { title: "사용자", href: "/admin/users", icon: Users },
+  { title: "문의 관리", href: "/admin/support", icon: LifeBuoy, capability: "manageSupport" },
   { title: "관리자", href: "/admin/admins", icon: UserCog, capability: "manageAdmins" },
   { title: "활동 로그", href: "/admin/logs", icon: ScrollText, capability: "viewLogs" },
   {

@@ -44,6 +44,8 @@ export const CAPABILITIES = {
   // Content & ops.
   manageAnnouncements: "ADMIN",
   viewLogs: "MODERATOR",
+  // Support tickets — moderators and up can view/answer.
+  manageSupport: "MODERATOR",
   manageSecurity: "ADMIN",
   manageSystem: "SUPER_ADMIN",
   manageAi: "ADMIN",

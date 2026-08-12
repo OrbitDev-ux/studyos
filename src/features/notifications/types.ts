@@ -7,6 +7,7 @@
 export type AppNotificationType =
   | "friend"
   | "review_due"
+  | "support_reply"
   | "battle_result"
   | "ai_generation_done"
   | "weekly_report";

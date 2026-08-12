@@ -14,6 +14,7 @@ const PROTECTED_PATHS = [
   "/social",
   "/ranking",
   "/battle",
+  "/support",
 ];
 
 // Edge-safe subset of the Auth.js config: no adapter, no providers that

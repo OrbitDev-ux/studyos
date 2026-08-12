@@ -55,12 +55,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        // Stamp sign-in time ONCE (only when `user` is present). Never updated
+        // on later rotations, so it reliably marks when this session began —
+        // used to invalidate sessions issued before a password reset.
+        token.loginAt = Date.now();
       }
       return token;
     },
     session({ session, token }) {
       if (token.id) {
         session.user.id = token.id as string;
+      }
+      if (typeof token.loginAt === "number") {
+        session.user.loginAt = token.loginAt;
       }
       return session;
     },

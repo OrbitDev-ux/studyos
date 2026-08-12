@@ -22,3 +22,21 @@ export const emailSignUpSchema = z.object({
 });
 
 export type EmailSignUpValues = z.infer<typeof emailSignUpSchema>;
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().email("올바른 이메일을 입력해주세요"),
+});
+export type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>;
+
+// Reuses the sign-up password policy (min 8 / max 72 = bcrypt limit).
+export const resetPasswordSchema = z
+  .object({
+    token: z.string().min(1),
+    password: z.string().min(8, "비밀번호는 8자 이상이어야 해요").max(72),
+    confirmPassword: z.string().min(1, "비밀번호 확인을 입력해주세요"),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "비밀번호가 일치하지 않아요",
+  });
+export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;
