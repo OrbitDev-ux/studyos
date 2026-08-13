@@ -36,6 +36,8 @@ import { getSubjects } from "@/features/subjects/queries";
 import { TodayTodosCard } from "@/features/todos/components/today-todos-card";
 import { getTodayTodos } from "@/features/todos/queries";
 import { formatKoreanDate } from "@/lib/date";
+import { getMessages } from "@/features/i18n/messages";
+import { getServerLocale } from "@/features/i18n/server";
 import { requireCurrentUser } from "@/lib/session";
 
 // generateWeaknessAnalysis/generateWeeklyReport's AI calls regularly run
@@ -86,6 +88,7 @@ export default async function DashboardPage() {
     getPlanSummary(user.id),
   ]);
   const showAds = adsVisibleFor(user);
+  const t = getMessages(await getServerLocale(user.locale)).dashboard;
 
   const completedTodos = todos.filter((todo) => todo.completed).length;
   const progressPercent =
@@ -96,18 +99,18 @@ export default async function DashboardPage() {
   const hero =
     dueCount > 0
       ? {
-          eyebrow: "오늘의 우선순위",
-          title: `복습 대기 ${dueCount}개`,
-          desc: "기억이 사라지기 전에 지금 복습하면 가장 효율적이에요.",
-          cta: "지금 복습하기",
+          eyebrow: t.priorityEyebrow,
+          title: t.reviewWaitingTitle.replace("{count}", String(dueCount)),
+          desc: t.reviewWaitingDesc,
+          cta: t.reviewCta,
           href: "/review",
           Icon: NotebookPen,
         }
       : {
-          eyebrow: "오늘의 학습",
-          title: "새 문제로 감을 이어가요",
-          desc: "추천 문제를 풀며 오늘의 연속 기록을 이어가세요.",
-          cta: "문제 풀러 가기",
+          eyebrow: t.todayEyebrow,
+          title: t.newProblemsTitle,
+          desc: t.newProblemsDesc,
+          cta: t.newProblemsCta,
           href: "/problems",
           Icon: Sparkles,
         };
@@ -128,7 +131,7 @@ export default async function DashboardPage() {
               {hero.eyebrow}
             </p>
             <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
-              안녕하세요, {user.name ?? user.email}님
+              {t.greeting.replace("{name}", user.name ?? user.email)}
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
               {formatKoreanDate(new Date(), user.timezone)}
@@ -163,8 +166,11 @@ export default async function DashboardPage() {
           <div className="flex items-center gap-2.5">
             <Flame className="text-warning size-5 shrink-0" />
             <div>
-              <p className="text-lg leading-none font-semibold tabular-nums">{streak}일</p>
-              <p className="text-muted-foreground mt-0.5 text-xs">연속 공부일</p>
+              <p className="text-lg leading-none font-semibold tabular-nums">
+                {streak}
+                {t.streakUnit}
+              </p>
+              <p className="text-muted-foreground mt-0.5 text-xs">{t.streakLabel}</p>
             </div>
           </div>
           <div className="flex items-center gap-2.5">
@@ -173,7 +179,7 @@ export default async function DashboardPage() {
               <p className="text-lg leading-none font-semibold tabular-nums">
                 {progressPercent}%
               </p>
-              <p className="text-muted-foreground mt-0.5 text-xs">오늘 진행률</p>
+              <p className="text-muted-foreground mt-0.5 text-xs">{t.progressLabel}</p>
             </div>
           </div>
         </div>
@@ -182,7 +188,7 @@ export default async function DashboardPage() {
       {/* ── 오늘의 학습 (1차) ── */}
       <section className="flex flex-col gap-3">
         <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-          오늘의 학습
+          {t.sectionTodayLearning}
         </h2>
         <div className="grid gap-4 lg:grid-cols-2">
           <div data-tour="daily-mission">
@@ -201,7 +207,7 @@ export default async function DashboardPage() {
       {/* ── 오늘의 계획 (2차) ── */}
       <section className="flex flex-col gap-3">
         <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-          오늘의 계획
+          {t.sectionTodayPlan}
         </h2>
         <div className="grid gap-4 lg:grid-cols-2">
           <TodayGoalsCard goals={goals} subjects={subjects} />
@@ -219,7 +225,7 @@ export default async function DashboardPage() {
       {/* ── 분석 & 리포트 (2차) ── */}
       <section className="flex flex-col gap-3">
         <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-          분석 & 리포트
+          {t.sectionAnalysis}
         </h2>
         <div className="grid gap-4 lg:grid-cols-3">
           <div data-tour="weakness">

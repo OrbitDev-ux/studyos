@@ -56,6 +56,23 @@ const ko = {
     autoHint: "브라우저·지역을 기준으로 자동 선택",
     saved: "언어 설정을 저장했어요.",
   },
+  dashboard: {
+    greeting: "안녕하세요, {name}님",
+    priorityEyebrow: "오늘의 우선순위",
+    todayEyebrow: "오늘의 학습",
+    reviewWaitingTitle: "복습 대기 {count}개",
+    reviewWaitingDesc: "기억이 사라지기 전에 지금 복습하면 가장 효율적이에요.",
+    reviewCta: "지금 복습하기",
+    newProblemsTitle: "새 문제로 감을 이어가요",
+    newProblemsDesc: "추천 문제를 풀며 오늘의 연속 기록을 이어가세요.",
+    newProblemsCta: "문제 풀러 가기",
+    streakLabel: "연속 공부일",
+    streakUnit: "일",
+    progressLabel: "오늘 진행률",
+    sectionTodayLearning: "오늘의 학습",
+    sectionTodayPlan: "오늘의 계획",
+    sectionAnalysis: "분석 & 리포트",
+  },
 } as const;
 
 export type Messages = {
@@ -109,6 +126,23 @@ const en: Messages = {
     autoHint: "Detected from your browser and region",
     saved: "Language preference saved.",
   },
+  dashboard: {
+    greeting: "Hello, {name}",
+    priorityEyebrow: "Today's priority",
+    todayEyebrow: "Today's study",
+    reviewWaitingTitle: "{count} reviews waiting",
+    reviewWaitingDesc: "Reviewing now, before you forget, is the most effective.",
+    reviewCta: "Review now",
+    newProblemsTitle: "Keep your momentum with new problems",
+    newProblemsDesc: "Solve recommended problems to keep today's streak going.",
+    newProblemsCta: "Go solve problems",
+    streakLabel: "Day streak",
+    streakUnit: "d",
+    progressLabel: "Today's progress",
+    sectionTodayLearning: "Today's study",
+    sectionTodayPlan: "Today's plan",
+    sectionAnalysis: "Analysis & reports",
+  },
 };
 
 const ja: Messages = {
@@ -158,6 +192,23 @@ const ja: Messages = {
     autoHint: "ブラウザと地域から自動判定",
     saved: "言語設定を保存しました。",
   },
+  dashboard: {
+    greeting: "こんにちは、{name}さん",
+    priorityEyebrow: "今日の優先事項",
+    todayEyebrow: "今日の学習",
+    reviewWaitingTitle: "復習待ち {count} 件",
+    reviewWaitingDesc: "忘れる前に今すぐ復習するのが最も効果的です。",
+    reviewCta: "今すぐ復習",
+    newProblemsTitle: "新しい問題で調子を継続",
+    newProblemsDesc: "おすすめの問題を解いて今日の連続記録を伸ばしましょう。",
+    newProblemsCta: "問題を解きに行く",
+    streakLabel: "連続学習日",
+    streakUnit: "日",
+    progressLabel: "今日の進捗",
+    sectionTodayLearning: "今日の学習",
+    sectionTodayPlan: "今日の計画",
+    sectionAnalysis: "分析とレポート",
+  },
 };
 
 const zh: Messages = {
@@ -206,6 +257,23 @@ const zh: Messages = {
     auto: "自动",
     autoHint: "根据浏览器和地区自动判断",
     saved: "已保存语言设置。",
+  },
+  dashboard: {
+    greeting: "你好，{name}",
+    priorityEyebrow: "今日重点",
+    todayEyebrow: "今日学习",
+    reviewWaitingTitle: "待复习 {count} 个",
+    reviewWaitingDesc: "在遗忘之前立即复习最为有效。",
+    reviewCta: "立即复习",
+    newProblemsTitle: "用新题目保持状态",
+    newProblemsDesc: "做推荐题目，延续今天的连续记录。",
+    newProblemsCta: "去做题",
+    streakLabel: "连续学习天数",
+    streakUnit: "天",
+    progressLabel: "今日进度",
+    sectionTodayLearning: "今日学习",
+    sectionTodayPlan: "今日计划",
+    sectionAnalysis: "分析与报告",
   },
 };
 
