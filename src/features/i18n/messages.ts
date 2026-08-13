@@ -73,6 +73,13 @@ const ko = {
     sectionTodayPlan: "오늘의 계획",
     sectionAnalysis: "분석 & 리포트",
   },
+  problems: {
+    title: "문제",
+    all: "전체",
+    favorites: "즐겨찾기",
+    generate: "문제 생성",
+    empty: "표시할 문제가 없습니다.",
+  },
 } as const;
 
 export type Messages = {
@@ -143,6 +150,13 @@ const en: Messages = {
     sectionTodayPlan: "Today's plan",
     sectionAnalysis: "Analysis & reports",
   },
+  problems: {
+    title: "Problems",
+    all: "All",
+    favorites: "Favorites",
+    generate: "Generate problems",
+    empty: "No problems to show.",
+  },
 };
 
 const ja: Messages = {
@@ -209,6 +223,13 @@ const ja: Messages = {
     sectionTodayPlan: "今日の計画",
     sectionAnalysis: "分析とレポート",
   },
+  problems: {
+    title: "問題",
+    all: "すべて",
+    favorites: "お気に入り",
+    generate: "問題を生成",
+    empty: "表示する問題がありません。",
+  },
 };
 
 const zh: Messages = {
@@ -274,6 +295,13 @@ const zh: Messages = {
     sectionTodayLearning: "今日学习",
     sectionTodayPlan: "今日计划",
     sectionAnalysis: "分析与报告",
+  },
+  problems: {
+    title: "题目",
+    all: "全部",
+    favorites: "收藏",
+    generate: "生成题目",
+    empty: "暂无题目。",
   },
 };
 
