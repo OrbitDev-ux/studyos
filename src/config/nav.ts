@@ -16,8 +16,11 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import type { Messages } from "@/features/i18n/messages";
 
 export type NavItem = {
+  /** i18n key into messages.nav; the label is looked up per locale (title = ko fallback). */
+  key: keyof Messages["nav"];
   title: string;
   href: string;
   icon: LucideIcon;
@@ -25,51 +28,55 @@ export type NavItem = {
   description?: string;
 };
 
-export type NavGroup = { label: string; items: NavItem[] };
+export type NavGroup = { labelKey: keyof Messages["groups"]; label: string; items: NavItem[] };
 
 /**
- * 사이드바 정보구조 — 평면 나열 대신 학습/콘텐츠/계획/소셜로 그룹핑한다.
- * "문제"(내가 만든 AI 문제)와 "문제은행"(공유 문제 탐색)의 역할 차이를
- * description으로 명시한다.
+ * 사이드바 정보구조 — 학습/콘텐츠/계획/소셜/지원으로 그룹핑한다. 각 라벨은 i18n
+ * key로 로케일별 번역되며, `title`/`label`은 한국어 fallback이다.
  */
 export const navGroups: NavGroup[] = [
   {
+    labelKey: "learning",
     label: "학습",
     items: [
-      { title: "대시보드", href: "/dashboard", icon: LayoutDashboard },
-      { title: "AI 과외", href: "/tutor", icon: GraduationCap, description: "AI 선생님과 1:1" },
-      { title: "문제", href: "/problems", icon: Sparkles, description: "내 AI 문제 풀이" },
-      { title: "문제은행", href: "/study-bank", icon: Library, description: "공유 문제 탐색" },
-      { title: "오답노트", href: "/review", icon: NotebookPen },
-      { title: "모의고사", href: "/mock-exam", icon: ClipboardList },
+      { key: "dashboard", title: "대시보드", href: "/dashboard", icon: LayoutDashboard },
+      { key: "tutor", title: "AI 과외", href: "/tutor", icon: GraduationCap, description: "AI 선생님과 1:1" },
+      { key: "problems", title: "문제", href: "/problems", icon: Sparkles, description: "내 AI 문제 풀이" },
+      { key: "studyBank", title: "문제은행", href: "/study-bank", icon: Library, description: "공유 문제 탐색" },
+      { key: "review", title: "오답노트", href: "/review", icon: NotebookPen },
+      { key: "mockExam", title: "모의고사", href: "/mock-exam", icon: ClipboardList },
     ],
   },
   {
+    labelKey: "content",
     label: "콘텐츠",
     items: [
-      { title: "나만의 교재", href: "/study-books", icon: BookMarked },
-      { title: "과목", href: "/subjects", icon: BookOpen },
-      { title: "실험실", href: "/lab", icon: FlaskConical, description: "새 기능 미리보기" },
+      { key: "studyBooks", title: "나만의 교재", href: "/study-books", icon: BookMarked },
+      { key: "subjects", title: "과목", href: "/subjects", icon: BookOpen },
+      { key: "lab", title: "실험실", href: "/lab", icon: FlaskConical, description: "새 기능 미리보기" },
     ],
   },
   {
+    labelKey: "plan",
     label: "계획",
     items: [
-      { title: "Todo", href: "/todos", icon: ListTodo },
-      { title: "통계", href: "/stats", icon: BarChart3 },
+      { key: "todos", title: "Todo", href: "/todos", icon: ListTodo },
+      { key: "stats", title: "통계", href: "/stats", icon: BarChart3 },
     ],
   },
   {
+    labelKey: "social",
     label: "소셜",
     items: [
-      { title: "친구", href: "/social", icon: Users },
-      { title: "랭킹", href: "/ranking", icon: Trophy },
-      { title: "배틀", href: "/battle", icon: Swords },
+      { key: "friends", title: "친구", href: "/social", icon: Users },
+      { key: "ranking", title: "랭킹", href: "/ranking", icon: Trophy },
+      { key: "battle", title: "배틀", href: "/battle", icon: Swords },
     ],
   },
   {
+    labelKey: "support",
     label: "지원",
-    items: [{ title: "문의하기", href: "/support", icon: LifeBuoy }],
+    items: [{ key: "support", title: "문의하기", href: "/support", icon: LifeBuoy }],
   },
 ];
 
@@ -78,9 +85,9 @@ export const navItems: NavItem[] = navGroups.flatMap((g) => g.items);
 
 /** 모바일 하단 바텀 네비 — 핵심 동선 5개만. */
 export const bottomNavItems: NavItem[] = [
-  { title: "홈", href: "/dashboard", icon: LayoutDashboard },
-  { title: "문제", href: "/problems", icon: Sparkles },
-  { title: "교재", href: "/study-books", icon: BookMarked },
-  { title: "오답노트", href: "/review", icon: NotebookPen },
-  { title: "친구", href: "/social", icon: Users },
+  { key: "home", title: "홈", href: "/dashboard", icon: LayoutDashboard },
+  { key: "problems", title: "문제", href: "/problems", icon: Sparkles },
+  { key: "studyBooks", title: "교재", href: "/study-books", icon: BookMarked },
+  { key: "review", title: "오답노트", href: "/review", icon: NotebookPen },
+  { key: "friends", title: "친구", href: "/social", icon: Users },
 ];

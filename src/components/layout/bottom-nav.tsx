@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { bottomNavItems } from "@/config/nav";
+import { useI18n } from "@/features/i18n/provider";
 import { cn } from "@/lib/utils";
 
 /**
@@ -11,6 +12,7 @@ import { cn } from "@/lib/utils";
  */
 export function BottomNav({ socialCount = 0 }: { socialCount?: number }) {
   const pathname = usePathname();
+  const { messages } = useI18n();
 
   return (
     <nav
@@ -41,7 +43,7 @@ export function BottomNav({ socialCount = 0 }: { socialCount?: number }) {
                     </span>
                   )}
                 </span>
-                {item.title}
+                {messages.nav[item.key]}
               </Link>
             </li>
           );

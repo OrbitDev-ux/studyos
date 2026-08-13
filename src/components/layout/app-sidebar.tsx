@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/sidebar";
 import { navGroups } from "@/config/nav";
 import { siteConfig } from "@/config/site";
+import { useI18n } from "@/features/i18n/provider";
 
 export function AppSidebar({
   user,
@@ -32,6 +33,7 @@ export function AppSidebar({
   showUpgrade?: boolean;
 }) {
   const pathname = usePathname();
+  const { messages } = useI18n();
 
   return (
     <Sidebar collapsible="icon">
@@ -49,8 +51,8 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         {navGroups.map((group) => (
-          <SidebarGroup key={group.label}>
-            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+          <SidebarGroup key={group.labelKey}>
+            <SidebarGroupLabel>{messages.groups[group.labelKey]}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {group.items.map((item) => {
@@ -60,11 +62,11 @@ export function AppSidebar({
                       <SidebarMenuButton
                         asChild
                         isActive={pathname.startsWith(item.href)}
-                        tooltip={item.description ?? item.title}
+                        tooltip={messages.nav[item.key]}
                       >
                         <Link href={item.href}>
                           <item.icon />
-                          <span>{item.title}</span>
+                          <span>{messages.nav[item.key]}</span>
                         </Link>
                       </SidebarMenuButton>
                       {badge > 0 && (
@@ -87,12 +89,12 @@ export function AppSidebar({
               <SidebarMenuButton
                 asChild
                 isActive={pathname.startsWith("/pricing")}
-                tooltip="업그레이드하기"
+                tooltip={messages.account.upgrade}
                 className="text-primary"
               >
                 <Link href="/pricing">
                   <Sparkles />
-                  <span>업그레이드하기</span>
+                  <span>{messages.account.upgrade}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

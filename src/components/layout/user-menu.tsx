@@ -1,3 +1,5 @@
+"use client";
+
 import { LifeBuoy, Settings, UserRound } from "lucide-react";
 import Link from "next/link";
 import type { Session } from "next-auth";
@@ -12,8 +14,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { SignOutButton } from "@/features/auth/components/sign-out-button";
+import { useI18n } from "@/features/i18n/provider";
 
 export function UserMenu({ user }: { user: Session["user"] }) {
+  const { messages } = useI18n();
   const initial = user.name?.at(0) ?? user.email?.at(0) ?? "?";
 
   return (
@@ -36,17 +40,20 @@ export function UserMenu({ user }: { user: Session["user"] }) {
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link href="/profile">
-                <UserRound className="size-4" />내 프로필
+                <UserRound className="size-4" />
+                {messages.account.profile}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/settings">
-                <Settings className="size-4" />설정
+                <Settings className="size-4" />
+                {messages.nav.settings}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href="/support">
-                <LifeBuoy className="size-4" />문의하기
+                <LifeBuoy className="size-4" />
+                {messages.nav.support}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
