@@ -4,6 +4,7 @@ import {
   BookOpen,
   ClipboardList,
   FlaskConical,
+  GraduationCap,
   Library,
   LayoutDashboard,
   LifeBuoy,
@@ -36,6 +37,7 @@ export const navGroups: NavGroup[] = [
     label: "학습",
     items: [
       { title: "대시보드", href: "/dashboard", icon: LayoutDashboard },
+      { title: "AI 과외", href: "/tutor", icon: GraduationCap, description: "AI 선생님과 1:1" },
       { title: "문제", href: "/problems", icon: Sparkles, description: "내 AI 문제 풀이" },
       { title: "문제은행", href: "/study-bank", icon: Library, description: "공유 문제 탐색" },
       { title: "오답노트", href: "/review", icon: NotebookPen },

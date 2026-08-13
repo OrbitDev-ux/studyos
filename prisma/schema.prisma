@@ -97,6 +97,7 @@ model User {
   supportTickets      SupportTicket[]
   supportMessages     SupportMessage[]
   labFeedback         LabFeedback[]
+  tutorConversations  TutorConversation[]
 }
 
 /// Password reset tokens. The raw token is emailed to the user and NEVER stored;
@@ -984,4 +985,43 @@ model LabFeedback {
 
   @@unique([userId, featureKey])
   @@index([featureKey])
+}
+
+// ─── AI 1:1 과외 선생님(Tutor) ─────────────────────────────────────────────
+// Minimal tutor-specific chat models. The social Conversation/Message tables are
+// user-to-user DMs, so they are NOT reused here; the tutor thread is a
+// student↔AI conversation with subject/grade context. Message text lives once
+// in TutorMessage (no duplication). Owner-scoped by userId on every read/write.
+
+model TutorConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  /// Subject key from features/tutor/subjects (수학/영어/…). Free-form string so
+  /// a new subject is a config change, not a migration.
+  subject   String
+  /// Grade-level key for difficulty tuning (features/tutor/grades).
+  grade     String
+  title     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages TutorMessage[]
+
+  @@index([userId, updatedAt])
+}
+
+model TutorMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  /// "user" | "assistant"
+  role           String
+  content        String   @db.Text
+  /// Optional structured extras (e.g. { understanding: "..." }) — never PII.
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  conversation TutorConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
 }
