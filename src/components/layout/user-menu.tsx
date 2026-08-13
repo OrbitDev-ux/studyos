@@ -1,4 +1,4 @@
-import { LifeBuoy, UserRound } from "lucide-react";
+import { LifeBuoy, Settings, UserRound } from "lucide-react";
 import Link from "next/link";
 import type { Session } from "next-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -37,6 +37,11 @@ export function UserMenu({ user }: { user: Session["user"] }) {
             <DropdownMenuItem asChild>
               <Link href="/profile">
                 <UserRound className="size-4" />내 프로필
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/settings">
+                <Settings className="size-4" />설정
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>

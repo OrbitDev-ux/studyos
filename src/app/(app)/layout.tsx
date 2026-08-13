@@ -5,6 +5,8 @@ import { Header } from "@/components/layout/header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ToastProvider } from "@/components/ui/toast";
 import { PresenceHeartbeat } from "@/features/profile/components/presence-heartbeat";
+import { I18nProvider } from "@/features/i18n/provider";
+import { getServerLocale } from "@/features/i18n/server";
 import { getNotifications } from "@/features/notifications/queries";
 import { getSocialNotificationCount } from "@/features/social/queries";
 import { getCurrentAdmin } from "@/lib/admin/context";
@@ -37,26 +39,30 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Show the upgrade CTA to everyone except PREMIUM. Cheap PK lookup.
   const planRow = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { plan: true },
+    select: { plan: true, locale: true },
   });
   const showUpgrade = planRow?.plan !== "PREMIUM";
+  // Central locale resolution (user choice → cookie → browser → IP → default).
+  const locale = await getServerLocale(planRow?.locale);
 
   return (
     // App-wide toast context. Without it, any client component that calls
     // useToast() (e.g. the 문제은행 card) throws "useToast must be used within a
     // ToastProvider" during render — which the route error boundary would catch.
-    <ToastProvider>
-      <SidebarProvider>
-        <PresenceHeartbeat />
-        <AppSidebar user={session.user} socialCount={socialCount} showUpgrade={showUpgrade} />
-        <SidebarInset>
-          <Header notifications={notifications} />
-          <main className="flex flex-1 flex-col gap-4 p-4 pb-24 md:p-6 md:pb-6">
-            {children}
-          </main>
-          <BottomNav socialCount={socialCount} />
-        </SidebarInset>
-      </SidebarProvider>
-    </ToastProvider>
+    <I18nProvider locale={locale}>
+      <ToastProvider>
+        <SidebarProvider>
+          <PresenceHeartbeat />
+          <AppSidebar user={session.user} socialCount={socialCount} showUpgrade={showUpgrade} />
+          <SidebarInset>
+            <Header notifications={notifications} />
+            <main className="flex flex-1 flex-col gap-4 p-4 pb-24 md:p-6 md:pb-6">
+              {children}
+            </main>
+            <BottomNav socialCount={socialCount} />
+          </SidebarInset>
+        </SidebarProvider>
+      </ToastProvider>
+    </I18nProvider>
   );
 }

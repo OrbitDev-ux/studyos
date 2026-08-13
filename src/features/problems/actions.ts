@@ -24,6 +24,8 @@ import {
   type GenerationErrorPayload,
 } from "@/features/ai/generation-guard";
 import { accessStateFor, trialStartedDate } from "@/features/billing/access";
+import { problemLocaleInstruction } from "@/features/i18n/ai";
+import { getServerLocale } from "@/features/i18n/server";
 import { IMPORT_SOURCE } from "@/features/problems/import/types";
 import { DEFAULT_SUBJECTS, SUBJECT_COLOR_PALETTE } from "@/features/subjects/constants";
 import { getClientIp } from "@/lib/ip";
@@ -74,13 +76,16 @@ export async function generateProblems(
     update: {},
   });
 
-  const prompt = buildProblemGenerationPrompt({
+  const basePrompt = buildProblemGenerationPrompt({
     subjectName,
     unit: unitName ?? undefined,
     difficulty: parsed.difficulty,
     type: parsed.type,
     count: parsed.count,
   });
+  // Generate in the user's UI language (§16); math stays standard LaTeX (§17).
+  const localeLine = problemLocaleInstruction(await getServerLocale(user.locale));
+  const prompt = localeLine ? `${basePrompt}\n\n${localeLine}` : basePrompt;
 
   // AI cost protection: reserve a quota slot (per-user advisory lock) BEFORE the
   // Gemini call. Over-quota throws QuotaError and no AI call happens. Only the

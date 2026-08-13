@@ -20,6 +20,9 @@ model User {
   password      String?
   timezone      String    @default("Asia/Seoul")
   school        String?
+  /// Explicit UI language choice (validated supported locale, e.g. "en-US").
+  /// null = AUTO (browser/IP auto-detection). See features/i18n.
+  locale        String?
   /// Set whenever the password changes (reset or future change flow). Sessions
   /// issued before this instant are treated as invalid by requireCurrentUser
   /// (JWT is stateless, so this is how a reset revokes older web sessions).

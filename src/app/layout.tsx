@@ -52,6 +52,9 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
+  // NOTE: <html lang> stays static here to keep marketing/legal pages statically
+  // generated (reading cookies/headers in the root layout would force every route
+  // dynamic). The resolved UI locale is applied in the dynamic (app) layout.
   return (
     <html
       lang="ko"

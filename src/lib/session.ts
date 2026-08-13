@@ -10,6 +10,8 @@ export type CurrentUser = {
   image: string | null;
   timezone: string;
   school: string | null;
+  /** Explicit UI locale; null = AUTO. Validated on read by the i18n resolver. */
+  locale: string | null;
   /** Subscription plan; the authoritative server value used for entitlements. */
   plan: Plan;
   subscriptionStatus: SubscriptionStatus;
@@ -32,7 +34,7 @@ export async function requireCurrentUser(): Promise<CurrentUser> {
   const { data, error } = await supabase
     .from("User")
     .select(
-      "id, name, email, image, timezone, school, plan, subscriptionStatus, trialStartedAt, trialEndsAt, adminPlanOverride, adminPlanOverrideEnabled, bannedAt, passwordChangedAt",
+      "id, name, email, image, timezone, school, locale, plan, subscriptionStatus, trialStartedAt, trialEndsAt, adminPlanOverride, adminPlanOverrideEnabled, bannedAt, passwordChangedAt",
     )
     .eq("id", session.user.id)
     .single();
