@@ -3,6 +3,7 @@ import {
   BookMarked,
   BookOpen,
   ClipboardList,
+  FlaskConical,
   Library,
   LayoutDashboard,
   LifeBuoy,
@@ -46,6 +47,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { title: "나만의 교재", href: "/study-books", icon: BookMarked },
       { title: "과목", href: "/subjects", icon: BookOpen },
+      { title: "실험실", href: "/lab", icon: FlaskConical, description: "새 기능 미리보기" },
     ],
   },
   {

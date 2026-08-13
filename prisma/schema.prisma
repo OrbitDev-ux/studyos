@@ -96,6 +96,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   supportTickets      SupportTicket[]
   supportMessages     SupportMessage[]
+  labFeedback         LabFeedback[]
 }
 
 /// Password reset tokens. The raw token is emailed to the user and NEVER stored;
@@ -946,4 +947,41 @@ model PromptVersion {
 
   @@unique([promptId, version])
   @@index([promptId])
+}
+
+// ─── 실험실(Lab) ───────────────────────────────────────────────────────────
+// Feature definitions live in code (features/lab/registry). These tables hold
+// only the admin-toggleable enabled flag + lightweight analytics counters and
+// per-user feedback — no duplicate feature-flag/analytics system.
+
+enum LabFeedbackVote {
+  LIKE
+  DISLIKE
+}
+
+/// Per-feature runtime state + aggregate analytics. `key` matches a registry key.
+/// A missing row means "enabled by default" (registry decides the rest).
+model LabFeatureState {
+  key         String   @id
+  enabled     Boolean  @default(true)
+  impressions Int      @default(0)
+  uses        Int      @default(0)
+  successes   Int      @default(0)
+  failures    Int      @default(0)
+  updatedAt   DateTime @updatedAt @default(now())
+}
+
+/// One like/dislike per user per feature (upsert on the unique pair).
+model LabFeedback {
+  id         String          @id @default(cuid())
+  userId     String
+  featureKey String
+  vote       LabFeedbackVote
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, featureKey])
+  @@index([featureKey])
 }

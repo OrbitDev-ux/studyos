@@ -46,6 +46,8 @@ export const CAPABILITIES = {
   viewLogs: "MODERATOR",
   // Support tickets — moderators and up can view/answer.
   manageSupport: "MODERATOR",
+  // Lab (실험실) feature flags + analytics.
+  manageLab: "ADMIN",
   manageSecurity: "ADMIN",
   manageSystem: "SUPER_ADMIN",
   manageAi: "ADMIN",
