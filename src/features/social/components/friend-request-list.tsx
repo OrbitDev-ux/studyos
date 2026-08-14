@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileNameplate } from "@/features/profile/components/profile-nameplate";
 import { respondToFriendRequest } from "@/features/social/actions";
 import type { getReceivedFriendRequests } from "@/features/social/queries";
+import { useI18n } from "@/features/i18n/provider";
 
 export function FriendRequestList({
   requests,
@@ -13,11 +14,13 @@ export function FriendRequestList({
   requests: Awaited<ReturnType<typeof getReceivedFriendRequests>>;
 }) {
   const [isPending, startTransition] = useTransition();
+  const { messages } = useI18n();
+  const t = messages.social;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>받은 친구 요청</CardTitle>
+        <CardTitle>{t.requestsTitle}</CardTitle>
       </CardHeader>
       <CardContent>
         <ul className="flex flex-col gap-3">
@@ -38,7 +41,7 @@ export function FriendRequestList({
                     startTransition(() => respondToFriendRequest(request.id, true))
                   }
                 >
-                  수락
+                  {t.accept}
                 </Button>
                 <Button
                   type="button"
@@ -49,7 +52,7 @@ export function FriendRequestList({
                     startTransition(() => respondToFriendRequest(request.id, false))
                   }
                 >
-                  거절
+                  {t.decline}
                 </Button>
               </div>
             </li>

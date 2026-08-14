@@ -3,22 +3,23 @@ import { ProfileNameplate } from "@/features/profile/components/profile-nameplat
 import { MessageFriendButton } from "@/features/social/components/message-friend-button";
 import { RemoveFriendButton } from "@/features/social/components/remove-friend-button";
 import type { getFriends } from "@/features/social/queries";
+import type { Messages } from "@/features/i18n/messages";
 
 export function FriendList({
   friends,
+  t,
 }: {
   friends: Awaited<ReturnType<typeof getFriends>>;
+  t: Messages["social"];
 }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>친구 목록</CardTitle>
+        <CardTitle>{t.friendListTitle}</CardTitle>
       </CardHeader>
       <CardContent>
         {friends.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            아직 친구가 없어요. 이메일로 친구를 추가해보세요.
-          </p>
+          <p className="text-muted-foreground text-sm">{t.friendListEmpty}</p>
         ) : (
           <ul className="flex flex-col gap-3">
             {friends.map(({ friendshipId, user }) => (

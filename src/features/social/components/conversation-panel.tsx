@@ -1,19 +1,18 @@
 import type { getConversation } from "@/features/social/queries";
+import type { Messages } from "@/features/i18n/messages";
 import { cn } from "@/lib/utils";
 
 export function ConversationPanel({
   conversation,
   currentUserId,
+  t,
 }: {
   conversation: NonNullable<Awaited<ReturnType<typeof getConversation>>>;
   currentUserId: string;
+  t: Messages["social"];
 }) {
   if (conversation.messages.length === 0) {
-    return (
-      <p className="text-muted-foreground text-sm">
-        아직 메시지가 없어요. 첫 메시지를 보내보세요.
-      </p>
-    );
+    return <p className="text-muted-foreground text-sm">{t.panelEmpty}</p>;
   }
 
   return (

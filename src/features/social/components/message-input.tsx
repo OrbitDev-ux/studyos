@@ -5,11 +5,14 @@ import { useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { sendMessage } from "@/features/social/actions";
+import { useI18n } from "@/features/i18n/provider";
 
 export function MessageInput({ conversationId }: { conversationId: string }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const { messages } = useI18n();
+  const t = messages.social;
 
   function handleSubmit(formData: FormData) {
     const content = String(formData.get("content") ?? "");
@@ -21,7 +24,7 @@ export function MessageInput({ conversationId }: { conversationId: string }) {
         await sendMessage(conversationId, content);
         formRef.current?.reset();
       } catch {
-        setError("전송에 실패했습니다. 다시 시도해주세요.");
+        setError(t.sendFailed);
       }
     });
   }
@@ -31,11 +34,11 @@ export function MessageInput({ conversationId }: { conversationId: string }) {
       <form ref={formRef} action={handleSubmit} className="flex gap-2">
         <Input
           name="content"
-          placeholder="메시지 입력"
+          placeholder={t.messagePlaceholder}
           autoComplete="off"
           disabled={isPending}
         />
-        <Button type="submit" size="icon" disabled={isPending} aria-label="전송">
+        <Button type="submit" size="icon" disabled={isPending} aria-label={messages.common.send}>
           <Send className="size-4" />
         </Button>
       </form>

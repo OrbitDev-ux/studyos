@@ -2,22 +2,25 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileNameplate } from "@/features/profile/components/profile-nameplate";
 import type { getConversations } from "@/features/social/queries";
+import type { Messages } from "@/features/i18n/messages";
 
 export function ConversationList({
   conversations,
   currentUserId,
+  t,
 }: {
   conversations: Awaited<ReturnType<typeof getConversations>>;
   currentUserId: string;
+  t: Messages["social"];
 }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>대화</CardTitle>
+        <CardTitle>{t.conversationsTitle}</CardTitle>
       </CardHeader>
       <CardContent>
         {conversations.length === 0 ? (
-          <p className="text-muted-foreground text-sm">아직 대화가 없어요.</p>
+          <p className="text-muted-foreground text-sm">{t.conversationsEmpty}</p>
         ) : (
           <ul className="flex flex-col gap-3">
             {conversations.map((conversation) => {
@@ -40,10 +43,10 @@ export function ConversationList({
                   <Link
                     href={`/social/${conversation.id}`}
                     className="flex min-w-0 flex-1 flex-col hover:opacity-80"
-                    aria-label="대화 열기"
+                    aria-label={t.openConversation}
                   >
                     <span className="text-muted-foreground truncate text-xs">
-                      {lastMessage ? lastMessage.content : "대화 열기"}
+                      {lastMessage ? lastMessage.content : t.openConversation}
                     </span>
                   </Link>
                 </li>

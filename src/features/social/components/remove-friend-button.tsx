@@ -15,9 +15,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { removeFriend } from "@/features/social/actions";
+import { useI18n } from "@/features/i18n/provider";
 
 export function RemoveFriendButton({ friendshipId }: { friendshipId: string }) {
   const [isPending, startTransition] = useTransition();
+  const { messages } = useI18n();
+  const t = messages.social;
 
   return (
     <AlertDialog>
@@ -27,24 +30,22 @@ export function RemoveFriendButton({ friendshipId }: { friendshipId: string }) {
           size="icon-sm"
           variant="ghost"
           disabled={isPending}
-          aria-label="친구 삭제"
+          aria-label={t.removeFriend}
         >
           <UserMinus className="size-4" />
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>친구를 삭제할까요?</AlertDialogTitle>
-          <AlertDialogDescription>
-            대화 기록은 유지되지만 더 이상 친구 목록에 표시되지 않습니다.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{t.removeConfirmTitle}</AlertDialogTitle>
+          <AlertDialogDescription>{t.removeConfirmDesc}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>취소</AlertDialogCancel>
+          <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
           <AlertDialogAction
             onClick={() => startTransition(() => removeFriend(friendshipId))}
           >
-            삭제
+            {messages.common.delete}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -4,6 +4,8 @@ import { ConversationPanel } from "@/features/social/components/conversation-pan
 import { MarkReadRefresh } from "@/features/social/components/mark-read-refresh";
 import { MessageInput } from "@/features/social/components/message-input";
 import { getConversation, markConversationRead } from "@/features/social/queries";
+import { getMessages } from "@/features/i18n/messages";
+import { getServerLocale } from "@/features/i18n/server";
 import { requireCurrentUser } from "@/lib/session";
 
 export default async function ConversationPage({
@@ -22,6 +24,7 @@ export default async function ConversationPage({
   const other = conversation.participants.find(
     (participant) => participant.userId !== user.id,
   )?.user;
+  const t = getMessages(await getServerLocale(user.locale)).social;
 
   return (
     <div className="flex flex-col gap-4">
@@ -35,10 +38,10 @@ export default async function ConversationPage({
           avatarClassName="size-9"
         />
       ) : (
-        <h1 className="text-xl font-semibold tracking-tight">알 수 없는 사용자</h1>
+        <h1 className="text-xl font-semibold tracking-tight">{t.unknownUser}</h1>
       )}
       <div className="flex flex-1 flex-col gap-4 rounded-lg border p-4">
-        <ConversationPanel conversation={conversation} currentUserId={user.id} />
+        <ConversationPanel conversation={conversation} currentUserId={user.id} t={t} />
       </div>
       <MessageInput conversationId={conversationId} />
       <MarkReadRefresh />

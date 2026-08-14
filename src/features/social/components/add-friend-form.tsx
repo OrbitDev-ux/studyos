@@ -7,8 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { sendFriendRequest } from "@/features/social/actions";
 import { addFriendFormSchema, type AddFriendFormValues } from "@/features/social/schema";
+import { useI18n } from "@/features/i18n/provider";
 
 export function AddFriendForm() {
+  const { messages } = useI18n();
+  const t = messages.social;
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -27,12 +30,12 @@ export function AddFriendForm() {
     setMessage(null);
     try {
       await sendFriendRequest(values.email);
-      setMessage({ type: "success", text: "친구 요청을 보냈어요." });
+      setMessage({ type: "success", text: t.requestSent });
       reset();
     } catch (error) {
       setMessage({
         type: "error",
-        text: error instanceof Error ? error.message : "요청에 실패했어요.",
+        text: error instanceof Error ? error.message : t.requestFailed,
       });
     }
   }
@@ -40,9 +43,9 @@ export function AddFriendForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col items-end gap-1.5">
       <div className="flex gap-2">
-        <Input placeholder="친구 이메일" className="w-56" {...register("email")} />
+        <Input placeholder={t.addEmailPlaceholder} className="w-56" {...register("email")} />
         <Button type="submit" size="sm" disabled={isSubmitting}>
-          친구 추가
+          {t.addFriend}
         </Button>
       </div>
       {errors.email && <p className="text-destructive text-xs">{errors.email.message}</p>}
