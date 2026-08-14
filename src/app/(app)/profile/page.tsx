@@ -4,18 +4,23 @@ import { ProfileHeader } from "@/features/profile/components/profile-header";
 import { getMyProfile } from "@/features/profile/queries";
 import { SubscriptionCard } from "@/features/billing/components/subscription-card";
 import { getPlanSummary } from "@/features/billing/usage";
+import { AchievementsSection } from "@/features/achievements/components/achievements-section";
+import { getAchievementCopy } from "@/features/achievements/copy";
+import { getAchievements } from "@/features/achievements/queries";
 import { getMessages } from "@/features/i18n/messages";
 import { getServerLocale } from "@/features/i18n/server";
 import { requireCurrentUser } from "@/lib/session";
 
 export default async function ProfilePage() {
   const user = await requireCurrentUser();
-  const [profile, planSummary] = await Promise.all([
+  const [profile, planSummary, achievements] = await Promise.all([
     getMyProfile(user.id),
     getPlanSummary(user.id),
+    getAchievements(user.id, user.timezone),
   ]);
   const locale = await getServerLocale(user.locale);
   const t = getMessages(locale).profile;
+  const achievementCopy = getAchievementCopy(locale);
   const joined = profile.createdAt.toLocaleDateString(locale, {
     year: "numeric",
     month: "long",
@@ -31,6 +36,12 @@ export default async function ProfilePage() {
       </Card>
 
       <SubscriptionCard summary={planSummary} />
+
+      <AchievementsSection
+        items={achievements.items}
+        earnedCount={achievements.earnedCount}
+        copy={achievementCopy}
+      />
 
       <Card>
         <CardHeader>
