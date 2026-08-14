@@ -18,6 +18,7 @@ const ko = {
     delete: "삭제",
     send: "전송",
     error: "문제가 발생했어요. 잠시 후 다시 시도해주세요.",
+    offline: "오프라인 상태예요. AI 기능은 인터넷 연결 후 사용할 수 있어요.",
   },
   groups: {
     learning: "학습",
@@ -302,6 +303,7 @@ const en: Messages = {
     delete: "Delete",
     send: "Send",
     error: "Something went wrong. Please try again shortly.",
+    offline: "You're offline. AI features are available once you're back online.",
   },
   groups: {
     learning: "Learning",
@@ -582,6 +584,7 @@ const ja: Messages = {
     delete: "削除",
     send: "送信",
     error: "問題が発生しました。しばらくしてからもう一度お試しください。",
+    offline: "オフラインです。AI機能はオンラインに戻ると利用できます。",
   },
   groups: {
     learning: "学習",
@@ -862,6 +865,7 @@ const zh: Messages = {
     delete: "删除",
     send: "发送",
     error: "出现问题，请稍后再试。",
+    offline: "当前处于离线状态。AI 功能需联网后使用。",
   },
   groups: {
     learning: "学习",

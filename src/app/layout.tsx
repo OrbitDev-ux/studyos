@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/providers/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AdminShortcut } from "@/features/admin/components/admin-shortcut";
 import { IpUnbanShortcut } from "@/features/admin/components/ip-unban-shortcut";
+import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { SITE_URL } from "@/lib/site-url";
 import "./globals.css";
 
@@ -74,6 +75,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {/* Global recovery: ⌘+Option+3 lifts the caller's IP block. */}
           <IpUnbanShortcut />
         </ThemeProvider>
+        {/* PWA: register the service worker (installability + offline fallback). */}
+        <ServiceWorkerRegister />
         {/* Vercel Web Analytics — only sends data on the Vercel deployment. */}
         <Analytics />
       </body>

@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ToastProvider } from "@/components/ui/toast";
 import { PresenceHeartbeat } from "@/features/profile/components/presence-heartbeat";
+import { OfflineBanner } from "@/components/pwa/offline-banner";
 import { I18nProvider } from "@/features/i18n/provider";
 import { getServerLocale } from "@/features/i18n/server";
 import { getNotifications } from "@/features/notifications/queries";
@@ -51,6 +52,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // ToastProvider" during render — which the route error boundary would catch.
     <I18nProvider locale={locale}>
       <ToastProvider>
+        <OfflineBanner />
         <SidebarProvider>
           <PresenceHeartbeat />
           <AppSidebar user={session.user} socialCount={socialCount} showUpgrade={showUpgrade} />
