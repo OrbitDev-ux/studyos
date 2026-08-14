@@ -96,6 +96,23 @@ const ko = {
     emptyDesc: "검색 조건이나 필터를 변경해보세요.",
     resetFilter: "필터 초기화",
   },
+  mockExam: {
+    title: "모의고사",
+    generate: "모의고사 생성",
+    needSubject: "모의고사를 만들려면 먼저 과목을 추가해주세요.",
+    empty: "아직 생성한 모의고사가 없습니다.",
+  },
+  studyBooks: {
+    title: "나만의 교재",
+    create: "나만의 교재 만들기",
+    createFirst: "첫 교재 만들기",
+    usageLabel: "교재 생성",
+    limitTitle: "이번 교재 생성 한도를 모두 사용했어요",
+    limitMessage: "상위 플랜으로 업그레이드하면 더 많은 교재를 만들 수 있어요.",
+    limitCta: "플랜 비교하기",
+    emptyDesc:
+      "아직 만든 교재가 없어요. 학습 목적과 스타일을 입력하면 StudyOS가 개념·예제·문제·해설이 담긴 나만의 교재를 만들어드려요.",
+  },
 } as const;
 
 export type Messages = {
@@ -189,6 +206,23 @@ const en: Messages = {
     emptyDesc: "Try changing your search or filters.",
     resetFilter: "Reset filters",
   },
+  mockExam: {
+    title: "Mock Exam",
+    generate: "Create mock exam",
+    needSubject: "Add a subject first to create a mock exam.",
+    empty: "You haven't created any mock exams yet.",
+  },
+  studyBooks: {
+    title: "Study Books",
+    create: "Create a study book",
+    createFirst: "Create your first book",
+    usageLabel: "Book generation",
+    limitTitle: "You've used up this period's book creation limit",
+    limitMessage: "Upgrade to a higher plan to create more books.",
+    limitCta: "Compare plans",
+    emptyDesc:
+      "No books yet. Tell StudyOS your goals and style, and it will build a book with concepts, examples, problems, and explanations.",
+  },
 };
 
 const ja: Messages = {
@@ -278,6 +312,23 @@ const ja: Messages = {
     emptyDesc: "検索条件やフィルターを変更してみてください。",
     resetFilter: "フィルターをリセット",
   },
+  mockExam: {
+    title: "模擬試験",
+    generate: "模擬試験を作成",
+    needSubject: "模擬試験を作るには、まず科目を追加してください。",
+    empty: "まだ作成した模擬試験はありません。",
+  },
+  studyBooks: {
+    title: "自分の教材",
+    create: "教材を作成",
+    createFirst: "最初の教材を作成",
+    usageLabel: "教材生成",
+    limitTitle: "今回の教材作成上限に達しました",
+    limitMessage: "上位プランにアップグレードすると、より多くの教材を作成できます。",
+    limitCta: "プランを比較",
+    emptyDesc:
+      "まだ教材がありません。学習の目的とスタイルを入力すると、StudyOSが概念・例題・問題・解説を含む教材を作成します。",
+  },
 };
 
 const zh: Messages = {
@@ -366,6 +417,23 @@ const zh: Messages = {
     emptyTitle: "暂无题目。",
     emptyDesc: "试试更改搜索条件或筛选。",
     resetFilter: "重置筛选",
+  },
+  mockExam: {
+    title: "模拟考试",
+    generate: "创建模拟考试",
+    needSubject: "创建模拟考试前请先添加科目。",
+    empty: "你还没有创建任何模拟考试。",
+  },
+  studyBooks: {
+    title: "我的教材",
+    create: "创建教材",
+    createFirst: "创建第一本教材",
+    usageLabel: "教材生成",
+    limitTitle: "本期教材创建额度已用完",
+    limitMessage: "升级到更高的套餐即可创建更多教材。",
+    limitCta: "对比套餐",
+    emptyDesc:
+      "还没有教材。输入你的学习目标和风格，StudyOS 会生成包含概念、例题、题目和解析的教材。",
   },
 };
 

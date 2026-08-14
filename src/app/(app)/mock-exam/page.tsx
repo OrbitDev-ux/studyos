@@ -3,6 +3,8 @@ import { ExamSetupForm } from "@/features/mock-exam/components/exam-setup-form";
 import { MockExamCard } from "@/features/mock-exam/components/mock-exam-card";
 import { getMockExams } from "@/features/mock-exam/queries";
 import { getSubjects } from "@/features/subjects/queries";
+import { getMessages } from "@/features/i18n/messages";
+import { getServerLocale } from "@/features/i18n/server";
 import { requireCurrentUser } from "@/lib/session";
 
 // generateMockExam's AI call regularly runs past Vercel's default
@@ -17,27 +19,26 @@ export default async function MockExamPage() {
     getMockExams(user.id),
     getSubjects(user.id),
   ]);
+  const t = getMessages(await getServerLocale(user.locale)).mockExam;
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">모의고사</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
         <ExamSetupForm
           subjects={subjects}
           trigger={
             <Button type="button" size="sm" disabled={subjects.length === 0}>
-              모의고사 생성
+              {t.generate}
             </Button>
           }
         />
       </div>
       {subjects.length === 0 && (
-        <p className="text-muted-foreground text-sm">
-          모의고사를 만들려면 먼저 과목을 추가해주세요.
-        </p>
+        <p className="text-muted-foreground text-sm">{t.needSubject}</p>
       )}
       {exams.length === 0 ? (
-        <p className="text-muted-foreground text-sm">아직 생성한 모의고사가 없습니다.</p>
+        <p className="text-muted-foreground text-sm">{t.empty}</p>
       ) : (
         <div className="flex flex-col gap-3">
           {exams.map((exam) => (

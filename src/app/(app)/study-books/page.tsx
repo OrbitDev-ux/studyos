@@ -10,6 +10,8 @@ import {
   type StudyBookListItem,
 } from "@/features/study-books/components/study-book-list";
 import { getStudyBooks, getStudyBookProgress } from "@/features/study-books/queries";
+import { getMessages } from "@/features/i18n/messages";
+import { getServerLocale } from "@/features/i18n/server";
 import { requireCurrentUser } from "@/lib/session";
 
 // Book generation runs a long AI call in the create Server Action.
@@ -40,10 +42,11 @@ export default async function StudyBooksPage() {
 
   const bookUsage = planSummary.features.studyBookGeneration;
   const atLimit = bookUsage.limit !== null && bookUsage.used >= bookUsage.limit;
+  const t = getMessages(await getServerLocale(user.locale)).studyBooks;
 
   const createTrigger = (
     <Button size="sm" className="gap-1.5">
-      <Plus className="size-4" /> 나만의 교재 만들기
+      <Plus className="size-4" /> {t.create}
     </Button>
   );
 
@@ -52,36 +55,29 @@ export default async function StudyBooksPage() {
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-            <BookMarked className="size-5" /> 나만의 교재
+            <BookMarked className="size-5" /> {t.title}
           </h1>
           <CreateStudyBookDialog trigger={createTrigger} />
         </div>
         <PlanStatusChip
           summary={planSummary}
           usage={bookUsage}
-          usageLabel="교재 생성"
+          usageLabel={t.usageLabel}
         />
       </div>
 
       {atLimit && (
-        <UpgradeNotice
-          title="이번 교재 생성 한도를 모두 사용했어요"
-          message="상위 플랜으로 업그레이드하면 더 많은 교재를 만들 수 있어요."
-          cta="플랜 비교하기"
-        />
+        <UpgradeNotice title={t.limitTitle} message={t.limitMessage} cta={t.limitCta} />
       )}
 
       {items.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-start gap-3 py-10">
-            <p className="text-muted-foreground text-sm">
-              아직 만든 교재가 없어요. 학습 목적과 스타일을 입력하면 StudyOS가 개념·예제·문제·해설이
-              담긴 나만의 교재를 만들어드려요.
-            </p>
+            <p className="text-muted-foreground text-sm">{t.emptyDesc}</p>
             <CreateStudyBookDialog
               trigger={
                 <Button size="sm" className="gap-1.5">
-                  <Plus className="size-4" /> 첫 교재 만들기
+                  <Plus className="size-4" /> {t.createFirst}
                 </Button>
               }
             />
