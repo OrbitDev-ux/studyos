@@ -9,6 +9,7 @@ import { MathText } from "@/components/ui/math-text";
 import { submitProblemAnswer } from "@/features/problems/actions";
 import {
   analyzeWrongAnswerDna,
+  gradeReview,
   markResolved,
   requestAiExplanation,
 } from "@/features/review/actions";
@@ -41,11 +42,13 @@ export function WrongAnswerActions({
         }
       : null,
   );
+  const [graded, setGraded] = useState<{ graduated: boolean } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, startSubmitting] = useTransition();
   const [isExplaining, startExplaining] = useTransition();
   const [isAnalyzing, startAnalyzing] = useTransition();
   const [isResolving, startResolving] = useTransition();
+  const [isGrading, startGrading] = useTransition();
 
   if (wrongAnswer.resolved && !result) {
     return <p className="text-muted-foreground text-sm">해결한 문제입니다.</p>;
@@ -61,7 +64,7 @@ export function WrongAnswerActions({
             choiceId: selectedChoiceId ?? undefined,
             text: answerText || undefined,
           },
-          { source: "review" },
+          { source: "review", deferReviewGrade: true },
         );
         setResult(res);
       } catch (err) {
@@ -101,6 +104,23 @@ export function WrongAnswerActions({
       } catch (err) {
         unstable_rethrow(err);
         setError("오답 원인 분석에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      }
+    });
+  }
+
+  function handleGrade(grade: "hard" | "good" | "easy") {
+    setError(null);
+    startGrading(async () => {
+      try {
+        const res = await gradeReview(wrongAnswer.id, grade);
+        if ("error" in res) {
+          setError(res.error);
+          return;
+        }
+        setGraded({ graduated: res.graduated });
+      } catch (err) {
+        unstable_rethrow(err);
+        setError("복습 결과 저장에 실패했습니다. 잠시 후 다시 시도해주세요.");
       }
     });
   }
@@ -220,14 +240,49 @@ export function WrongAnswerActions({
         )}
       </div>
 
-      {result && (
-        <p
-          className={cn(
-            "text-sm font-medium",
-            result.correct ? "text-primary" : "text-destructive",
-          )}
-        >
-          {result.correct ? "정답입니다! 복습 일정에 반영되었습니다." : "아직 오답입니다."}
+      {result && !result.correct && (
+        <p className="text-destructive text-sm font-medium">아직 오답입니다.</p>
+      )}
+
+      {result?.correct && !graded && (
+        <div className="border-primary/20 bg-primary/5 flex flex-col gap-2 rounded-md border p-3">
+          <p className="text-sm font-medium">정답입니다! 다음 복습은 언제가 좋을까요?</p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={isGrading}
+              onClick={() => handleGrade("hard")}
+            >
+              어려움
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={isGrading}
+              onClick={() => handleGrade("good")}
+            >
+              보통
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={isGrading}
+              onClick={() => handleGrade("easy")}
+            >
+              쉬움
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {graded && (
+        <p className="text-primary text-sm font-medium">
+          {graded.graduated
+            ? "복습을 졸업했어요! 이제 이 문제는 복습 목록에서 빠집니다."
+            : "복습 일정에 반영되었어요."}
         </p>
       )}
 

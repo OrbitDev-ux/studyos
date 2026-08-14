@@ -600,6 +600,11 @@ model WrongAnswer {
   reviewStage    Int       @default(0)
   nextReviewAt   DateTime?
   lastReviewedAt DateTime?
+  /// ── 적응형 복습 (Phase 6) ── per-item ease factor (SM-2 style). Modulates the
+  /// base interval ladder so chronically-missed items keep shorter intervals and
+  /// well-known items grow faster. Defaults to DEFAULT_EASE (2.5); existing rows
+  /// inherit the default via the migration, so the fixed ladder is preserved.
+  easeFactor     Float     @default(2.5)
   createdAt     DateTime @default(now())
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)

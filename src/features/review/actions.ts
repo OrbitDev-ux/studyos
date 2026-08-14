@@ -8,6 +8,8 @@ import { getActivePromptContent } from "@/features/ai/prompt-service";
 import { PROMPT_TYPES } from "@/features/ai/prompt-registry";
 import { wrongAnswerDnaSchema, type WrongAnswerDna } from "@/features/review/dna";
 import { aiExplanationSchema } from "@/features/review/schema";
+import { gradeReviewById } from "@/features/review/schedule-service";
+import type { ReviewGrade } from "@/features/review/schedule";
 import { accessStateFor } from "@/features/billing/access";
 import { canUseFeature } from "@/features/billing/entitlements";
 import { prisma } from "@/lib/prisma";
@@ -144,4 +146,29 @@ export async function markResolved(wrongAnswerId: string) {
     data: { resolved: true },
   });
   revalidatePath("/review");
+}
+
+const REVIEW_GRADES: readonly ReviewGrade[] = ["again", "hard", "good", "easy"];
+
+/**
+ * Apply the user's explicit review grade (다시/어려움/보통/쉬움) to a wrong
+ * answer, advancing the adaptive spaced-repetition schedule. Ownership is
+ * enforced in the service; the grade is validated here against ReviewGrade so
+ * an arbitrary client string can never reach the scheduler.
+ */
+export async function gradeReview(
+  wrongAnswerId: string,
+  grade: string,
+): Promise<{ graduated: boolean; reviewStage: number } | { error: string }> {
+  const user = await requireCurrentUser();
+  if (!REVIEW_GRADES.includes(grade as ReviewGrade)) {
+    return { error: "올바르지 않은 복습 결과입니다." };
+  }
+
+  const result = await gradeReviewById(user.id, wrongAnswerId, grade as ReviewGrade);
+  if (!result) return { error: "오답 기록을 찾을 수 없습니다." };
+
+  revalidatePath("/review");
+  revalidatePath("/dashboard");
+  return result;
 }

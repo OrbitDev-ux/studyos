@@ -50,3 +50,91 @@ export function scheduleAfterSuccess(currentStage: number, now: Date = new Date(
 export function isDue(nextReviewAt: Date | null, now: Date = new Date()): boolean {
   return nextReviewAt === null || nextReviewAt.getTime() <= now.getTime();
 }
+
+/**
+ * ── 적응형 복습 (Phase 6) ──────────────────────────────────────────────────
+ * The fixed ladder above is the anchor; a per-item `easeFactor` (SM-2 style)
+ * personalizes it. A review outcome maps to a grade; the grade nudges the ease
+ * and scales the next interval. Design guarantee: `scheduleWithGrade(stage,
+ * DEFAULT_EASE, "good")` reproduces `scheduleAfterSuccess(stage)` exactly, so
+ * existing schedules (ease defaulted to 2.5) are unchanged until a non-"good"
+ * outcome drifts the ease.
+ */
+export type ReviewGrade = "again" | "hard" | "good" | "easy";
+
+export const DEFAULT_EASE = 2.5;
+const MIN_EASE = 1.3;
+const MAX_EASE = 3.0;
+
+/** Ease nudge per grade. "good" is neutral (keeps continuity); lapses/hard drop
+ * it (shorter future intervals), "easy" raises it (longer). */
+const EASE_DELTA: Record<ReviewGrade, number> = {
+  again: -0.2,
+  hard: -0.15,
+  good: 0,
+  easy: 0.15,
+};
+
+/** Interval multiplier per (non-lapse) grade, on top of the base ladder step. */
+const GRADE_INTERVAL_FACTOR: Record<Exclude<ReviewGrade, "again">, number> = {
+  hard: 0.6,
+  good: 1,
+  easy: 1.3,
+};
+
+export function clampEase(ease: number): number {
+  return Math.min(MAX_EASE, Math.max(MIN_EASE, ease));
+}
+
+export function nextEase(ease: number, grade: ReviewGrade): number {
+  return clampEase(Math.round((ease + EASE_DELTA[grade]) * 100) / 100);
+}
+
+export type AdaptiveSchedule = {
+  reviewStage: number;
+  easeFactor: number;
+  nextReviewAt: Date | null;
+  graduated: boolean;
+};
+
+/**
+ * Next schedule for an item at `currentStage`/`ease` given a review `grade`.
+ * - "again": lapse — reset to stage 0, due after the first interval, ease down.
+ * - "hard"/"good"/"easy": advance one stage; interval = base ladder step ×
+ *   grade factor × (ease / DEFAULT_EASE). Passing the last step graduates it.
+ */
+export function scheduleWithGrade(
+  currentStage: number,
+  ease: number,
+  grade: ReviewGrade,
+  now: Date = new Date(),
+): AdaptiveSchedule {
+  const easeFactor = nextEase(ease, grade);
+
+  if (grade === "again") {
+    const days = REVIEW_INTERVALS_DAYS[0]!;
+    return {
+      reviewStage: 0,
+      easeFactor,
+      nextReviewAt: new Date(now.getTime() + days * DAY_MS),
+      graduated: false,
+    };
+  }
+
+  const newStage = currentStage + 1;
+  if (newStage >= REVIEW_INTERVALS_DAYS.length) {
+    return { reviewStage: newStage, easeFactor, nextReviewAt: null, graduated: true };
+  }
+
+  const base = REVIEW_INTERVALS_DAYS[newStage]!;
+  const days = Math.max(
+    1,
+    Math.round(base * GRADE_INTERVAL_FACTOR[grade] * (easeFactor / DEFAULT_EASE)),
+  );
+  return {
+    reviewStage: newStage,
+    easeFactor,
+    nextReviewAt: new Date(now.getTime() + days * DAY_MS),
+    graduated: false,
+  };
+}

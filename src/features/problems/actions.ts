@@ -237,7 +237,13 @@ export async function deleteProblem(problemId: string) {
 export async function submitProblemAnswer(
   problemId: string,
   answer: { choiceId?: string; text?: string; selfCorrect?: boolean },
-  opts?: { source?: Extract<AttemptSource, "practice" | "review">; durationMs?: number },
+  opts?: {
+    source?: Extract<AttemptSource, "practice" | "review">;
+    durationMs?: number;
+    /** In-page review re-solve: defer the SRS advance to the explicit grade
+     * (다시/어려움/보통/쉬움) the user picks next, instead of auto-advancing. */
+    deferReviewGrade?: boolean;
+  },
 ): Promise<{ correct: boolean; explanation: string | null }> {
   const user = await requireCurrentUser();
   const supabase = await createClient();
@@ -312,7 +318,12 @@ export async function submitProblemAnswer(
   // the old plain resolved-toggle so every submission keeps the schedule
   // consistent.
   if (correct) {
-    await recordReviewSuccess(user.id, problemId);
+    // The in-page review card defers the advance to the user's explicit grade
+    // (다시/어려움/보통/쉬움); every other path auto-advances with a neutral
+    // "good" so behaviour there is unchanged.
+    if (!opts?.deferReviewGrade) {
+      await recordReviewSuccess(user.id, problemId);
+    }
   } else {
     await registerWrongAnswerForReview(user.id, problemId, "problem");
   }
