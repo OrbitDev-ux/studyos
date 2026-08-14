@@ -88,7 +88,8 @@ export default async function DashboardPage() {
     getPlanSummary(user.id),
   ]);
   const showAds = adsVisibleFor(user);
-  const t = getMessages(await getServerLocale(user.locale)).dashboard;
+  const messages = getMessages(await getServerLocale(user.locale));
+  const t = messages.dashboard;
 
   const completedTodos = todos.filter((todo) => todo.completed).length;
   const progressPercent =
@@ -211,7 +212,7 @@ export default async function DashboardPage() {
         </h2>
         <div className="grid gap-4 lg:grid-cols-2">
           <TodayGoalsCard goals={goals} subjects={subjects} />
-          <TodayTodosCard todos={todos} />
+          <TodayTodosCard todos={todos} t={messages.todos} />
         </div>
         <div className="grid gap-4 lg:grid-cols-3">
           <RecommendedProblemsCard problems={recentProblems} />

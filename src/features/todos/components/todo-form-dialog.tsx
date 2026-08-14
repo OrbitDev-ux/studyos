@@ -24,6 +24,7 @@ import {
 import type { Subject } from "@/generated/prisma/client";
 import { createTodo, updateTodo } from "@/features/todos/actions";
 import { todoFormSchema, type TodoFormValues } from "@/features/todos/schema";
+import { useI18n } from "@/features/i18n/provider";
 
 type TodoFormDialogProps = {
   subjects: Subject[];
@@ -53,6 +54,8 @@ export function TodoFormDialog({
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isEdit = !!todo;
+  const { messages } = useI18n();
+  const t = messages.todos;
 
   const {
     register,
@@ -80,7 +83,7 @@ export function TodoFormDialog({
       reset();
       setOpen(false);
     } catch {
-      setError("저장에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      setError(t.saveError);
     }
   }
 
@@ -98,14 +101,14 @@ export function TodoFormDialog({
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEdit ? "할 일 수정" : "할 일 추가"}</DialogTitle>
+          <DialogTitle>{isEdit ? t.edit : t.add}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="todo-title">할 일</Label>
+            <Label htmlFor="todo-title">{t.fieldTitle}</Label>
             <Input
               id="todo-title"
-              placeholder="예: 수학 문제집 3단원"
+              placeholder={t.titlePlaceholder}
               {...register("title")}
             />
             {errors.title && (
@@ -114,7 +117,7 @@ export function TodoFormDialog({
           </div>
           <div className="flex gap-3">
             <div className="flex flex-1 flex-col gap-1.5">
-              <Label htmlFor="todo-due-date">날짜</Label>
+              <Label htmlFor="todo-due-date">{t.dateLabel}</Label>
               <Input id="todo-due-date" type="date" {...register("dueDate")} />
               {errors.dueDate && (
                 <p className="text-destructive text-xs">{errors.dueDate.message}</p>
@@ -122,14 +125,14 @@ export function TodoFormDialog({
             </div>
             {subjects.length > 0 && (
               <div className="flex flex-1 flex-col gap-1.5">
-                <Label>과목 (선택)</Label>
+                <Label>{t.subjectLabel}</Label>
                 <Controller
                   control={control}
                   name="subjectId"
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger>
-                        <SelectValue placeholder="선택 안 함" />
+                        <SelectValue placeholder={t.subjectPlaceholder} />
                       </SelectTrigger>
                       <SelectContent>
                         {subjects.map((subject) => (
@@ -147,7 +150,7 @@ export function TodoFormDialog({
           {error && <p className="text-destructive text-xs">{error}</p>}
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting}>
-              {isEdit ? "저장" : "추가"}
+              {isEdit ? t.submitSave : t.submitAdd}
             </Button>
           </DialogFooter>
         </form>

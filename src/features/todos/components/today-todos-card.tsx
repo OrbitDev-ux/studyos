@@ -6,27 +6,30 @@ import { quickAddTodo } from "@/features/todos/actions";
 import { TodoCheckbox } from "@/features/todos/components/todo-checkbox";
 import type { getTodayTodos } from "@/features/todos/queries";
 import { SubjectChip } from "@/features/subjects/components/subject-chip";
+import type { Messages } from "@/features/i18n/messages";
 import { cn } from "@/lib/utils";
 
 export function TodayTodosCard({
   todos,
+  t,
 }: {
   todos: Awaited<ReturnType<typeof getTodayTodos>>;
+  t: Messages["todos"];
 }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>오늘 Todo</CardTitle>
+        <CardTitle>{t.todayTitle}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <form action={quickAddTodo} className="flex gap-2">
-          <Input name="title" placeholder="할 일 추가" maxLength={200} required />
-          <Button type="submit" size="icon" variant="outline" aria-label="추가">
+          <Input name="title" placeholder={t.add} maxLength={200} required />
+          <Button type="submit" size="icon" variant="outline" aria-label={t.submitAdd}>
             <Plus className="size-4" />
           </Button>
         </form>
         {todos.length === 0 ? (
-          <p className="text-muted-foreground text-sm">오늘 할 일이 없습니다.</p>
+          <p className="text-muted-foreground text-sm">{t.todayEmpty}</p>
         ) : (
           <ul className="flex flex-col gap-2.5">
             {todos.map((todo) => (

@@ -15,9 +15,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { deleteTodo } from "@/features/todos/actions";
+import { useI18n } from "@/features/i18n/provider";
 
 export function DeleteTodoButton({ todoId }: { todoId: string }) {
   const [isPending, startTransition] = useTransition();
+  const { messages } = useI18n();
+  const t = messages.todos;
 
   return (
     <AlertDialog>
@@ -27,20 +30,20 @@ export function DeleteTodoButton({ todoId }: { todoId: string }) {
           size="icon-sm"
           variant="ghost"
           disabled={isPending}
-          aria-label="삭제"
+          aria-label={t.deleteLabel}
         >
           <Trash2 className="text-destructive size-4" />
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>할 일을 삭제할까요?</AlertDialogTitle>
-          <AlertDialogDescription>이 작업은 되돌릴 수 없습니다.</AlertDialogDescription>
+          <AlertDialogTitle>{t.deleteConfirmTitle}</AlertDialogTitle>
+          <AlertDialogDescription>{t.deleteConfirmDesc}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>취소</AlertDialogCancel>
+          <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
           <AlertDialogAction onClick={() => startTransition(() => deleteTodo(todoId))}>
-            삭제
+            {t.deleteLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

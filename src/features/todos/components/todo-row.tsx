@@ -13,10 +13,12 @@ export function TodoRow({
   todo,
   subjects,
   defaultDueDate,
+  editLabel,
 }: {
   todo: Awaited<ReturnType<typeof getAllTodos>>[number];
   subjects: Subject[];
   defaultDueDate: string;
+  editLabel: string;
 }) {
   return (
     <li className="flex items-center gap-3 rounded-lg border px-3 py-2.5">
@@ -51,7 +53,7 @@ export function TodoRow({
           dueDate: formatDateOnly(todo.dueDate),
         }}
         trigger={
-          <Button type="button" size="icon-sm" variant="ghost" aria-label="수정">
+          <Button type="button" size="icon-sm" variant="ghost" aria-label={editLabel}>
             <Pencil className="size-4" />
           </Button>
         }
