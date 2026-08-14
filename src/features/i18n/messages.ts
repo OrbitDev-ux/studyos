@@ -80,6 +80,22 @@ const ko = {
     generate: "문제 생성",
     empty: "표시할 문제가 없습니다.",
   },
+  review: {
+    title: "오답노트",
+    heroTitle: "오답은 그냥 쌓이지 않아요",
+    heroPrefix: "여기 기록된 오답은 ",
+    heroLink: "취약 단원 분석",
+    heroSuffix: "과 맞춤 문제 추천에 자동으로 반영됩니다.",
+  },
+  studyBank: {
+    title: "문제은행",
+    subtitle: "StudyOS의 다양한 문제를 탐색하고 풀어보세요.",
+    generate: "AI 문제 생성",
+    total: "총 {count}개의 문제",
+    emptyTitle: "문제가 없습니다.",
+    emptyDesc: "검색 조건이나 필터를 변경해보세요.",
+    resetFilter: "필터 초기화",
+  },
 } as const;
 
 export type Messages = {
@@ -157,6 +173,22 @@ const en: Messages = {
     generate: "Generate problems",
     empty: "No problems to show.",
   },
+  review: {
+    title: "Review",
+    heroTitle: "Wrong answers don't just pile up",
+    heroPrefix: "The mistakes recorded here feed into ",
+    heroLink: "weak-unit analysis",
+    heroSuffix: " and personalized problem recommendations automatically.",
+  },
+  studyBank: {
+    title: "Problem Bank",
+    subtitle: "Explore and solve a variety of StudyOS problems.",
+    generate: "Generate with AI",
+    total: "{count} problems total",
+    emptyTitle: "No problems found.",
+    emptyDesc: "Try changing your search or filters.",
+    resetFilter: "Reset filters",
+  },
 };
 
 const ja: Messages = {
@@ -230,6 +262,22 @@ const ja: Messages = {
     generate: "問題を生成",
     empty: "表示する問題がありません。",
   },
+  review: {
+    title: "復習ノート",
+    heroTitle: "間違いはただ溜まるだけではありません",
+    heroPrefix: "ここに記録された間違いは、",
+    heroLink: "弱点単元の分析",
+    heroSuffix: "とおすすめ問題に自動で反映されます。",
+  },
+  studyBank: {
+    title: "問題バンク",
+    subtitle: "StudyOSのさまざまな問題を探して解いてみましょう。",
+    generate: "AIで問題生成",
+    total: "全 {count} 問",
+    emptyTitle: "問題がありません。",
+    emptyDesc: "検索条件やフィルターを変更してみてください。",
+    resetFilter: "フィルターをリセット",
+  },
 };
 
 const zh: Messages = {
@@ -302,6 +350,22 @@ const zh: Messages = {
     favorites: "收藏",
     generate: "生成题目",
     empty: "暂无题目。",
+  },
+  review: {
+    title: "错题本",
+    heroTitle: "错题不会白白堆积",
+    heroPrefix: "这里记录的错题会自动用于",
+    heroLink: "薄弱单元分析",
+    heroSuffix: "和个性化题目推荐。",
+  },
+  studyBank: {
+    title: "题库",
+    subtitle: "探索并练习 StudyOS 的各种题目。",
+    generate: "AI 生成题目",
+    total: "共 {count} 道题",
+    emptyTitle: "暂无题目。",
+    emptyDesc: "试试更改搜索条件或筛选。",
+    resetFilter: "重置筛选",
   },
 };
 

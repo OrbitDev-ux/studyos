@@ -5,6 +5,8 @@ import { getWrongAnswers } from "@/features/review/queries";
 import { AdSlot } from "@/features/ads/components/ad-slot";
 import { accessStateFor, adsVisibleFor } from "@/features/billing/access";
 import { canUseFeature } from "@/features/billing/entitlements";
+import { getMessages } from "@/features/i18n/messages";
+import { getServerLocale } from "@/features/i18n/server";
 import { requireCurrentUser } from "@/lib/session";
 
 // requestAiExplanation's AI call regularly runs past Vercel's default
@@ -17,10 +19,11 @@ export default async function ReviewPage() {
   const wrongAnswers = await getWrongAnswers(user.id);
   const canUseDna = canUseFeature(accessStateFor(user), "WRONG_ANSWER_DNA");
   const showAds = adsVisibleFor(user);
+  const t = getMessages(await getServerLocale(user.locale)).review;
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">오답노트</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
 
       {/* 차별점 연결 서사 — 오답이 어떻게 다음 학습으로 이어지는지 보여준다. */}
       <div className="border-info/20 bg-info/8 flex items-start gap-3 rounded-xl border p-3.5">
@@ -28,13 +31,13 @@ export default async function ReviewPage() {
           <Dna className="size-4" />
         </span>
         <div className="min-w-0">
-          <p className="text-sm font-medium">오답은 그냥 쌓이지 않아요</p>
+          <p className="text-sm font-medium">{t.heroTitle}</p>
           <p className="text-muted-foreground text-xs">
-            여기 기록된 오답은{" "}
+            {t.heroPrefix}
             <Link href="/stats" className="text-info font-medium hover:underline">
-              취약 단원 분석
+              {t.heroLink}
             </Link>
-            과 맞춤 문제 추천에 자동으로 반영됩니다.
+            {t.heroSuffix}
           </p>
         </div>
       </div>

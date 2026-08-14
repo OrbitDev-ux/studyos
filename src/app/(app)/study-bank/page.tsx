@@ -15,6 +15,8 @@ import {
   hasActiveFilters,
   parseStudyBankParams,
 } from "@/features/study-bank/search-params";
+import { getMessages, type Messages } from "@/features/i18n/messages";
+import { getServerLocale } from "@/features/i18n/server";
 import { requireCurrentUser } from "@/lib/session";
 
 // The AI generation modal (ProblemGeneratorForm) is hosted here; its Server
@@ -33,21 +35,20 @@ export default async function StudyBankPage({
     getStudyBankFacets(user.id),
     getStudyBankProblems(user.id, params),
   ]);
+  const t = getMessages(await getServerLocale(user.locale)).studyBank;
 
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">📚 문제은행</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            StudyOS의 다양한 문제를 탐색하고 풀어보세요.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">📚 {t.title}</h1>
+          <p className="text-muted-foreground mt-1 text-sm">{t.subtitle}</p>
         </div>
         <ProblemGeneratorForm
           trigger={
             <Button type="button" className="gap-1.5">
-              <Sparkles className="size-4" /> AI 문제 생성
+              <Sparkles className="size-4" /> {t.generate}
             </Button>
           }
         />
@@ -76,11 +77,11 @@ export default async function StudyBankPage({
         {/* Main list */}
         <div className="flex min-w-0 flex-col gap-4">
           <p className="text-muted-foreground text-xs">
-            총 {result.total}개의 문제
+            {t.total.replace("{count}", String(result.total))}
           </p>
 
           {result.items.length === 0 ? (
-            <EmptyState resettable={hasActiveFilters(params)} />
+            <EmptyState resettable={hasActiveFilters(params)} t={t} />
           ) : (
             <>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -105,19 +106,23 @@ export default async function StudyBankPage({
   );
 }
 
-function EmptyState({ resettable }: { resettable: boolean }) {
+function EmptyState({
+  resettable,
+  t,
+}: {
+  resettable: boolean;
+  t: Messages["studyBank"];
+}) {
   return (
     <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-16 text-center">
       <p className="text-2xl">📚</p>
       <div>
-        <p className="text-sm font-medium">문제가 없습니다.</p>
-        <p className="text-muted-foreground text-sm">
-          검색 조건이나 필터를 변경해보세요.
-        </p>
+        <p className="text-sm font-medium">{t.emptyTitle}</p>
+        <p className="text-muted-foreground text-sm">{t.emptyDesc}</p>
       </div>
       {resettable && (
         <Button asChild variant="outline" size="sm">
-          <a href="/study-bank">필터 초기화</a>
+          <a href="/study-bank">{t.resetFilter}</a>
         </Button>
       )}
     </div>
