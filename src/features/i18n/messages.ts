@@ -113,6 +113,23 @@ const ko = {
     emptyDesc:
       "아직 만든 교재가 없어요. 학습 목적과 스타일을 입력하면 StudyOS가 개념·예제·문제·해설이 담긴 나만의 교재를 만들어드려요.",
   },
+  tutor: {
+    title: "AI 과외 선생님",
+    subtitle: "과목과 학년을 고르고, 1:1로 편하게 물어보세요. 정답을 바로 알려주기보다 함께 풀어가요.",
+    emptyTitle: "아직 과외 대화가 없어요.",
+    emptyDesc: "‘새 과외 시작’으로 첫 수업을 시작해보세요.",
+  },
+  lab: {
+    title: "실험실",
+    subtitle: "StudyOS의 새로운 기능을 먼저 사용해보고, 다음 기능을 함께 만들어가요.",
+  },
+  profile: {
+    infoTitle: "프로필 정보",
+    email: "이메일",
+    joinedAt: "가입일",
+    friends: "친구",
+    friendCount: "{count}명",
+  },
 } as const;
 
 export type Messages = {
@@ -223,6 +240,23 @@ const en: Messages = {
     emptyDesc:
       "No books yet. Tell StudyOS your goals and style, and it will build a book with concepts, examples, problems, and explanations.",
   },
+  tutor: {
+    title: "AI Tutor",
+    subtitle: "Pick a subject and grade and ask anything 1:1. We solve it together rather than just handing you the answer.",
+    emptyTitle: "No tutor conversations yet.",
+    emptyDesc: "Start your first lesson with 'New tutoring'.",
+  },
+  lab: {
+    title: "Lab",
+    subtitle: "Try StudyOS's new features first and help shape what comes next.",
+  },
+  profile: {
+    infoTitle: "Profile",
+    email: "Email",
+    joinedAt: "Joined",
+    friends: "Friends",
+    friendCount: "{count}",
+  },
 };
 
 const ja: Messages = {
@@ -329,6 +363,23 @@ const ja: Messages = {
     emptyDesc:
       "まだ教材がありません。学習の目的とスタイルを入力すると、StudyOSが概念・例題・問題・解説を含む教材を作成します。",
   },
+  tutor: {
+    title: "AI家庭教師",
+    subtitle: "科目と学年を選んで、1対1で気軽に質問しましょう。答えをすぐ教えるより一緒に解いていきます。",
+    emptyTitle: "まだ家庭教師との会話がありません。",
+    emptyDesc: "「新しい授業を始める」から最初のレッスンを始めましょう。",
+  },
+  lab: {
+    title: "ラボ",
+    subtitle: "StudyOSの新機能をいち早く試して、次の機能を一緒に作りましょう。",
+  },
+  profile: {
+    infoTitle: "プロフィール",
+    email: "メール",
+    joinedAt: "登録日",
+    friends: "友だち",
+    friendCount: "{count}人",
+  },
 };
 
 const zh: Messages = {
@@ -434,6 +485,23 @@ const zh: Messages = {
     limitCta: "对比套餐",
     emptyDesc:
       "还没有教材。输入你的学习目标和风格，StudyOS 会生成包含概念、例题、题目和解析的教材。",
+  },
+  tutor: {
+    title: "AI 家教",
+    subtitle: "选择科目和年级，1 对 1 随时提问。我们会陪你一起解题，而不是直接给答案。",
+    emptyTitle: "还没有家教对话。",
+    emptyDesc: "点击“开始新家教”开始第一节课吧。",
+  },
+  lab: {
+    title: "实验室",
+    subtitle: "抢先体验 StudyOS 的新功能，和我们一起打造下一个功能。",
+  },
+  profile: {
+    infoTitle: "个人资料",
+    email: "邮箱",
+    joinedAt: "注册日期",
+    friends: "好友",
+    friendCount: "{count}",
   },
 };
 

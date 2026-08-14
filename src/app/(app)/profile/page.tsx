@@ -4,6 +4,8 @@ import { ProfileHeader } from "@/features/profile/components/profile-header";
 import { getMyProfile } from "@/features/profile/queries";
 import { SubscriptionCard } from "@/features/billing/components/subscription-card";
 import { getPlanSummary } from "@/features/billing/usage";
+import { getMessages } from "@/features/i18n/messages";
+import { getServerLocale } from "@/features/i18n/server";
 import { requireCurrentUser } from "@/lib/session";
 
 export default async function ProfilePage() {
@@ -12,6 +14,7 @@ export default async function ProfilePage() {
     getMyProfile(user.id),
     getPlanSummary(user.id),
   ]);
+  const t = getMessages(await getServerLocale(user.locale)).profile;
   const joined = profile.createdAt.toLocaleDateString("ko-KR", {
     year: "numeric",
     month: "long",
@@ -30,19 +33,19 @@ export default async function ProfilePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">프로필 정보</CardTitle>
+          <CardTitle className="text-base">{t.infoTitle}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 text-sm">
-          <InfoRow icon={<Mail className="size-4" />} label="이메일" value={profile.email} />
+          <InfoRow icon={<Mail className="size-4" />} label={t.email} value={profile.email} />
           <InfoRow
             icon={<CalendarDays className="size-4" />}
-            label="가입일"
+            label={t.joinedAt}
             value={joined}
           />
           <InfoRow
             icon={<Users className="size-4" />}
-            label="친구"
-            value={`${profile.friendCount}명`}
+            label={t.friends}
+            value={t.friendCount.replace("{count}", String(profile.friendCount))}
           />
         </CardContent>
       </Card>
