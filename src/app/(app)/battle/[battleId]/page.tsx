@@ -1,8 +1,10 @@
 import { notFound } from "next/navigation";
 import { BattleLeaderboard } from "@/features/battle/components/battle-leaderboard";
 import { RespondBattleInviteButtons } from "@/features/battle/components/respond-battle-invite-buttons";
-import { BATTLE_DURATION_LABEL, BATTLE_METRIC_LABEL } from "@/features/battle/constants";
+import { battleDurationLabel, battleMetricLabel } from "@/features/battle/constants";
 import { getBattle } from "@/features/battle/queries";
+import { getMessages } from "@/features/i18n/messages";
+import { getServerLocale } from "@/features/i18n/server";
 import { requireCurrentUser } from "@/lib/session";
 
 export default async function BattleDetailPage({
@@ -19,16 +21,17 @@ export default async function BattleDetailPage({
   const myParticipant = battle.participants.find(
     (participant) => participant.userId === user.id,
   );
+  const t = getMessages(await getServerLocale(user.locale)).battle;
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">
-          {BATTLE_METRIC_LABEL[battle.metric as keyof typeof BATTLE_METRIC_LABEL]} 배틀
+          {t.detailTitle.replace("{metric}", battleMetricLabel(t, battle.metric))}
         </h1>
         <p className="text-muted-foreground mt-1 text-sm">
-          {BATTLE_DURATION_LABEL[String(battle.durationDays)]} ·{" "}
-          {isActive ? "진행 중" : "종료됨"}
+          {battleDurationLabel(t, String(battle.durationDays))} ·{" "}
+          {isActive ? t.statusActive : t.statusEnded}
         </p>
       </div>
 
@@ -40,12 +43,15 @@ export default async function BattleDetailPage({
         leaderboard={leaderboard}
         metric={battle.metric}
         currentUserId={user.id}
+        emptyMessage={t.leaderboardEmpty}
       />
 
       {pendingInvites.length > 0 && (
         <p className="text-muted-foreground text-xs">
-          응답 대기 중:{" "}
-          {pendingInvites.map((p) => p.user.name ?? p.user.email).join(", ")}
+          {t.pending.replace(
+            "{names}",
+            pendingInvites.map((p) => p.user.name ?? p.user.email).join(", "),
+          )}
         </p>
       )}
     </div>

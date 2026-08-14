@@ -3,13 +3,16 @@
 import { useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { respondToBattleInvite } from "@/features/battle/actions";
+import { useI18n } from "@/features/i18n/provider";
 
 export function RespondBattleInviteButtons({ battleId }: { battleId: string }) {
   const [isPending, startTransition] = useTransition();
+  const { messages } = useI18n();
+  const t = messages.battle;
 
   return (
     <div className="flex items-center gap-2 rounded-md border p-3">
-      <p className="text-sm">배틀에 초대받았어요.</p>
+      <p className="text-sm">{t.inviteReceived}</p>
       <div className="ml-auto flex gap-2">
         <Button
           type="button"
@@ -17,7 +20,7 @@ export function RespondBattleInviteButtons({ battleId }: { battleId: string }) {
           disabled={isPending}
           onClick={() => startTransition(() => respondToBattleInvite(battleId, true))}
         >
-          참가
+          {t.accept}
         </Button>
         <Button
           type="button"
@@ -26,7 +29,7 @@ export function RespondBattleInviteButtons({ battleId }: { battleId: string }) {
           disabled={isPending}
           onClick={() => startTransition(() => respondToBattleInvite(battleId, false))}
         >
-          거절
+          {t.decline}
         </Button>
       </div>
     </div>

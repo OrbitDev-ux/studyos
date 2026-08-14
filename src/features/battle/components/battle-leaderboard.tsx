@@ -9,13 +9,15 @@ export function BattleLeaderboard({
   leaderboard,
   metric,
   currentUserId,
+  emptyMessage,
 }: {
   leaderboard: NonNullable<Awaited<ReturnType<typeof getBattle>>>["leaderboard"];
   metric: string;
   currentUserId: string;
+  emptyMessage: string;
 }) {
   if (leaderboard.length === 0) {
-    return <p className="text-muted-foreground text-sm">아직 참가한 친구가 없어요.</p>;
+    return <p className="text-muted-foreground text-sm">{emptyMessage}</p>;
   }
 
   const maxScore = leaderboard[0]?.score ?? 0;

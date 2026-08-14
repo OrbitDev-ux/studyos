@@ -1,21 +1,30 @@
+import type { Messages } from "@/features/i18n/messages";
 import { formatDurationKorean } from "@/lib/format";
 
 export const BATTLE_METRICS = ["study_time", "todo_count", "goal_progress"] as const;
 export type BattleMetric = (typeof BATTLE_METRICS)[number];
 
-export const BATTLE_METRIC_LABEL: Record<BattleMetric, string> = {
-  study_time: "공부시간",
-  todo_count: "Todo 완료",
-  goal_progress: "목표 달성률",
-};
-
 export const BATTLE_DURATION_DAYS = ["1", "3", "7"] as const;
 
-export const BATTLE_DURATION_LABEL: Record<string, string> = {
-  "1": "24시간",
-  "3": "3일",
-  "7": "7일",
-};
+/** Localized label for a battle metric (falls back to the raw value). */
+export function battleMetricLabel(t: Messages["battle"], metric: string): string {
+  const map: Record<BattleMetric, string> = {
+    study_time: t.metricStudyTime,
+    todo_count: t.metricTodoCount,
+    goal_progress: t.metricGoalProgress,
+  };
+  return map[metric as BattleMetric] ?? metric;
+}
+
+/** Localized label for a battle duration in days (falls back to the raw value). */
+export function battleDurationLabel(t: Messages["battle"], days: string): string {
+  const map: Record<string, string> = {
+    "1": t.duration1,
+    "3": t.duration3,
+    "7": t.duration7,
+  };
+  return map[days] ?? days;
+}
 
 export function formatBattleScore(metric: string, score: number): string {
   if (metric === "study_time") return formatDurationKorean(score);

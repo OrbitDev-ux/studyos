@@ -23,12 +23,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createBattle } from "@/features/battle/actions";
-import { BATTLE_DURATION_LABEL, BATTLE_METRIC_LABEL } from "@/features/battle/constants";
+import {
+  BATTLE_DURATION_DAYS,
+  BATTLE_METRICS,
+  battleDurationLabel,
+  battleMetricLabel,
+} from "@/features/battle/constants";
 import {
   createBattleFormSchema,
   type CreateBattleFormValues,
 } from "@/features/battle/schema";
 import type { getFriends } from "@/features/social/queries";
+import { useI18n } from "@/features/i18n/provider";
 
 export function BattleCreateDialog({
   friends,
@@ -40,6 +46,8 @@ export function BattleCreateDialog({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { messages } = useI18n();
+  const t = messages.battle;
 
   const {
     handleSubmit,
@@ -59,7 +67,7 @@ export function BattleCreateDialog({
       setOpen(false);
       router.push(`/battle/${battleId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "배틀 생성에 실패했습니다.");
+      setError(err instanceof Error ? err.message : t.createError);
     }
   }
 
@@ -77,12 +85,12 @@ export function BattleCreateDialog({
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>공부 배틀 시작</DialogTitle>
+          <DialogTitle>{t.createTitle}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="flex gap-3">
             <div className="flex flex-1 flex-col gap-1.5">
-              <Label>기준</Label>
+              <Label>{t.metricLabel}</Label>
               <Controller
                 control={control}
                 name="metric"
@@ -92,9 +100,9 @@ export function BattleCreateDialog({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(BATTLE_METRIC_LABEL).map(([value, label]) => (
+                      {BATTLE_METRICS.map((value) => (
                         <SelectItem key={value} value={value}>
-                          {label}
+                          {battleMetricLabel(t, value)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -103,7 +111,7 @@ export function BattleCreateDialog({
               />
             </div>
             <div className="flex flex-1 flex-col gap-1.5">
-              <Label>기간</Label>
+              <Label>{t.durationLabel}</Label>
               <Controller
                 control={control}
                 name="durationDays"
@@ -113,9 +121,9 @@ export function BattleCreateDialog({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(BATTLE_DURATION_LABEL).map(([value, label]) => (
+                      {BATTLE_DURATION_DAYS.map((value) => (
                         <SelectItem key={value} value={value}>
-                          {label}
+                          {battleDurationLabel(t, value)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -126,11 +134,9 @@ export function BattleCreateDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label>초대할 친구</Label>
+            <Label>{t.inviteFriendsLabel}</Label>
             {friends.length === 0 ? (
-              <p className="text-muted-foreground text-xs">
-                초대할 친구가 없어요. 먼저 친구를 추가해주세요.
-              </p>
+              <p className="text-muted-foreground text-xs">{t.noFriends}</p>
             ) : (
               <Controller
                 control={control}
@@ -168,7 +174,7 @@ export function BattleCreateDialog({
 
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting || friends.length === 0}>
-              {isSubmitting ? "생성 중..." : "배틀 시작"}
+              {isSubmitting ? t.creating : t.start}
             </Button>
           </DialogFooter>
         </form>

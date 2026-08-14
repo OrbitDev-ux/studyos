@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { BATTLE_METRIC_LABEL } from "@/features/battle/constants";
+import { battleMetricLabel } from "@/features/battle/constants";
 import type { getBattles } from "@/features/battle/queries";
+import type { Messages } from "@/features/i18n/messages";
 
 export function BattleCard({
   battle,
+  t,
 }: {
   battle: Awaited<ReturnType<typeof getBattles>>[number];
+  t: Messages["battle"];
 }) {
   const acceptedCount = battle.participants.filter((p) => p.status === "accepted").length;
 
@@ -18,12 +21,14 @@ export function BattleCard({
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">
-                {BATTLE_METRIC_LABEL[battle.metric as keyof typeof BATTLE_METRIC_LABEL]}
+                {battleMetricLabel(t, battle.metric)}
               </span>
-              {battle.myStatus === "invited" && <Badge variant="outline">초대됨</Badge>}
-              {!battle.isActive && <Badge variant="outline">종료</Badge>}
+              {battle.myStatus === "invited" && <Badge variant="outline">{t.badgeInvited}</Badge>}
+              {!battle.isActive && <Badge variant="outline">{t.badgeEnded}</Badge>}
             </div>
-            <p className="text-muted-foreground text-xs">참가자 {acceptedCount}명</p>
+            <p className="text-muted-foreground text-xs">
+              {t.participants.replace("{count}", String(acceptedCount))}
+            </p>
           </div>
         </CardContent>
       </Card>
