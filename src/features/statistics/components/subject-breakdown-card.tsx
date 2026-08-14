@@ -1,23 +1,26 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { Messages } from "@/features/i18n/messages";
 import type { getTodaySubjectBreakdown } from "@/features/statistics/queries";
 import { formatDurationKorean } from "@/lib/format";
 
 export function SubjectBreakdownCard({
   breakdown,
+  t,
 }: {
   breakdown: Awaited<ReturnType<typeof getTodaySubjectBreakdown>>;
+  t: Messages["stats"];
 }) {
   const total = breakdown.reduce((sum, item) => sum + item.seconds, 0);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>과목별 공부시간</CardTitle>
+        <CardTitle>{t.subjectBreakdownTitle}</CardTitle>
       </CardHeader>
       <CardContent>
         {breakdown.length === 0 ? (
           <p className="text-muted-foreground text-sm">
-            오늘 기록된 공부시간이 없습니다.
+            {t.subjectBreakdownEmpty}
           </p>
         ) : (
           <ul className="flex flex-col gap-3.5">
@@ -37,7 +40,7 @@ export function SubjectBreakdownCard({
                         className="size-2 rounded-full"
                         style={{ backgroundColor: color }}
                       />
-                      {item.subject?.name ?? "과목 미지정"}
+                      {item.subject?.name ?? t.subjectUnassigned}
                     </span>
                     <span className="text-muted-foreground tabular-nums">
                       {formatDurationKorean(item.seconds)}

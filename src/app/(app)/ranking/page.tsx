@@ -5,6 +5,8 @@ import {
   getSchoolRanking,
   getSeasonRanking,
 } from "@/features/ranking/queries";
+import { getMessages } from "@/features/i18n/messages";
+import { getServerLocale } from "@/features/i18n/server";
 import { requireCurrentUser } from "@/lib/session";
 
 export default async function RankingPage() {
@@ -16,10 +18,11 @@ export default async function RankingPage() {
     getSchoolRanking(user.id),
     getSeasonRanking(),
   ]);
+  const t = getMessages(await getServerLocale(user.locale)).ranking;
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">랭킹</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
       <RankingTabs
         currentUserId={user.id}
         global={global}

@@ -9,6 +9,8 @@ import { getStreak, getTodayStudySeconds } from "@/features/study-sessions/queri
 import { UpgradeNotice } from "@/features/billing/components/upgrade-notice";
 import { accessStateFor } from "@/features/billing/access";
 import { canUseFeature } from "@/features/billing/entitlements";
+import { getMessages } from "@/features/i18n/messages";
+import { getServerLocale } from "@/features/i18n/server";
 import { formatDurationKorean } from "@/lib/format";
 import { requireCurrentUser } from "@/lib/session";
 
@@ -26,34 +28,39 @@ export default async function StatsPage() {
   const totalCount = todoCounts.reduce((sum, c) => sum + c._count._all, 0);
 
   const canAdvancedAnalytics = canUseFeature(accessStateFor(user), "ADVANCED_ANALYTICS");
+  const t = getMessages(await getServerLocale(user.locale)).stats;
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">통계</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
 
       {!canAdvancedAnalytics && (
         <UpgradeNotice
-          title="상세·고급 통계는 Pro 플랜에서 제공돼요"
-          message="단원별 정답률, 성적 추세, 학습 시간 분석 등을 확인할 수 있어요."
-          cta="Pro 알아보기"
+          title={t.proNoticeTitle}
+          message={t.proNoticeMessage}
+          cta={t.proNoticeCta}
         />
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
-          label="오늘 공부시간"
+          label={t.todayStudyTime}
           value={formatDurationKorean(todaySeconds)}
           icon={Clock}
         />
         <StatCard
-          label="완료한 Todo"
+          label={t.completedTodos}
           value={`${completedCount}/${totalCount}`}
           icon={ListChecks}
         />
-        <StatCard label="연속 공부일" value={`${streak}일`} icon={Flame} />
+        <StatCard
+          label={t.streak}
+          value={t.streakValue.replace("{count}", String(streak))}
+          icon={Flame}
+        />
       </div>
 
-      <SubjectBreakdownCard breakdown={breakdown} />
+      <SubjectBreakdownCard breakdown={breakdown} t={t} />
     </div>
   );
 }

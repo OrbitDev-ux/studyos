@@ -8,11 +8,13 @@ const DISPLAY_LIMIT = 20;
 export function RankingList({
   entries,
   currentUserId,
-  emptyMessage = "표시할 랭킹이 없어요.",
+  emptyMessage,
+  noNameLabel,
 }: {
   entries: RankingEntry[];
   currentUserId: string;
-  emptyMessage?: string;
+  emptyMessage: string;
+  noNameLabel: string;
 }) {
   if (entries.length === 0) {
     return <p className="text-muted-foreground text-sm">{emptyMessage}</p>;
@@ -30,6 +32,7 @@ export function RankingList({
             key={entry.userId}
             entry={entry}
             isMe={entry.userId === currentUserId}
+            noNameLabel={noNameLabel}
           />
         ))}
       </ol>
@@ -37,7 +40,7 @@ export function RankingList({
         <>
           <div className="border-t" />
           <ol>
-            <RankingRow entry={currentUserEntry} isMe />
+            <RankingRow entry={currentUserEntry} isMe noNameLabel={noNameLabel} />
           </ol>
         </>
       )}
@@ -45,7 +48,15 @@ export function RankingList({
   );
 }
 
-function RankingRow({ entry, isMe }: { entry: RankingEntry; isMe: boolean }) {
+function RankingRow({
+  entry,
+  isMe,
+  noNameLabel,
+}: {
+  entry: RankingEntry;
+  isMe: boolean;
+  noNameLabel: string;
+}) {
   return (
     <li
       className={cn(
@@ -61,7 +72,7 @@ function RankingRow({ entry, isMe }: { entry: RankingEntry; isMe: boolean }) {
           <AvatarImage src={entry.image ?? undefined} alt={entry.name ?? ""} />
           <AvatarFallback>{(entry.name ?? "?").at(0)}</AvatarFallback>
         </Avatar>
-        <span className="truncate">{entry.name ?? "이름 없음"}</span>
+        <span className="truncate">{entry.name ?? noNameLabel}</span>
       </span>
       <span className="text-muted-foreground shrink-0 tabular-nums">
         {formatDurationKorean(entry.totalSeconds)}

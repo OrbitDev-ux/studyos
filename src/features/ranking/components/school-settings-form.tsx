@@ -6,8 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { updateSchool } from "@/features/ranking/actions";
 import { schoolFormSchema, type SchoolFormValues } from "@/features/ranking/schema";
+import { useI18n } from "@/features/i18n/provider";
 
 export function SchoolSettingsForm() {
+  const { messages } = useI18n();
+  const t = messages.ranking;
   const {
     register,
     handleSubmit,
@@ -23,17 +26,15 @@ export function SchoolSettingsForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-      <p className="text-muted-foreground text-sm">
-        학교를 설정하면 같은 학교 친구들과 랭킹을 비교할 수 있어요.
-      </p>
+      <p className="text-muted-foreground text-sm">{t.schoolPrompt}</p>
       <div className="flex flex-col gap-1.5">
-        <Input placeholder="학교명" {...register("school")} />
+        <Input placeholder={t.schoolPlaceholder} {...register("school")} />
         {errors.school && (
           <p className="text-destructive text-xs">{errors.school.message}</p>
         )}
       </div>
       <Button type="submit" size="sm" disabled={isSubmitting} className="self-start">
-        학교 설정
+        {t.schoolSubmit}
       </Button>
     </form>
   );

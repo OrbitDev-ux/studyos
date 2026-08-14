@@ -18,6 +18,7 @@ import { ColorSwatchPicker } from "@/features/subjects/components/color-swatch-p
 import { SUBJECT_COLOR_PALETTE } from "@/features/subjects/constants";
 import { subjectFormSchema, type SubjectFormValues } from "@/features/subjects/schema";
 import { createSubject, updateSubject } from "@/features/subjects/actions";
+import { useI18n } from "@/features/i18n/provider";
 
 type SubjectFormDialogProps = {
   trigger: ReactNode;
@@ -27,6 +28,8 @@ type SubjectFormDialogProps = {
 export function SubjectFormDialog({ trigger, subject }: SubjectFormDialogProps) {
   const [open, setOpen] = useState(false);
   const isEdit = !!subject;
+  const { messages } = useI18n();
+  const t = messages.subjects;
 
   const {
     register,
@@ -57,7 +60,7 @@ export function SubjectFormDialog({ trigger, subject }: SubjectFormDialogProps) 
       reset();
       setOpen(false);
     } catch {
-      setError("name", { message: "저장에 실패했습니다. 잠시 후 다시 시도해주세요." });
+      setError("name", { message: t.saveError });
     }
   }
 
@@ -72,18 +75,18 @@ export function SubjectFormDialog({ trigger, subject }: SubjectFormDialogProps) 
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEdit ? "과목 수정" : "과목 추가"}</DialogTitle>
+          <DialogTitle>{isEdit ? t.edit : t.add}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="subject-name">과목명</Label>
-            <Input id="subject-name" placeholder="예: 사회" {...register("name")} />
+            <Label htmlFor="subject-name">{t.nameLabel}</Label>
+            <Input id="subject-name" placeholder={t.namePlaceholder} {...register("name")} />
             {errors.name && (
               <p className="text-destructive text-xs">{errors.name.message}</p>
             )}
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label>색상</Label>
+            <Label>{t.colorLabel}</Label>
             <Controller
               control={control}
               name="color"
@@ -94,7 +97,7 @@ export function SubjectFormDialog({ trigger, subject }: SubjectFormDialogProps) 
           </div>
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting}>
-              {isEdit ? "저장" : "추가"}
+              {isEdit ? t.submitSave : t.submitAdd}
             </Button>
           </DialogFooter>
         </form>

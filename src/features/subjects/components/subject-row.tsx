@@ -4,7 +4,13 @@ import { DeleteSubjectButton } from "@/features/subjects/components/delete-subje
 import { SubjectFormDialog } from "@/features/subjects/components/subject-form-dialog";
 import type { Subject } from "@/generated/prisma/client";
 
-export function SubjectRow({ subject }: { subject: Subject }) {
+export function SubjectRow({
+  subject,
+  editLabel,
+}: {
+  subject: Subject;
+  editLabel: string;
+}) {
   return (
     <li className="flex items-center gap-3 rounded-lg border px-3 py-2.5">
       <span
@@ -15,7 +21,7 @@ export function SubjectRow({ subject }: { subject: Subject }) {
       <SubjectFormDialog
         subject={{ id: subject.id, name: subject.name, color: subject.color }}
         trigger={
-          <Button type="button" size="icon-sm" variant="ghost" aria-label="수정">
+          <Button type="button" size="icon-sm" variant="ghost" aria-label={editLabel}>
             <Pencil className="size-4" />
           </Button>
         }

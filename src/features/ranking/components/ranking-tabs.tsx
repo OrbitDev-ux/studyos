@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RankingList } from "@/features/ranking/components/ranking-list";
 import { SchoolSettingsForm } from "@/features/ranking/components/school-settings-form";
 import type { RankingEntry } from "@/features/ranking/queries";
+import { useI18n } from "@/features/i18n/provider";
 
 type Scope = "global" | "friends" | "school" | "season";
 
@@ -22,26 +23,34 @@ export function RankingTabs({
   season: RankingEntry[];
 }) {
   const [scope, setScope] = useState<Scope>("global");
+  const { messages } = useI18n();
+  const t = messages.ranking;
 
   return (
     <div className="flex flex-col gap-4">
       <Tabs value={scope} onValueChange={(value) => setScope(value as Scope)}>
         <TabsList>
-          <TabsTrigger value="global">전체</TabsTrigger>
-          <TabsTrigger value="friends">친구</TabsTrigger>
-          <TabsTrigger value="school">학교</TabsTrigger>
-          <TabsTrigger value="season">시즌</TabsTrigger>
+          <TabsTrigger value="global">{t.tabGlobal}</TabsTrigger>
+          <TabsTrigger value="friends">{t.tabFriends}</TabsTrigger>
+          <TabsTrigger value="school">{t.tabSchool}</TabsTrigger>
+          <TabsTrigger value="season">{t.tabSeason}</TabsTrigger>
         </TabsList>
       </Tabs>
 
       {scope === "global" && (
-        <RankingList entries={global} currentUserId={currentUserId} />
+        <RankingList
+          entries={global}
+          currentUserId={currentUserId}
+          emptyMessage={t.emptyDefault}
+          noNameLabel={t.noName}
+        />
       )}
       {scope === "friends" && (
         <RankingList
           entries={friends}
           currentUserId={currentUserId}
-          emptyMessage="친구를 추가하고 함께 공부시간을 비교해보세요."
+          emptyMessage={t.emptyFriends}
+          noNameLabel={t.noName}
         />
       )}
       {scope === "school" &&
@@ -51,14 +60,16 @@ export function RankingTabs({
           <RankingList
             entries={school}
             currentUserId={currentUserId}
-            emptyMessage="같은 학교 친구가 아직 없어요."
+            emptyMessage={t.emptySchool}
+            noNameLabel={t.noName}
           />
         ))}
       {scope === "season" && (
         <RankingList
           entries={season}
           currentUserId={currentUserId}
-          emptyMessage="이번 달 공부 기록이 아직 없어요."
+          emptyMessage={t.emptySeason}
+          noNameLabel={t.noName}
         />
       )}
     </div>
