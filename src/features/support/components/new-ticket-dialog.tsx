@@ -23,13 +23,16 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import { createTicket } from "@/features/support/actions";
-import { SUPPORT_TYPES } from "@/features/support/constants";
+import { SUPPORT_TYPES, supportTypeLabel } from "@/features/support/constants";
 import type { SupportTicketType } from "@/generated/prisma/client";
+import { useI18n } from "@/features/i18n/provider";
 
 /** "새 문의 작성" — Dialog + form. Loading/success/error/validation states. */
 export function NewTicketDialog() {
   const router = useRouter();
   const { toast } = useToast();
+  const { messages } = useI18n();
+  const t = messages.support;
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<SupportTicketType>("BUG");
   const [title, setTitle] = useState("");
@@ -40,7 +43,7 @@ export function NewTicketDialog() {
   function submit() {
     setError(null);
     if (!title.trim() || !content.trim()) {
-      setError("제목과 내용을 입력해주세요.");
+      setError(t.validationRequired);
       return;
     }
     startTransition(async () => {
@@ -50,8 +53,8 @@ export function NewTicketDialog() {
         return;
       }
       toast({
-        title: "문의가 접수되었습니다.",
-        description: "관리자가 확인 후 답변드리겠습니다.",
+        title: t.submittedTitle,
+        description: t.submittedDesc,
       });
       setOpen(false);
       setTitle("");
@@ -64,53 +67,53 @@ export function NewTicketDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" className="gap-1.5">
-          <Plus className="size-4" /> 새 문의 작성
+          <Plus className="size-4" /> {t.newTicket}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>문의하기</DialogTitle>
+          <DialogTitle>{t.dialogTitle}</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="ticket-type">문의 유형</Label>
+            <Label htmlFor="ticket-type">{t.typeLabel}</Label>
             <Select value={type} onValueChange={(v) => setType(v as SupportTicketType)}>
               <SelectTrigger id="ticket-type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {SUPPORT_TYPES.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.emoji} {t.label}
+                {SUPPORT_TYPES.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {supportTypeLabel(t, option.id)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="ticket-title">제목</Label>
+            <Label htmlFor="ticket-title">{t.titleLabel}</Label>
             <Input
               id="ticket-title"
               value={title}
               maxLength={120}
-              placeholder="제목을 입력하세요"
+              placeholder={t.titlePlaceholder}
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="ticket-content">문의 내용</Label>
+            <Label htmlFor="ticket-content">{t.contentLabel}</Label>
             <Textarea
               id="ticket-content"
               value={content}
               rows={6}
               maxLength={5000}
-              placeholder="문의 내용을 자세히 적어주세요"
+              placeholder={t.contentPlaceholder}
               onChange={(e) => setContent(e.target.value)}
             />
           </div>
           {error && <p className="text-destructive text-xs">{error}</p>}
           <Button type="button" onClick={submit} disabled={pending} className="self-end">
-            {pending ? "문의 제출 중..." : "문의 제출"}
+            {pending ? t.submitting : t.submit}
           </Button>
         </div>
       </DialogContent>

@@ -1,4 +1,5 @@
 import type { SupportTicketStatus, SupportTicketType } from "@/generated/prisma/client";
+import type { Messages } from "@/features/i18n/messages";
 
 /**
  * Support ticket types — config-driven so a new type is added here (+ the Prisma
@@ -46,3 +47,33 @@ export const SUPPORT_STATUS_VARIANT: Record<
   ANSWERED: "outline",
   CLOSED: "outline",
 };
+
+/**
+ * Localized labels for the user-facing support screens (emoji + text). The
+ * Korean SUPPORT_*_LABEL maps above stay as the source for the admin console,
+ * which is not yet localized.
+ */
+export function supportTypeLabel(t: Messages["support"], type: SupportTicketType): string {
+  const map: Record<SupportTicketType, string> = {
+    BUG: t.typeBug,
+    FEATURE_REQUEST: t.typeFeatureRequest,
+    PAYMENT: t.typePayment,
+    ACCOUNT: t.typeAccount,
+    LEARNING: t.typeLearning,
+    OTHER: t.typeOther,
+  };
+  return map[type] ?? type;
+}
+
+export function supportStatusLabel(
+  t: Messages["support"],
+  status: SupportTicketStatus,
+): string {
+  const map: Record<SupportTicketStatus, string> = {
+    OPEN: t.statusOpen,
+    IN_PROGRESS: t.statusInProgress,
+    ANSWERED: t.statusAnswered,
+    CLOSED: t.statusClosed,
+  };
+  return map[status] ?? status;
+}
