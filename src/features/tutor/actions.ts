@@ -4,13 +4,14 @@ import { revalidatePath } from "next/cache";
 import { requireCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { runTutorTurn, type TutorTurnMessage } from "@/features/tutor/ai";
-import { tutorSubjectLabel } from "@/features/tutor/config";
+import { TUTOR_SUBJECTS, tutorSubjectLabel, type TutorSubjectId } from "@/features/tutor/config";
 import {
   createConversationSchema,
   sendMessageSchema,
   type CreateConversationValues,
   type SendMessageValues,
 } from "@/features/tutor/schema";
+import { bringForwardConceptReviews } from "@/features/review/schedule-service";
 
 function greeting(subjectLabel: string): string {
   return `안녕! 나는 너의 ${subjectLabel} 과외 선생님이야. 오늘은 무엇을 공부해볼까? 어려운 문제나 개념이 있으면 편하게 물어봐 😊`;
@@ -50,6 +51,8 @@ export async function createTutorConversation(
 
 export type SendMessageResult = {
   reply?: { content: string; understanding?: string };
+  /** Tutor→SRS: existing wrong answers on a concept surfaced for review today. */
+  reviewScheduled?: { concept: string; count: number };
   error?: string;
   code?: string;
   upgradePlan?: string | null;
@@ -95,12 +98,29 @@ export async function sendTutorMessage(values: SendMessageValues): Promise<SendM
     };
   }
 
+  // Tutor→SRS: if the AI proposes a review and the recommendation validates,
+  // surface the user's OWN matching wrong answers for review today. The service
+  // scopes strictly to this user's rows; the AI string never touches the schema.
+  let reviewScheduled: { concept: string; count: number } | undefined;
+  const rec = res.reply.reviewRecommendation;
+  if (rec?.shouldSchedule) {
+    const count = await bringForwardConceptReviews(
+      user.id,
+      tutorSubjectLabel(convo.subject),
+      rec.concept,
+    );
+    if (count > 0) reviewScheduled = { concept: rec.concept, count };
+  }
+
   await prisma.tutorMessage.create({
     data: {
       conversationId: convo.id,
       role: "assistant",
       content: res.reply.reply,
-      metadata: res.reply.understanding ? { understanding: res.reply.understanding } : undefined,
+      metadata:
+        res.reply.understanding || reviewScheduled
+          ? { understanding: res.reply.understanding, reviewScheduled }
+          : undefined,
     },
   });
   await prisma.tutorConversation.update({
@@ -108,10 +128,39 @@ export async function sendTutorMessage(values: SendMessageValues): Promise<SendM
     data: { updatedAt: new Date() },
   });
 
+  if (reviewScheduled) revalidatePath("/review");
   revalidatePath(`/tutor/${convo.id}`);
   return {
     reply: { content: res.reply.reply, understanding: res.reply.understanding },
+    reviewScheduled,
   };
+}
+
+/**
+ * SRS→Tutor: start a tutoring session seeded to review a specific due wrong
+ * answer's concept. Reuses createTutorConversation (no new chat system). The
+ * wrong answer must belong to the user; its subject/unit seed the session.
+ */
+export async function createReviewTutorConversation(
+  wrongAnswerId: string,
+): Promise<{ conversationId?: string; error?: string }> {
+  const user = await requireCurrentUser();
+  const wrongAnswer = await prisma.wrongAnswer.findFirst({
+    where: { id: wrongAnswerId, userId: user.id },
+    select: { problem: { select: { unit: true, subject: { select: { name: true } } } } },
+  });
+  if (!wrongAnswer) return { error: "오답 기록을 찾을 수 없습니다." };
+
+  const subjectName = wrongAnswer.problem.subject?.name ?? null;
+  const unit = wrongAnswer.problem.unit ?? null;
+  // Map the user's subject name onto a tutor subject; fall back to math.
+  const subject: TutorSubjectId =
+    TUTOR_SUBJECTS.find((s) => s.label === subjectName)?.id ?? "math";
+  const message = unit
+    ? `'${unit}' 개념이 아직 헷갈려요. 복습을 도와주세요.`
+    : `${subjectName ?? "이 과목"} 개념을 복습하고 싶어요.`;
+
+  return createTutorConversation({ subject, grade: "middle", message });
 }
 
 /** Delete a conversation (owner-scoped). */

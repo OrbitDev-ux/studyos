@@ -96,6 +96,47 @@ export async function recordReviewSuccess(
 }
 
 /**
+ * Tutor→SRS: bring the user's existing wrong answers on a concept forward so
+ * they surface in "오늘 복습" now. Scoped to the user's OWN rows in the given
+ * subject whose unit fuzzily matches the concept (either contains the other).
+ * Reuses the existing WrongAnswer schedule — no new problem/record is created,
+ * and reviewStage/easeFactor are left intact (only the due time is advanced).
+ * Returns how many items were surfaced (0 = nothing matched; honest no-op).
+ */
+export async function bringForwardConceptReviews(
+  userId: string,
+  subjectLabel: string,
+  concept: string,
+  now: Date = new Date(),
+): Promise<number> {
+  const normalizedConcept = concept.trim().toLowerCase();
+  if (!normalizedConcept) return 0;
+
+  const candidates = await prisma.wrongAnswer.findMany({
+    where: {
+      userId,
+      problem: { subject: { name: subjectLabel }, unit: { not: null } },
+    },
+    select: { id: true, problem: { select: { unit: true } } },
+  });
+
+  const matchedIds = candidates
+    .filter(({ problem }) => {
+      const unit = problem.unit?.trim().toLowerCase();
+      return !!unit && (normalizedConcept.includes(unit) || unit.includes(normalizedConcept));
+    })
+    .map((c) => c.id);
+
+  if (matchedIds.length === 0) return 0;
+
+  await prisma.wrongAnswer.updateMany({
+    where: { id: { in: matchedIds }, userId },
+    data: { nextReviewAt: now, resolved: false },
+  });
+  return matchedIds.length;
+}
+
+/**
  * Apply an explicit review grade (다시/어려움/보통/쉬움) to a specific wrong
  * answer the user owns. Used by the review UI's self-assessment buttons and by
  * the Tutor→SRS integration. Ownership + unresolved state are enforced here;

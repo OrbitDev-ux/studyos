@@ -21,5 +21,20 @@ export const tutorReplySchema = z.object({
   reply: z.string().min(1),
   /** Coarse read of the student's understanding, stored in message metadata. */
   understanding: z.enum(["understood", "partial", "confused", "unknown"]).optional(),
+  /**
+   * Optional structured hint that the student is struggling with a concept and
+   * it should be surfaced for spaced-repetition review. The AI only *proposes*
+   * this; the server validates the shape (here) and scopes the effect to the
+   * user's own existing wrong answers — an AI string never writes the schedule
+   * directly.
+   */
+  reviewRecommendation: z
+    .object({
+      shouldSchedule: z.boolean(),
+      concept: z.string().trim().min(1).max(100),
+      reason: z.string().trim().max(300).optional(),
+      priority: z.enum(["low", "medium", "high"]).optional(),
+    })
+    .optional(),
 });
 export type TutorReply = z.infer<typeof tutorReplySchema>;

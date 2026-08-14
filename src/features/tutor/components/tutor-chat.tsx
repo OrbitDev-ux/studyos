@@ -80,7 +80,16 @@ export function TutorChat({
       }
       if (res.reply) {
         const id = `ai-${Date.now()}`;
-        setMessages((prev) => [...prev, { id, role: "assistant", content: res.reply!.content }]);
+        const next: Msg[] = [{ id, role: "assistant", content: res.reply.content }];
+        // Tutor→SRS: surface a note when the tutor scheduled a concept review.
+        if (res.reviewScheduled) {
+          next.push({
+            id: `note-${Date.now()}`,
+            role: "note",
+            content: `‘${res.reviewScheduled.concept}’ 복습 ${res.reviewScheduled.count}개를 오늘 복습에 추가했어요.`,
+          });
+        }
+        setMessages((prev) => [...prev, ...next]);
         setRevealId(id);
         setRevealLen(0);
       }
@@ -138,6 +147,15 @@ export function TutorChat({
       {/* Messages */}
       <div ref={scrollRef} className="flex flex-1 flex-col gap-3 overflow-y-auto py-4">
         {messages.map((m) => {
+          if (m.role === "note") {
+            return (
+              <div key={m.id} className="flex justify-center">
+                <p className="border-primary/20 bg-primary/5 text-primary rounded-full border px-3 py-1 text-xs">
+                  🔁 {m.content}
+                </p>
+              </div>
+            );
+          }
           const isUser = m.role === "user";
           const text =
             m.id === revealId ? m.content.slice(0, revealLen) : m.content;

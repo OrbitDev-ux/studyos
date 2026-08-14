@@ -118,6 +118,8 @@ const ko = {
     subtitle: "과목과 학년을 고르고, 1:1로 편하게 물어보세요. 정답을 바로 알려주기보다 함께 풀어가요.",
     emptyTitle: "아직 과외 대화가 없어요.",
     emptyDesc: "‘새 과외 시작’으로 첫 수업을 시작해보세요.",
+    reviewSectionTitle: "오늘 복습",
+    reviewWithTutor: "AI Tutor로 복습하기",
   },
   lab: {
     title: "실험실",
@@ -400,6 +402,8 @@ const en: Messages = {
     subtitle: "Pick a subject and grade and ask anything 1:1. We solve it together rather than just handing you the answer.",
     emptyTitle: "No tutor conversations yet.",
     emptyDesc: "Start your first lesson with 'New tutoring'.",
+    reviewSectionTitle: "Today's review",
+    reviewWithTutor: "Review with AI Tutor",
   },
   lab: {
     title: "Lab",
@@ -678,6 +682,8 @@ const ja: Messages = {
     subtitle: "科目と学年を選んで、1対1で気軽に質問しましょう。答えをすぐ教えるより一緒に解いていきます。",
     emptyTitle: "まだ家庭教師との会話がありません。",
     emptyDesc: "「新しい授業を始める」から最初のレッスンを始めましょう。",
+    reviewSectionTitle: "今日の復習",
+    reviewWithTutor: "AIチューターで復習",
   },
   lab: {
     title: "ラボ",
@@ -956,6 +962,8 @@ const zh: Messages = {
     subtitle: "选择科目和年级，1 对 1 随时提问。我们会陪你一起解题，而不是直接给答案。",
     emptyTitle: "还没有家教对话。",
     emptyDesc: "点击“开始新家教”开始第一节课吧。",
+    reviewSectionTitle: "今日复习",
+    reviewWithTutor: "用 AI 家教复习",
   },
   lab: {
     title: "实验室",
