@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import type { Locale } from "@/features/i18n/config";
 import type { RankingEntry } from "@/features/ranking/queries";
-import { formatDurationKorean } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const DISPLAY_LIMIT = 20;
@@ -10,11 +11,13 @@ export function RankingList({
   currentUserId,
   emptyMessage,
   noNameLabel,
+  locale,
 }: {
   entries: RankingEntry[];
   currentUserId: string;
   emptyMessage: string;
   noNameLabel: string;
+  locale: Locale;
 }) {
   if (entries.length === 0) {
     return <p className="text-muted-foreground text-sm">{emptyMessage}</p>;
@@ -33,6 +36,7 @@ export function RankingList({
             entry={entry}
             isMe={entry.userId === currentUserId}
             noNameLabel={noNameLabel}
+            locale={locale}
           />
         ))}
       </ol>
@@ -40,7 +44,7 @@ export function RankingList({
         <>
           <div className="border-t" />
           <ol>
-            <RankingRow entry={currentUserEntry} isMe noNameLabel={noNameLabel} />
+            <RankingRow entry={currentUserEntry} isMe noNameLabel={noNameLabel} locale={locale} />
           </ol>
         </>
       )}
@@ -52,10 +56,12 @@ function RankingRow({
   entry,
   isMe,
   noNameLabel,
+  locale,
 }: {
   entry: RankingEntry;
   isMe: boolean;
   noNameLabel: string;
+  locale: Locale;
 }) {
   return (
     <li
@@ -75,7 +81,7 @@ function RankingRow({
         <span className="truncate">{entry.name ?? noNameLabel}</span>
       </span>
       <span className="text-muted-foreground shrink-0 tabular-nums">
-        {formatDurationKorean(entry.totalSeconds)}
+        {formatDuration(entry.totalSeconds, locale)}
       </span>
     </li>
   );

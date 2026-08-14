@@ -17,6 +17,7 @@ import { fetchPublicProfile, requestFriendByUserId } from "@/features/profile/ac
 import { OnlineStatusLabel } from "@/features/profile/components/online-status";
 import type { PublicProfile } from "@/features/profile/queries";
 import { removeFriend, respondToFriendRequest, startConversation } from "@/features/social/actions";
+import { useI18n } from "@/features/i18n/provider";
 
 /**
  * A reusable user profile card shown in a modal. Wrap any element (avatar,
@@ -85,10 +86,11 @@ function ProfileCardBody({
   onChanged: () => Promise<void>;
 }) {
   const router = useRouter();
+  const { locale } = useI18n();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const displayName = profile.name ?? "이름 없음";
-  const joined = new Date(profile.createdAt).toLocaleDateString("ko-KR");
+  const joined = new Date(profile.createdAt).toLocaleDateString(locale);
 
   const run = (fn: () => Promise<void>) => {
     setError(null);

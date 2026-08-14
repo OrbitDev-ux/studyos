@@ -22,7 +22,7 @@ export function TodoList({
   defaultDueDate: string;
 }) {
   const [filter, setFilter] = useState<Filter>("all");
-  const { messages } = useI18n();
+  const { messages, locale } = useI18n();
   const t = messages.todos;
 
   const filteredTodos = useMemo(() => {
@@ -63,6 +63,7 @@ export function TodoList({
               subjects={subjects}
               defaultDueDate={defaultDueDate}
               editLabel={t.editLabel}
+              locale={locale}
             />
           ))}
         </ul>

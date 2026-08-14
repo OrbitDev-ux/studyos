@@ -11,7 +11,7 @@ import { accessStateFor } from "@/features/billing/access";
 import { canUseFeature } from "@/features/billing/entitlements";
 import { getMessages } from "@/features/i18n/messages";
 import { getServerLocale } from "@/features/i18n/server";
-import { formatDurationKorean } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
 import { requireCurrentUser } from "@/lib/session";
 
 export default async function StatsPage() {
@@ -28,7 +28,8 @@ export default async function StatsPage() {
   const totalCount = todoCounts.reduce((sum, c) => sum + c._count._all, 0);
 
   const canAdvancedAnalytics = canUseFeature(accessStateFor(user), "ADVANCED_ANALYTICS");
-  const t = getMessages(await getServerLocale(user.locale)).stats;
+  const locale = await getServerLocale(user.locale);
+  const t = getMessages(locale).stats;
 
   return (
     <div className="flex flex-col gap-6">
@@ -45,7 +46,7 @@ export default async function StatsPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
           label={t.todayStudyTime}
-          value={formatDurationKorean(todaySeconds)}
+          value={formatDuration(todaySeconds, locale)}
           icon={Clock}
         />
         <StatCard
@@ -60,7 +61,7 @@ export default async function StatsPage() {
         />
       </div>
 
-      <SubjectBreakdownCard breakdown={breakdown} t={t} />
+      <SubjectBreakdownCard breakdown={breakdown} t={t} locale={locale} />
     </div>
   );
 }

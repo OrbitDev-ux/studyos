@@ -23,7 +23,7 @@ export function RankingTabs({
   season: RankingEntry[];
 }) {
   const [scope, setScope] = useState<Scope>("global");
-  const { messages } = useI18n();
+  const { messages, locale } = useI18n();
   const t = messages.ranking;
 
   return (
@@ -43,6 +43,7 @@ export function RankingTabs({
           currentUserId={currentUserId}
           emptyMessage={t.emptyDefault}
           noNameLabel={t.noName}
+          locale={locale}
         />
       )}
       {scope === "friends" && (
@@ -51,6 +52,7 @@ export function RankingTabs({
           currentUserId={currentUserId}
           emptyMessage={t.emptyFriends}
           noNameLabel={t.noName}
+          locale={locale}
         />
       )}
       {scope === "school" &&
@@ -62,6 +64,7 @@ export function RankingTabs({
             currentUserId={currentUserId}
             emptyMessage={t.emptySchool}
             noNameLabel={t.noName}
+            locale={locale}
           />
         ))}
       {scope === "season" && (
@@ -70,6 +73,7 @@ export function RankingTabs({
           currentUserId={currentUserId}
           emptyMessage={t.emptySeason}
           noNameLabel={t.noName}
+          locale={locale}
         />
       )}
     </div>

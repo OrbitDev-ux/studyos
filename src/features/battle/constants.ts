@@ -1,5 +1,6 @@
+import type { Locale } from "@/features/i18n/config";
 import type { Messages } from "@/features/i18n/messages";
-import { formatDurationKorean } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
 
 export const BATTLE_METRICS = ["study_time", "todo_count", "goal_progress"] as const;
 export type BattleMetric = (typeof BATTLE_METRICS)[number];
@@ -26,8 +27,8 @@ export function battleDurationLabel(t: Messages["battle"], days: string): string
   return map[days] ?? days;
 }
 
-export function formatBattleScore(metric: string, score: number): string {
-  if (metric === "study_time") return formatDurationKorean(score);
-  if (metric === "todo_count") return `${score}개`;
+export function formatBattleScore(metric: string, score: number, locale: Locale): string {
+  if (metric === "study_time") return formatDuration(score, locale);
+  if (metric === "todo_count") return `${score}`;
   return `${score}%`;
 }

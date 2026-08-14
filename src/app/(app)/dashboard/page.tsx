@@ -35,7 +35,7 @@ import { StudyTimerCard } from "@/features/study-sessions/components/study-timer
 import { getSubjects } from "@/features/subjects/queries";
 import { TodayTodosCard } from "@/features/todos/components/today-todos-card";
 import { getTodayTodos } from "@/features/todos/queries";
-import { formatKoreanDate } from "@/lib/date";
+import { formatLongDate } from "@/lib/date";
 import { getMessages } from "@/features/i18n/messages";
 import { getServerLocale } from "@/features/i18n/server";
 import { requireCurrentUser } from "@/lib/session";
@@ -88,7 +88,8 @@ export default async function DashboardPage() {
     getPlanSummary(user.id),
   ]);
   const showAds = adsVisibleFor(user);
-  const messages = getMessages(await getServerLocale(user.locale));
+  const locale = await getServerLocale(user.locale);
+  const messages = getMessages(locale);
   const t = messages.dashboard;
 
   const completedTodos = todos.filter((todo) => todo.completed).length;
@@ -135,7 +136,7 @@ export default async function DashboardPage() {
               {t.greeting.replace("{name}", user.name ?? user.email)}
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
-              {formatKoreanDate(new Date(), user.timezone)}
+              {formatLongDate(new Date(), locale, user.timezone)}
             </p>
           </div>
           <OnboardingLauncher

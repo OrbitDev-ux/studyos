@@ -21,7 +21,8 @@ export default async function BattleDetailPage({
   const myParticipant = battle.participants.find(
     (participant) => participant.userId === user.id,
   );
-  const t = getMessages(await getServerLocale(user.locale)).battle;
+  const locale = await getServerLocale(user.locale);
+  const t = getMessages(locale).battle;
 
   return (
     <div className="flex flex-col gap-6">
@@ -44,6 +45,7 @@ export default async function BattleDetailPage({
         metric={battle.metric}
         currentUserId={user.id}
         emptyMessage={t.leaderboardEmpty}
+        locale={locale}
       />
 
       {pendingInvites.length > 0 && (

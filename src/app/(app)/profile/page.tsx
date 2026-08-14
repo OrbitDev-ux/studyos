@@ -14,8 +14,9 @@ export default async function ProfilePage() {
     getMyProfile(user.id),
     getPlanSummary(user.id),
   ]);
-  const t = getMessages(await getServerLocale(user.locale)).profile;
-  const joined = profile.createdAt.toLocaleDateString("ko-KR", {
+  const locale = await getServerLocale(user.locale);
+  const t = getMessages(locale).profile;
+  const joined = profile.createdAt.toLocaleDateString(locale, {
     year: "numeric",
     month: "long",
     day: "numeric",

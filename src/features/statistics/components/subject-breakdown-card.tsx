@@ -1,14 +1,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { Locale } from "@/features/i18n/config";
 import type { Messages } from "@/features/i18n/messages";
 import type { getTodaySubjectBreakdown } from "@/features/statistics/queries";
-import { formatDurationKorean } from "@/lib/format";
+import { formatDuration } from "@/lib/format";
 
 export function SubjectBreakdownCard({
   breakdown,
   t,
+  locale,
 }: {
   breakdown: Awaited<ReturnType<typeof getTodaySubjectBreakdown>>;
   t: Messages["stats"];
+  locale: Locale;
 }) {
   const total = breakdown.reduce((sum, item) => sum + item.seconds, 0);
 
@@ -43,7 +46,7 @@ export function SubjectBreakdownCard({
                       {item.subject?.name ?? t.subjectUnassigned}
                     </span>
                     <span className="text-muted-foreground tabular-nums">
-                      {formatDurationKorean(item.seconds)}
+                      {formatDuration(item.seconds, locale)}
                       <span className="ml-1.5 text-xs">{percent}%</span>
                     </span>
                   </div>

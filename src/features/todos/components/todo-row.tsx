@@ -6,7 +6,8 @@ import { TodoCheckbox } from "@/features/todos/components/todo-checkbox";
 import { TodoFormDialog } from "@/features/todos/components/todo-form-dialog";
 import type { getAllTodos } from "@/features/todos/queries";
 import { SubjectChip } from "@/features/subjects/components/subject-chip";
-import { formatDateOnly, formatShortKoreanDate } from "@/lib/date";
+import type { Locale } from "@/features/i18n/config";
+import { formatDateOnly, formatShortDate } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
 export function TodoRow({
@@ -14,11 +15,13 @@ export function TodoRow({
   subjects,
   defaultDueDate,
   editLabel,
+  locale,
 }: {
   todo: Awaited<ReturnType<typeof getAllTodos>>[number];
   subjects: Subject[];
   defaultDueDate: string;
   editLabel: string;
+  locale: Locale;
 }) {
   return (
     <li className="flex items-center gap-3 rounded-lg border px-3 py-2.5">
@@ -33,7 +36,7 @@ export function TodoRow({
           {todo.title}
         </span>
         <span className="text-muted-foreground text-xs">
-          {formatShortKoreanDate(todo.dueDate)}
+          {formatShortDate(todo.dueDate, locale)}
         </span>
       </div>
       {todo.subject && (

@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { BattleProgressBar } from "@/features/battle/components/battle-progress-bar";
 import { formatBattleScore } from "@/features/battle/constants";
 import type { getBattle } from "@/features/battle/queries";
+import type { Locale } from "@/features/i18n/config";
 import { cn } from "@/lib/utils";
 
 export function BattleLeaderboard({
@@ -10,11 +11,13 @@ export function BattleLeaderboard({
   metric,
   currentUserId,
   emptyMessage,
+  locale,
 }: {
   leaderboard: NonNullable<Awaited<ReturnType<typeof getBattle>>>["leaderboard"];
   metric: string;
   currentUserId: string;
   emptyMessage: string;
+  locale: Locale;
 }) {
   if (leaderboard.length === 0) {
     return <p className="text-muted-foreground text-sm">{emptyMessage}</p>;
@@ -43,7 +46,7 @@ export function BattleLeaderboard({
                 <span className="truncate">{entry.name ?? entry.email}</span>
               </span>
               <span className="text-muted-foreground shrink-0 tabular-nums">
-                {formatBattleScore(metric, entry.score)}
+                {formatBattleScore(metric, entry.score, locale)}
               </span>
             </div>
             <BattleProgressBar value={entry.score} max={maxScore} />

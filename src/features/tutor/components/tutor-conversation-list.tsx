@@ -7,6 +7,7 @@ import { useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { deleteTutorConversation } from "@/features/tutor/actions";
 import { tutorSubjectLabel } from "@/features/tutor/config";
+import { useI18n } from "@/features/i18n/provider";
 import { cn } from "@/lib/utils";
 
 type ConvoSummary = { id: string; title: string; subject: string; updatedAt: string };
@@ -19,6 +20,7 @@ export function TutorConversationList({
   activeId?: string;
 }) {
   const router = useRouter();
+  const { locale } = useI18n();
   const [pending, startTransition] = useTransition();
 
   function remove(id: string) {
@@ -46,7 +48,7 @@ export function TutorConversationList({
           >
             <span className="block truncate">{c.title}</span>
             <span className="text-muted-foreground text-xs">
-              {tutorSubjectLabel(c.subject)} · {new Date(c.updatedAt).toLocaleDateString("ko-KR")}
+              {tutorSubjectLabel(c.subject)} · {new Date(c.updatedAt).toLocaleDateString(locale)}
             </span>
           </Link>
           <Button

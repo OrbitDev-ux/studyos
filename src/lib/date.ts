@@ -79,8 +79,9 @@ export function getZonedDateOnly(timeZone: string, now = new Date()): Date {
   return parseDateOnly(getZonedDateString(now, timeZone));
 }
 
-export function formatKoreanDate(date: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat("ko-KR", {
+/** Long "month day, weekday" for the given `timeZone`, in the caller's locale. */
+export function formatLongDate(date: Date, locale: string, timeZone: string): string {
+  return new Intl.DateTimeFormat(locale, {
     timeZone,
     month: "long",
     day: "numeric",
@@ -88,8 +89,10 @@ export function formatKoreanDate(date: Date, timeZone: string): string {
   }).format(date);
 }
 
-export function formatShortKoreanDate(date: Date): string {
-  return new Intl.DateTimeFormat("ko-KR", {
+/** Short "month day" for a `@db.Date` value (already UTC midnight), in the
+ * caller's locale. */
+export function formatShortDate(date: Date, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
     timeZone: "UTC",
     month: "short",
     day: "numeric",
