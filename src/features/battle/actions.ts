@@ -6,6 +6,7 @@ import {
   createBattleFormSchema,
   type CreateBattleFormValues,
 } from "@/features/battle/schema";
+import { createNotification, createNotifications, markAsReadByTarget } from "@/features/notifications/service";
 import { createClient } from "@/lib/supabase/server";
 import { requireCurrentUser } from "@/lib/session";
 
@@ -70,6 +71,18 @@ export async function createBattle(values: CreateBattleFormValues): Promise<stri
     throw participantsError;
   }
 
+  const actorName = user.name ?? user.email ?? "";
+  await createNotifications(
+    parsed.friendUserIds.map((friendId) => ({
+      userId: friendId,
+      type: "battle_invite" as const,
+      title: `${actorName}님이 배틀에 초대했어요`,
+      actorId: user.id,
+      targetUrl: `/battle/${battleId}`,
+      metadata: { actorName, battleId },
+    })),
+  );
+
   revalidatePath("/battle");
   return battleId;
 }
@@ -92,6 +105,29 @@ export async function respondToBattleInvite(battleId: string, accept: boolean) {
     .update({ status: accept ? "accepted" : "declined" })
     .eq("id", participant.id);
   if (error) throw error;
+
+  const { data: battle } = await supabase
+    .from("Battle")
+    .select("creatorId")
+    .eq("id", battleId)
+    .maybeSingle();
+  if (battle) {
+    const actorName = user.name ?? user.email ?? "";
+    await createNotification({
+      userId: battle.creatorId,
+      type: "battle_invite_response",
+      title: accept ? `${actorName}님이 배틀 초대를 수락했어요` : `${actorName}님이 배틀 초대를 거절했어요`,
+      actorId: user.id,
+      targetUrl: `/battle/${battleId}`,
+      metadata: { actorName, battleId, accepted: accept },
+    });
+  }
+  await markAsReadByTarget(
+    user.id,
+    "battle_invite",
+    (metadata) =>
+      !!metadata && typeof metadata === "object" && (metadata as { battleId?: unknown }).battleId === battleId,
+  );
 
   revalidatePath("/battle");
   revalidatePath(`/battle/${battleId}`);

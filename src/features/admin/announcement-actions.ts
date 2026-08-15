@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { announcementSchema, type AnnouncementValues } from "@/features/admin/schema";
+import { broadcastToAllUsers } from "@/features/notifications/service";
 import { ADMIN_ACTIONS, logAdminActivity } from "@/lib/admin/activity";
 import { requireCapability } from "@/lib/admin/context";
 import { prisma } from "@/lib/prisma";
@@ -56,6 +57,18 @@ export async function createAnnouncement(values: AnnouncementValues): Promise<Re
     targetId: created.id,
     detail: { title: created.title },
   });
+
+  // Only an immediate publish notifies everyone right now — a *scheduled*
+  // announcement has no background job that flips it live later in this
+  // codebase (its "live" status is derived at read time, like Battle), so
+  // there is no discrete moment to hang a notification on for that case.
+  if (timing.publishedAt) {
+    await broadcastToAllUsers({
+      type: "system_announcement",
+      title: created.title,
+      body: created.body,
+    });
+  }
 
   revalidatePath("/admin/announcements");
   return {};

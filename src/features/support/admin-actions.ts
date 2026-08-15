@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { createNotification } from "@/features/notifications/service";
 import { requireCapability } from "@/lib/admin/context";
 import { prisma } from "@/lib/prisma";
 import {
@@ -24,7 +25,7 @@ export async function replyToTicket(
 
   const ticket = await prisma.supportTicket.findUnique({
     where: { id: parsed.data.ticketId },
-    select: { id: true },
+    select: { id: true, userId: true, title: true },
   });
   if (!ticket) return { error: "문의를 찾을 수 없습니다." };
 
@@ -35,6 +36,15 @@ export async function replyToTicket(
     }),
     prisma.supportTicket.update({ where: { id: ticket.id }, data: { status: "ANSWERED" } }),
   ]);
+
+  await createNotification({
+    userId: ticket.userId,
+    type: "support_reply",
+    title: "문의에 새 답변이 달렸어요",
+    body: ticket.title,
+    targetUrl: `/support/${ticket.id}`,
+    metadata: { ticketId: ticket.id },
+  });
 
   revalidatePath(`/admin/support/${ticket.id}`);
   revalidatePath("/admin/support");

@@ -67,6 +67,10 @@ model User {
   /// role in the migration so a client can never self-grant a plan.
   adminPlanOverride         Plan?
   adminPlanOverrideEnabled  Boolean @default(false)
+  /// Per-category opt-out for the notification system (features/notifications).
+  /// Null/missing key = enabled (opt-out model, so shipping a brand-new category
+  /// never silently mutes it for existing users). Shape: Record<NotificationCategory, boolean>.
+  notificationPreferences Json?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -102,6 +106,7 @@ model User {
   labFeedback         LabFeedback[]
   tutorConversations  TutorConversation[]
   devWorkspace        DevWorkspace?
+  notifications       Notification[]
 }
 
 /// Password reset tokens. The raw token is emailed to the user and NEVER stored;
@@ -788,6 +793,52 @@ model BattleParticipant {
 
   @@unique([battleId, userId])
   @@index([userId])
+}
+
+/// Central, app-wide notification feed (features/notifications). One row per
+/// notification per recipient — even a broadcast (e.g. an admin announcement)
+/// fans out into one row per user, so read-state is always per-user and a
+/// single `markAsRead` never leaks into another user's inbox.
+///
+/// `type` is a plain string (not a Postgres enum), matching this schema's
+/// existing convention for fields expected to grow over time (see
+/// Friendship.status, Battle.metric, TutorMessage.role): adding a new
+/// notification type is a TS union change (features/notifications/types.ts),
+/// never a migration. Validated at the application boundary, not the DB.
+///
+/// `actorId` is nullable and intentionally has NO foreign key — the actor of
+/// an admin-originated notification (e.g. a support reply) is an AdminUser,
+/// a wholly separate table from User, so it cannot be a real FK to either
+/// table uniformly. It is a plain informational id; never trust it for auth.
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String?  @db.Text
+  isRead    Boolean  @default(false)
+  readAt    DateTime?
+  /// The user who caused this notification (friend request sender, DM sender,
+  /// battle invite responder). Null for system/admin-originated notifications.
+  actorId   String?
+  /// Where a click should navigate, e.g. "/social" or "/social/:conversationId".
+  /// Null when the notification has nothing to navigate to (e.g. a broadcast
+  /// announcement whose full text is already shown inline).
+  targetUrl String?
+  /// Free-form, type-specific extra data (e.g. { conversationId, friendshipId,
+  /// battleId }) — used for precise mark-as-read-by-target lookups without a
+  /// migration per new type. Never trusted for authorization.
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Notification Center list + unread badge: newest-first, optionally
+  // filtered to unread only — both covered by one composite index.
+  @@index([userId, isRead, createdAt])
+  // Mark-as-read-by-target lookups (e.g. "mark this conversation's DM
+  // notifications read") scan by type within a user's rows.
+  @@index([userId, type, createdAt])
 }
 
 // ─── Admin panel ──────────────────────────────────────────────────────────

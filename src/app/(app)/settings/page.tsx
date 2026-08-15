@@ -2,6 +2,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LanguageSelect } from "@/features/i18n/components/language-select";
 import { getMessages } from "@/features/i18n/messages";
 import { getServerLocale } from "@/features/i18n/server";
+import { NotificationPreferencesForm } from "@/features/notifications/components/notification-preferences-form";
+import { getNotificationPreferences } from "@/features/notifications/service";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/session";
 
@@ -9,10 +11,10 @@ export const metadata = { title: "설정" };
 
 export default async function SettingsPage() {
   const user = await requireCurrentUser();
-  const row = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { locale: true },
-  });
+  const [row, notificationPreferences] = await Promise.all([
+    prisma.user.findUnique({ where: { id: user.id }, select: { locale: true } }),
+    getNotificationPreferences(user.id),
+  ]);
   const mode: "auto" | "manual" = row?.locale ? "manual" : "auto";
   const locale = await getServerLocale(row?.locale);
   const t = getMessages(locale);
@@ -27,6 +29,11 @@ export default async function SettingsPage() {
             <p className="text-muted-foreground text-sm">{t.language.subtitle}</p>
           </div>
           <LanguageSelect initialMode={mode} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent>
+          <NotificationPreferencesForm initial={notificationPreferences} />
         </CardContent>
       </Card>
     </div>

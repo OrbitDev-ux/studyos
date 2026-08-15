@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
+import { createNotification } from "@/features/notifications/service";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/session";
 import { updateProfileSchema } from "@/features/profile/schema";
@@ -101,8 +102,17 @@ export async function requestFriendByUserId(targetId: string) {
   }
 
   try {
-    await prisma.friendship.create({
+    const friendship = await prisma.friendship.create({
       data: { requesterId: user.id, addresseeId: target.id, status: "pending" },
+    });
+    const actorName = user.name ?? user.email ?? "";
+    await createNotification({
+      userId: target.id,
+      type: "friend_request",
+      title: `${actorName}님이 친구 요청을 보냈어요`,
+      actorId: user.id,
+      targetUrl: "/social",
+      metadata: { actorName, friendshipId: friendship.id },
     });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {

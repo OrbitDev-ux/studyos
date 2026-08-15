@@ -8,7 +8,7 @@ import { PresenceHeartbeat } from "@/features/profile/components/presence-heartb
 import { OfflineBanner } from "@/components/pwa/offline-banner";
 import { I18nProvider } from "@/features/i18n/provider";
 import { getServerLocale } from "@/features/i18n/server";
-import { getNotifications } from "@/features/notifications/queries";
+import { getHeaderNotifications } from "@/features/notifications/queries";
 import { getSocialNotificationCount } from "@/features/social/queries";
 import { getCurrentAdmin } from "@/lib/admin/context";
 import { getMaintenance } from "@/lib/maintenance";
@@ -34,7 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // Notification feed (review due + social) → the header bell.
   const [socialCount, notifications] = await Promise.all([
     getSocialNotificationCount(session.user.id),
-    getNotifications(session.user.id),
+    getHeaderNotifications(session.user.id),
   ]);
 
   // Show the upgrade CTA to everyone except PREMIUM. Cheap PK lookup.

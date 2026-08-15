@@ -8,7 +8,7 @@ import { SearchDialog } from "@/components/layout/search-dialog";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { navItems } from "@/config/nav";
 import { useI18n } from "@/features/i18n/provider";
-import type { AppNotification } from "@/features/notifications/types";
+import type { HeaderNotifications } from "@/features/notifications/queries";
 
 /** 현재 경로에 해당하는 내비 항목의 i18n key. 가장 길게 매칭되는 항목을 고른다. */
 function usePageTitleKey() {
@@ -19,7 +19,13 @@ function usePageTitleKey() {
   return match?.key ?? null;
 }
 
-export function Header({ notifications = [] }: { notifications?: AppNotification[] }) {
+const EMPTY_NOTIFICATIONS: HeaderNotifications = { items: [], unreadCount: 0 };
+
+export function Header({
+  notifications = EMPTY_NOTIFICATIONS,
+}: {
+  notifications?: HeaderNotifications;
+}) {
   const { messages } = useI18n();
   const titleKey = usePageTitleKey();
   const title = titleKey ? messages.nav[titleKey] : null;
@@ -33,7 +39,7 @@ export function Header({ notifications = [] }: { notifications?: AppNotification
       </div>
       <div className="flex items-center gap-1.5">
         <SearchDialog />
-        <NotificationsMenu notifications={notifications} />
+        <NotificationsMenu initial={notifications} />
         <ThemeToggle />
       </div>
     </header>

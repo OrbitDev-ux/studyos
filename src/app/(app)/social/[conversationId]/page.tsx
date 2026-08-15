@@ -6,6 +6,7 @@ import { MessageInput } from "@/features/social/components/message-input";
 import { getConversation, markConversationRead } from "@/features/social/queries";
 import { getMessages } from "@/features/i18n/messages";
 import { getServerLocale } from "@/features/i18n/server";
+import { markAsReadByTarget } from "@/features/notifications/service";
 import { requireCurrentUser } from "@/lib/session";
 
 export default async function ConversationPage({
@@ -20,6 +21,14 @@ export default async function ConversationPage({
 
   // Opening the thread marks it read, clearing its unread badge contribution.
   await markConversationRead(conversationId, user.id);
+  await markAsReadByTarget(
+    user.id,
+    "dm_message",
+    (metadata) =>
+      !!metadata &&
+      typeof metadata === "object" &&
+      (metadata as { conversationId?: unknown }).conversationId === conversationId,
+  );
 
   const other = conversation.participants.find(
     (participant) => participant.userId !== user.id,

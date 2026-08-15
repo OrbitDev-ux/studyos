@@ -3,9 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { addFriendFormSchema } from "@/features/social/schema";
 import { Prisma } from "@/generated/prisma/client";
+import { createNotification, markAsReadByTarget } from "@/features/notifications/service";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { requireCurrentUser } from "@/lib/session";
+
+/** Match helper for markAsReadByTarget over `friend_request`/DM-shaped metadata. */
+function metadataMatches(key: string, value: string) {
+  return (metadata: unknown) =>
+    !!metadata && typeof metadata === "object" && (metadata as Record<string, unknown>)[key] === value;
+}
 
 export async function sendFriendRequest(email: string) {
   const user = await requireCurrentUser();
@@ -40,8 +47,19 @@ export async function sendFriendRequest(email: string) {
   }
 
   try {
-    await prisma.friendship.create({
+    const friendship = await prisma.friendship.create({
       data: { requesterId: user.id, addresseeId: target.id, status: "pending" },
+    });
+    const actorName = user.name ?? user.email ?? "";
+    await createNotification({
+      userId: target.id,
+      type: "friend_request",
+      // Fallback for any raw (non-UI) read of this row; the UI itself always
+      // renders via resolveNotificationText in the viewer's own locale.
+      title: `${actorName}님이 친구 요청을 보냈어요`,
+      actorId: user.id,
+      targetUrl: "/social",
+      metadata: { actorName, friendshipId: friendship.id },
     });
   } catch (err) {
     // Concurrent double-submit can race past the findFirst check above and
@@ -68,9 +86,22 @@ export async function respondToFriendRequest(friendshipId: string, accept: boole
       where: { id: friendshipId },
       data: { status: "accepted" },
     });
+    const actorName = user.name ?? user.email ?? "";
+    await createNotification({
+      userId: friendship.requesterId,
+      type: "friend_request_accepted",
+      title: `${actorName}님이 친구 요청을 수락했어요`,
+      actorId: user.id,
+      targetUrl: "/social",
+      metadata: { actorName, friendshipId: friendship.id },
+    });
   } else {
     await prisma.friendship.delete({ where: { id: friendshipId } });
   }
+
+  // The request notification (shown to the addressee, i.e. the current user)
+  // is now handled either way — accepting or declining both resolve it.
+  await markAsReadByTarget(user.id, "friend_request", metadataMatches("friendshipId", friendshipId));
 
   revalidatePath("/social");
 }
@@ -124,6 +155,8 @@ export async function startConversation(friendUserId: string): Promise<string> {
 
 const MAX_MESSAGE_LENGTH = 1000;
 
+const NOTIFICATION_PREVIEW_LENGTH = 120;
+
 export async function sendMessage(conversationId: string, content: string) {
   const user = await requireCurrentUser();
   const trimmed = content.trim().slice(0, MAX_MESSAGE_LENGTH);
@@ -131,6 +164,7 @@ export async function sendMessage(conversationId: string, content: string) {
 
   const participant = await prisma.conversationParticipant.findUnique({
     where: { conversationId_userId: { conversationId, userId: user.id } },
+    include: { conversation: { include: { participants: true } } },
   });
   if (!participant) throw new Error("대화에 참여하고 있지 않습니다.");
 
@@ -143,6 +177,26 @@ export async function sendMessage(conversationId: string, content: string) {
       data: { updatedAt: new Date() },
     }),
   ]);
+
+  const actorName = user.name ?? user.email ?? "";
+  const preview =
+    trimmed.length > NOTIFICATION_PREVIEW_LENGTH
+      ? `${trimmed.slice(0, NOTIFICATION_PREVIEW_LENGTH)}…`
+      : trimmed;
+  const others = participant.conversation.participants.filter((p) => p.userId !== user.id);
+  await Promise.all(
+    others.map((other) =>
+      createNotification({
+        userId: other.userId,
+        type: "dm_message",
+        title: `${actorName}님의 새 메시지`,
+        body: preview,
+        actorId: user.id,
+        targetUrl: `/social/${conversationId}`,
+        metadata: { actorName, conversationId },
+      }),
+    ),
+  );
 
   revalidatePath(`/social/${conversationId}`);
   revalidatePath("/social");

@@ -98,3 +98,31 @@ export function formatShortDate(date: Date, locale: string): string {
     day: "numeric",
   }).format(date);
 }
+
+const RELATIVE_TIME_UNITS: { limitMs: number; unit: Intl.RelativeTimeFormatUnit; divisorMs: number }[] = [
+  { limitMs: 60_000, unit: "second", divisorMs: 1_000 },
+  { limitMs: 3_600_000, unit: "minute", divisorMs: 60_000 },
+  { limitMs: 86_400_000, unit: "hour", divisorMs: 3_600_000 },
+  { limitMs: 2_592_000_000, unit: "day", divisorMs: 86_400_000 }, // < 30 days
+  { limitMs: 31_536_000_000, unit: "month", divisorMs: 2_592_000_000 }, // < 365 days
+];
+
+/**
+ * "3 minutes ago" style relative time — used by the notification list
+ * (features/notifications), which has no other need for a locale-aware
+ * "time ago" formatter elsewhere in the app. Falls back to `formatShortDate`
+ * once the gap is a year or more (a relative "11 months ago" stops being
+ * useful; an absolute date is clearer).
+ */
+export function formatRelativeTime(date: Date, locale: string, now = new Date()): string {
+  const diffMs = now.getTime() - date.getTime();
+  if (diffMs < 5_000) return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(0, "second");
+
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  for (const { limitMs, unit, divisorMs } of RELATIVE_TIME_UNITS) {
+    if (diffMs < limitMs) {
+      return rtf.format(-Math.floor(diffMs / divisorMs), unit);
+    }
+  }
+  return formatShortDate(date, locale);
+}

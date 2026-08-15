@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { markAsReadByTarget } from "@/features/notifications/service";
 import { requireCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import {
@@ -83,4 +84,10 @@ export async function markTicketRead(ticketId: string): Promise<void> {
     where: { id: ticketId, userId: user.id },
     data: { userLastReadAt: new Date() },
   });
+  await markAsReadByTarget(
+    user.id,
+    "support_reply",
+    (metadata) =>
+      !!metadata && typeof metadata === "object" && (metadata as { ticketId?: unknown }).ticketId === ticketId,
+  );
 }
