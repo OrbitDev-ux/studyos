@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GraduationCap, Sparkles } from "lucide-react";
+import { GraduationCap, Sparkles, TerminalSquare } from "lucide-react";
 import type { Session } from "next-auth";
 import { UserMenu } from "@/components/layout/user-menu";
 import {
@@ -81,6 +81,25 @@ export function AppSidebar({
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
+        {/* Study OS Dev entry point (§3) — separate area, its own layout at /dev. */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname.startsWith("/dev")}
+                  tooltip={messages.dev.sidebarLabel}
+                >
+                  <Link href="/dev">
+                    <TerminalSquare />
+                    <span>{messages.dev.sidebarLabel}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
         {showUpgrade && (

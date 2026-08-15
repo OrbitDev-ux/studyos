@@ -101,6 +101,7 @@ model User {
   supportMessages     SupportMessage[]
   labFeedback         LabFeedback[]
   tutorConversations  TutorConversation[]
+  devWorkspace        DevWorkspace?
 }
 
 /// Password reset tokens. The raw token is emailed to the user and NEVER stored;
@@ -1032,4 +1033,32 @@ model TutorMessage {
   conversation TutorConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId])
+}
+
+/// ── Study OS Dev (v1) ── one personal dev workspace per user. v1 ships the
+/// product shell only: this row is real and persists across reloads, but no
+/// container backend is wired up yet (features/dev/container-manager returns
+/// "unavailable" for every operation) — status therefore stays NOT_PROVISIONED
+/// until a real container/PTY backend is integrated. `status` is a free-form
+/// string (same convention as StudySession.type) so new lifecycle states don't
+/// need a migration. `settings` is user preferences only (terminal font size,
+/// theme, shell, idle timeout, …), never container runtime state — validated
+/// against an explicit whitelist (features/dev/schema.ts) before every write.
+model DevWorkspace {
+  id           String    @id @default(cuid())
+  userId       String
+  name         String
+  /// NOT_PROVISIONED | CREATING | READY | RUNNING | IDLE | STOPPED | ERROR
+  status       String    @default("NOT_PROVISIONED")
+  containerId  String?
+  runtime      String?
+  lastActiveAt DateTime?
+  settings     Json?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+  @@index([userId])
 }

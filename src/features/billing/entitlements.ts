@@ -28,6 +28,8 @@ export const FEATURES = {
   ADVANCED_AI_RECOMMENDATION: "ADVANCED_AI_RECOMMENDATION",
   CUSTOM_THEMES: "CUSTOM_THEMES",
   ADS: "ADS",
+  /** Study OS Dev — personal dev workspace (v1: shell only, no container backend). */
+  DEV_WORKSPACE: "DEV_WORKSPACE",
 } as const;
 
 export type FeatureKey = (typeof FEATURES)[keyof typeof FEATURES];
@@ -68,6 +70,9 @@ type Entitlement = {
   advancedRecommendation: boolean;
   customThemes: ThemeAccess;
   ads: boolean;
+  /** Study OS Dev: create/use a personal dev workspace. Mirrors the
+   * generation-feature gating pattern (blocked once trial expires). */
+  devWorkspace: boolean;
 };
 
 export const ACCESS_ENTITLEMENTS: Record<AccessState, Entitlement> = {
@@ -82,6 +87,7 @@ export const ACCESS_ENTITLEMENTS: Record<AccessState, Entitlement> = {
     advancedRecommendation: false,
     customThemes: "none",
     ads: true,
+    devWorkspace: true,
   },
   TRIAL_EXPIRED: {
     // Generation blocked; existing data stays viewable (those reads aren't gated
@@ -96,6 +102,7 @@ export const ACCESS_ENTITLEMENTS: Record<AccessState, Entitlement> = {
     advancedRecommendation: false,
     customThemes: "none",
     ads: false,
+    devWorkspace: false,
   },
   PRO: {
     limits: { AI_PROBLEM_GENERATION: 50, MOCK_EXAM_GENERATION: 10, STUDY_BOOK_GENERATION: 5 },
@@ -108,6 +115,7 @@ export const ACCESS_ENTITLEMENTS: Record<AccessState, Entitlement> = {
     advancedRecommendation: false,
     customThemes: "some",
     ads: false,
+    devWorkspace: true,
   },
   PREMIUM: {
     limits: { AI_PROBLEM_GENERATION: null, MOCK_EXAM_GENERATION: null, STUDY_BOOK_GENERATION: null },
@@ -120,6 +128,7 @@ export const ACCESS_ENTITLEMENTS: Record<AccessState, Entitlement> = {
     advancedRecommendation: true,
     customThemes: "all",
     ads: false,
+    devWorkspace: true,
   },
 };
 
@@ -195,6 +204,8 @@ export function canUseFeature(state: AccessState, feature: FeatureKey): boolean 
       return e.advancedRecommendation;
     case "CUSTOM_THEMES":
       return e.customThemes !== "none";
+    case "DEV_WORKSPACE":
+      return e.devWorkspace;
     default:
       return false;
   }

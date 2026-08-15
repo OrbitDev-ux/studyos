@@ -84,3 +84,17 @@ describe("entitlements — upgrade mapping", () => {
     expect(minPlanForFeature("ADVANCED_AI_RECOMMENDATION")).toBe("PREMIUM");
   });
 });
+
+describe("entitlements — Study OS Dev (DEV_WORKSPACE)", () => {
+  it("available during active trial and on paid plans, blocked once trial expires", () => {
+    expect(canUseFeature("TRIAL", "DEV_WORKSPACE")).toBe(true);
+    expect(canUseFeature("PRO", "DEV_WORKSPACE")).toBe(true);
+    expect(canUseFeature("PREMIUM", "DEV_WORKSPACE")).toBe(true);
+    expect(canUseFeature("TRIAL_EXPIRED", "DEV_WORKSPACE")).toBe(false);
+  });
+
+  it("server-side gate only — never inferred from an unlisted feature key", () => {
+    expect(canUseFeature("TRIAL_EXPIRED", "DEV_WORKSPACE")).toBe(false);
+    expect(minPlanForFeature("DEV_WORKSPACE")).toBeNull(); // TRIAL (active) already has it
+  });
+});
