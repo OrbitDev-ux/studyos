@@ -380,6 +380,35 @@ const ko = {
     upgradeCta: "플랜 비교하기",
 
     errorNotFound: "Workspace를 찾을 수 없습니다.",
+    reconnect: "재연결",
+    noFileSelected: "파일을 선택하면 여기에 표시돼요.",
+
+    runCommandPlaceholder: "명령 입력 (예: npm run dev)",
+    runStart: "실행",
+    runStop: "중지",
+    runRestart: "재시작",
+    runLogs: "로그",
+    runEmpty: "실행 중인 프로세스가 없어요.",
+    runStatusFailed: "실패",
+
+    gitNoRepo: "이 워크스페이스는 아직 Git 저장소가 아니에요.",
+    gitBranch: "브랜치",
+    gitChanges: "변경사항",
+    gitNoChanges: "변경된 파일이 없어요.",
+    gitCommitPlaceholder: "커밋 메시지",
+    gitCommit: "커밋",
+    gitViewDiff: "Diff 보기",
+    gitLog: "히스토리",
+    gitAddAndCommit: "스테이징 후 커밋",
+
+    previewPortLabel: "포트",
+    previewOpen: "미리보기 열기",
+    previewEmpty: "포트를 입력하고 미리보기를 열어보세요.",
+
+    metricCpu: "CPU",
+    metricMemory: "메모리",
+    metricDisk: "디스크",
+    metricProcesses: "프로세스",
   },
 } as const;
 
@@ -758,6 +787,35 @@ const en: Messages = {
     upgradeCta: "Compare plans",
 
     errorNotFound: "Couldn't find that workspace.",
+    reconnect: "Reconnect",
+    noFileSelected: "Select a file to view it here.",
+
+    runCommandPlaceholder: "Type a command (e.g. npm run dev)",
+    runStart: "Run",
+    runStop: "Stop",
+    runRestart: "Restart",
+    runLogs: "Logs",
+    runEmpty: "No running processes.",
+    runStatusFailed: "Failed",
+
+    gitNoRepo: "This workspace isn't a Git repository yet.",
+    gitBranch: "Branch",
+    gitChanges: "Changes",
+    gitNoChanges: "No changed files.",
+    gitCommitPlaceholder: "Commit message",
+    gitCommit: "Commit",
+    gitViewDiff: "View diff",
+    gitLog: "History",
+    gitAddAndCommit: "Stage and commit",
+
+    previewPortLabel: "Port",
+    previewOpen: "Open preview",
+    previewEmpty: "Enter a port and open the preview.",
+
+    metricCpu: "CPU",
+    metricMemory: "Memory",
+    metricDisk: "Disk",
+    metricProcesses: "Processes",
   },
 };
 
@@ -1132,6 +1190,35 @@ const ja: Messages = {
     upgradeCta: "プランを比較",
 
     errorNotFound: "ワークスペースが見つかりません。",
+    reconnect: "再接続",
+    noFileSelected: "ファイルを選択するとここに表示されます。",
+
+    runCommandPlaceholder: "コマンドを入力（例: npm run dev）",
+    runStart: "実行",
+    runStop: "停止",
+    runRestart: "再起動",
+    runLogs: "ログ",
+    runEmpty: "実行中のプロセスはありません。",
+    runStatusFailed: "失敗",
+
+    gitNoRepo: "このワークスペースはまだGitリポジトリではありません。",
+    gitBranch: "ブランチ",
+    gitChanges: "変更",
+    gitNoChanges: "変更されたファイルはありません。",
+    gitCommitPlaceholder: "コミットメッセージ",
+    gitCommit: "コミット",
+    gitViewDiff: "差分を見る",
+    gitLog: "履歴",
+    gitAddAndCommit: "ステージしてコミット",
+
+    previewPortLabel: "ポート",
+    previewOpen: "プレビューを開く",
+    previewEmpty: "ポートを入力してプレビューを開いてください。",
+
+    metricCpu: "CPU",
+    metricMemory: "メモリ",
+    metricDisk: "ディスク",
+    metricProcesses: "プロセス",
   },
 };
 
@@ -1506,6 +1593,35 @@ const zh: Messages = {
     upgradeCta: "对比套餐",
 
     errorNotFound: "未找到该工作区。",
+    reconnect: "重新连接",
+    noFileSelected: "选择文件后将在此显示。",
+
+    runCommandPlaceholder: "输入命令（例如 npm run dev）",
+    runStart: "运行",
+    runStop: "停止",
+    runRestart: "重启",
+    runLogs: "日志",
+    runEmpty: "没有正在运行的进程。",
+    runStatusFailed: "失败",
+
+    gitNoRepo: "该工作区还不是 Git 仓库。",
+    gitBranch: "分支",
+    gitChanges: "变更",
+    gitNoChanges: "没有变更的文件。",
+    gitCommitPlaceholder: "提交信息",
+    gitCommit: "提交",
+    gitViewDiff: "查看差异",
+    gitLog: "历史记录",
+    gitAddAndCommit: "暂存并提交",
+
+    previewPortLabel: "端口",
+    previewOpen: "打开预览",
+    previewEmpty: "输入端口并打开预览。",
+
+    metricCpu: "CPU",
+    metricMemory: "内存",
+    metricDisk: "磁盘",
+    metricProcesses: "进程",
   },
 };
 

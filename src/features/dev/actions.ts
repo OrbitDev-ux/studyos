@@ -111,6 +111,36 @@ export async function startMyWorkspace(): Promise<DevActionError> {
   return {};
 }
 
+export async function stopMyWorkspace(): Promise<DevActionError> {
+  const user = await requireCurrentUser();
+  const workspace = await prisma.devWorkspace.findUnique({ where: { userId: user.id } });
+  if (!workspace) return { error: "Workspace를 찾을 수 없습니다.", code: "NOT_FOUND" };
+
+  const result = await containerManager.stop(workspace.id);
+  if (!result.ok) return { error: result.message, code: "BACKEND_UNAVAILABLE" };
+  await prisma.devWorkspace.update({ where: { userId: user.id }, data: { status: result.status } });
+  revalidatePath("/dev");
+  return {};
+}
+
+export async function restartMyWorkspace(): Promise<DevActionError> {
+  const user = await requireCurrentUser();
+  const blocked = await requireDevEntitlement(user);
+  if (blocked) return blocked;
+
+  const workspace = await prisma.devWorkspace.findUnique({ where: { userId: user.id } });
+  if (!workspace) return { error: "Workspace를 찾을 수 없습니다.", code: "NOT_FOUND" };
+
+  const result = await containerManager.restart(workspace.id);
+  if (!result.ok) return { error: result.message, code: "BACKEND_UNAVAILABLE" };
+  await prisma.devWorkspace.update({
+    where: { userId: user.id },
+    data: { status: result.status, lastActiveAt: new Date() },
+  });
+  revalidatePath("/dev");
+  return {};
+}
+
 /** Persist Dev Settings. `devSettingsSchema` is `.strict()` — any key outside
  * the whitelist fails validation before it ever reaches the DB (§31). */
 export async function updateMyDevSettings(

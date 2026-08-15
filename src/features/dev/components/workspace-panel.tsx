@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Code2, Eye, FolderTree, Play, Terminal } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { createMyWorkspace, destroyMyWorkspace, renameMyWorkspace } from "@/features/dev/actions";
+import { getWorkspaceMetrics, getWorkspaceStatus, type WorkspaceMetrics } from "@/features/dev/runtime-actions";
 import { workspaceStatusLabel } from "@/features/dev/labels";
 import { useI18n } from "@/features/i18n/provider";
 import { cn } from "@/lib/utils";
@@ -34,11 +35,18 @@ type WorkspaceSummary = {
 /**
  * Dev Home's workspace panel. Everything here is real: creating, renaming, and
  * deleting genuinely reads/writes the DevWorkspace row (§36 persistence — a
- * reload shows the same workspace). The Container/Terminal/Filesystem/IDE
- * status dots are honestly OFF (no backend); only "Workspace" itself is ON,
- * because that row is really persisted in the DB.
+ * reload shows the same workspace). When a runtime backend IS configured, the
+ * Container/Terminal/Filesystem/IDE dots and the CPU/Mem/Disk/Process metrics
+ * reflect a real `docker stats` call (§28/§30 — fetched once on load, not
+ * polled aggressively); when it isn't, they stay honestly OFF.
  */
-export function WorkspacePanel({ workspace }: { workspace: WorkspaceSummary }) {
+export function WorkspacePanel({
+  workspace,
+  runtimeConfigured,
+}: {
+  workspace: WorkspaceSummary;
+  runtimeConfigured: boolean;
+}) {
   const router = useRouter();
   const { messages } = useI18n();
   const t = messages.dev;
@@ -47,6 +55,25 @@ export function WorkspacePanel({ workspace }: { workspace: WorkspaceSummary }) {
   const [renameValue, setRenameValue] = useState(workspace?.name ?? "");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [liveStatus, setLiveStatus] = useState<string | null>(null);
+  const [metrics, setMetrics] = useState<WorkspaceMetrics | null>(null);
+
+  useEffect(() => {
+    if (!runtimeConfigured || !workspace) return;
+    let cancelled = false;
+    void (async () => {
+      const [statusRes, metricsRes] = await Promise.all([getWorkspaceStatus(), getWorkspaceMetrics()]);
+      if (cancelled) return;
+      if (statusRes.status) setLiveStatus(statusRes.status);
+      if (metricsRes.metrics !== undefined) setMetrics(metricsRes.metrics ?? null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Runs once per workspace load — a manual container action (start/stop)
+    // already triggers router.refresh(), which remounts this with fresh data.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runtimeConfigured, workspace?.id]);
 
   function create() {
     setError(null);
@@ -104,12 +131,13 @@ export function WorkspacePanel({ workspace }: { workspace: WorkspaceSummary }) {
     );
   }
 
+  const containerOnline = runtimeConfigured && liveStatus === "RUNNING";
   const statusItems = [
     { label: t.statusWorkspace, online: true },
-    { label: t.statusContainer, online: false },
-    { label: t.statusTerminal, online: false },
-    { label: t.statusFilesystem, online: false },
-    { label: t.statusIde, online: false },
+    { label: t.statusContainer, online: containerOnline },
+    { label: t.statusTerminal, online: containerOnline },
+    { label: t.statusFilesystem, online: containerOnline },
+    { label: t.statusIde, online: containerOnline },
   ];
 
   const quickActions = [
@@ -189,6 +217,15 @@ export function WorkspacePanel({ workspace }: { workspace: WorkspaceSummary }) {
             <span className="font-mono">{workspace.runtime ?? "—"}</span>
           </div>
 
+          {metrics && (
+            <div className="grid grid-cols-4 gap-2 text-center text-xs">
+              <MetricTile label={t.metricCpu} value={`${metrics.cpuPercent}%`} />
+              <MetricTile label={t.metricMemory} value={`${metrics.memoryUsedMb}/${metrics.memoryLimitMb}MB`} />
+              <MetricTile label={t.metricDisk} value={metrics.diskUsedMb !== null ? `${metrics.diskUsedMb}MB` : "—"} />
+              <MetricTile label={t.metricProcesses} value={String(metrics.processCount)} />
+            </div>
+          )}
+
           {error && <p className="text-destructive text-xs">{error}</p>}
 
           <div className="mt-1 flex flex-wrap gap-2">
@@ -226,6 +263,15 @@ export function WorkspacePanel({ workspace }: { workspace: WorkspaceSummary }) {
           </AlertDialog>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function MetricTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border px-2 py-1.5">
+      <p className="font-mono text-sm font-medium">{value}</p>
+      <p className="text-muted-foreground text-[10px] tracking-wide">{label}</p>
     </div>
   );
 }

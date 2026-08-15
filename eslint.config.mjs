@@ -14,7 +14,16 @@ const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   prettierConfig,
   {
-    ignores: [".next/**", "out/**", "build/**", "next-env.d.ts", "src/generated/**"],
+    ignores: [
+      ".next/**",
+      "out/**",
+      "build/**",
+      "next-env.d.ts",
+      "src/generated/**",
+      // dev-runtime is an independently deployed Node service (own package.json/
+      // tsconfig/lint), not part of the Next.js app — see dev-runtime/README.md.
+      "dev-runtime/**",
+    ],
   },
 ];
 

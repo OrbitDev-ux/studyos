@@ -1,0 +1,30 @@
+services:
+  dev-runtime:
+    build: .
+    image: studyos-dev-runtime:latest
+    ports:
+      - "8088:8088"
+    environment:
+      PORT: "8088"
+      DEV_RUNTIME_SERVICE_TOKEN: ${DEV_RUNTIME_SERVICE_TOKEN:?set in .env}
+      DEV_RUNTIME_CAPABILITY_SECRET: ${DEV_RUNTIME_CAPABILITY_SECRET:?set in .env}
+      DEV_WORKSPACE_IMAGE: ${DEV_WORKSPACE_IMAGE:-studyos-dev-sandbox:latest}
+      DEV_CONTAINER_CPU: ${DEV_CONTAINER_CPU:-1}
+      DEV_CONTAINER_MEMORY_MB: ${DEV_CONTAINER_MEMORY_MB:-1024}
+      DEV_CONTAINER_PIDS_LIMIT: ${DEV_CONTAINER_PIDS_LIMIT:-128}
+      DEV_CONTAINER_DISK_QUOTA_MB: ${DEV_CONTAINER_DISK_QUOTA_MB:-2048}
+      DEV_IDLE_TIMEOUT_MINUTES: ${DEV_IDLE_TIMEOUT_MINUTES:-30}
+      DEV_PROCESS_TIMEOUT_SECONDS: ${DEV_PROCESS_TIMEOUT_SECONDS:-600}
+      DEV_TERMINAL_OUTPUT_RATE: ${DEV_TERMINAL_OUTPUT_RATE:-200000}
+      DEV_TERMINAL_BUFFER_CAP: ${DEV_TERMINAL_BUFFER_CAP:-5000000}
+      DEV_CAPABILITY_TOKEN_TTL: ${DEV_CAPABILITY_TOKEN_TTL:-60}
+    volumes:
+      # ONLY this service ever sees the Docker socket — never a user
+      # container (§8: "Docker socket을 사용자 container에 노출하지 마십시오").
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8088/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
