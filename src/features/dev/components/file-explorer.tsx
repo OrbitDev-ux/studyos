@@ -1,6 +1,13 @@
 "use client";
 
-import { ChevronDown, ChevronRight, FilePlus, FolderPlus, MoreHorizontal, RefreshCw } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  FilePlus,
+  FolderPlus,
+  MoreHorizontal,
+  RefreshCw,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -84,9 +91,13 @@ export function FileExplorer({
       setPendingCreate(null);
       return;
     }
-    const path = pendingCreate.parentPath ? `${pendingCreate.parentPath}/${draftName}` : draftName;
+    const path = pendingCreate.parentPath
+      ? `${pendingCreate.parentPath}/${draftName}`
+      : draftName;
     const res =
-      pendingCreate.type === "dir" ? await createWorkspaceFolder(path) : await writeWorkspaceFile(path, "");
+      pendingCreate.type === "dir"
+        ? await createWorkspaceFolder(path)
+        : await writeWorkspaceFile(path, "");
     if (res.error) setError(res.error);
     else refresh(pendingCreate.parentPath);
     setPendingCreate(null);
@@ -117,15 +128,35 @@ export function FileExplorer({
   return (
     <div className="flex h-full flex-col gap-1.5 text-sm">
       <div className="flex items-center justify-between gap-1 px-1">
-        <span className="text-muted-foreground font-mono text-[10px] tracking-widest">/workspace</span>
+        <span className="text-muted-foreground font-mono text-[10px] tracking-widest">
+          /workspace
+        </span>
         <div className="flex items-center gap-0.5">
-          <Button type="button" size="icon-sm" variant="ghost" onClick={() => startCreate("", "file")}>
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="ghost"
+            aria-label="새 파일"
+            onClick={() => startCreate("", "file")}
+          >
             <FilePlus className="size-3.5" />
           </Button>
-          <Button type="button" size="icon-sm" variant="ghost" onClick={() => startCreate("", "dir")}>
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="ghost"
+            aria-label="새 폴더"
+            onClick={() => startCreate("", "dir")}
+          >
             <FolderPlus className="size-3.5" />
           </Button>
-          <Button type="button" size="icon-sm" variant="ghost" onClick={() => refresh("")}>
+          <Button
+            type="button"
+            size="icon-sm"
+            variant="ghost"
+            aria-label="새로고침"
+            onClick={() => refresh("")}
+          >
             <RefreshCw className="size-3.5" />
           </Button>
         </div>
@@ -221,8 +252,16 @@ function DirContents(props: {
               style={{ paddingLeft: `${depth * 14 + 4}px` }}
             >
               {isDir ? (
-                <button type="button" onClick={() => onToggle(entryPath)} className="flex items-center gap-1 truncate text-left">
-                  {isExpanded ? <ChevronDown className="size-3.5 shrink-0" /> : <ChevronRight className="size-3.5 shrink-0" />}
+                <button
+                  type="button"
+                  onClick={() => onToggle(entryPath)}
+                  className="flex items-center gap-1 truncate text-left"
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="size-3.5 shrink-0" />
+                  ) : (
+                    <ChevronRight className="size-3.5 shrink-0" />
+                  )}
                   <Icon className={cn("size-3.5 shrink-0", className)} />
                 </button>
               ) : (
@@ -259,6 +298,7 @@ function DirContents(props: {
                     type="button"
                     size="icon-sm"
                     variant="ghost"
+                    aria-label="더보기"
                     className="size-5 opacity-0 group-hover:opacity-100"
                   >
                     <MoreHorizontal className="size-3.5" />
@@ -275,8 +315,13 @@ function DirContents(props: {
                       </DropdownMenuItem>
                     </>
                   )}
-                  <DropdownMenuItem onClick={() => onStartRename(entryPath, entry.name)}>Rename</DropdownMenuItem>
-                  <DropdownMenuItem variant="destructive" onClick={() => onDelete(entry, path)}>
+                  <DropdownMenuItem onClick={() => onStartRename(entryPath, entry.name)}>
+                    Rename
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={() => onDelete(entry, path)}
+                  >
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>

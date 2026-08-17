@@ -14,10 +14,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/features/i18n/provider";
 import { deleteSubject } from "@/features/subjects/actions";
 
 export function DeleteSubjectButton({ subjectId }: { subjectId: string }) {
   const [isPending, startTransition] = useTransition();
+  const { messages } = useI18n();
+  const t = messages.subjects;
 
   return (
     <AlertDialog>
@@ -27,25 +30,22 @@ export function DeleteSubjectButton({ subjectId }: { subjectId: string }) {
           size="icon-sm"
           variant="ghost"
           disabled={isPending}
-          aria-label="삭제"
+          aria-label={t.deleteLabel}
         >
           <Trash2 className="text-destructive size-4" />
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>과목을 삭제할까요?</AlertDialogTitle>
-          <AlertDialogDescription>
-            이 과목과 연결된 Todo·목표·공부 기록은 삭제되지 않고 &ldquo;과목 미지정&rdquo;
-            상태로 남습니다.
-          </AlertDialogDescription>
+          <AlertDialogTitle>{t.deleteConfirmTitle}</AlertDialogTitle>
+          <AlertDialogDescription>{t.deleteConfirmDesc}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>취소</AlertDialogCancel>
+          <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
           <AlertDialogAction
             onClick={() => startTransition(() => deleteSubject(subjectId))}
           >
-            삭제
+            {messages.common.delete}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

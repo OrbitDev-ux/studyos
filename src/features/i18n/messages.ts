@@ -219,6 +219,10 @@ const ko = {
     submitAdd: "추가",
     submitSave: "저장",
     saveError: "저장에 실패했습니다. 잠시 후 다시 시도해주세요.",
+    deleteLabel: "삭제",
+    deleteConfirmTitle: "과목을 삭제할까요?",
+    deleteConfirmDesc:
+      '이 과목과 연결된 Todo·목표·공부 기록은 삭제되지 않고 "과목 미지정" 상태로 남습니다.',
   },
   materials: {
     title: "자료실",
@@ -269,6 +273,10 @@ const ko = {
     menuLabel: "더보기",
     previewError: "미리보기를 불러오지 못했습니다.",
     previewUnsupported: "미리보기를 지원하지 않는 파일입니다.",
+  },
+  goals: {
+    todayTitle: "오늘 목표",
+    todayEmpty: "오늘 설정한 목표가 없습니다.",
   },
   todos: {
     title: "Todo",
@@ -760,6 +768,10 @@ const en: Messages = {
     submitAdd: "Add",
     submitSave: "Save",
     saveError: "Failed to save. Please try again shortly.",
+    deleteLabel: "Delete",
+    deleteConfirmTitle: "Delete this subject?",
+    deleteConfirmDesc:
+      "Todos, goals, and study records linked to this subject won't be deleted — they'll just show as \"unassigned\".",
   },
   materials: {
     title: "Materials",
@@ -810,6 +822,10 @@ const en: Messages = {
     menuLabel: "More",
     previewError: "Couldn't load the preview.",
     previewUnsupported: "Preview isn't supported for this file.",
+  },
+  goals: {
+    todayTitle: "Today's goals",
+    todayEmpty: "No goals set for today.",
   },
   todos: {
     title: "Todos",
@@ -1298,6 +1314,10 @@ const ja: Messages = {
     submitAdd: "追加",
     submitSave: "保存",
     saveError: "保存に失敗しました。しばらくしてからもう一度お試しください。",
+    deleteLabel: "削除",
+    deleteConfirmTitle: "この科目を削除しますか？",
+    deleteConfirmDesc:
+      "この科目に紐づくToDo・目標・学習記録は削除されず、「科目未指定」として残ります。",
   },
   materials: {
     title: "資料室",
@@ -1348,6 +1368,10 @@ const ja: Messages = {
     menuLabel: "その他",
     previewError: "プレビューを読み込めませんでした。",
     previewUnsupported: "この形式のプレビューには対応していません。",
+  },
+  goals: {
+    todayTitle: "今日の目標",
+    todayEmpty: "今日設定した目標がありません。",
   },
   todos: {
     title: "ToDo",
@@ -1834,6 +1858,10 @@ const zh: Messages = {
     submitAdd: "添加",
     submitSave: "保存",
     saveError: "保存失败，请稍后再试。",
+    deleteLabel: "删除",
+    deleteConfirmTitle: "要删除此科目吗？",
+    deleteConfirmDesc:
+      "与此科目关联的待办、目标、学习记录不会被删除，只会显示为“未指定科目”。",
   },
   materials: {
     title: "资料室",
@@ -1883,6 +1911,10 @@ const zh: Messages = {
     menuLabel: "更多",
     previewError: "无法加载预览。",
     previewUnsupported: "不支持预览此文件类型。",
+  },
+  goals: {
+    todayTitle: "今日目标",
+    todayEmpty: "今天还没有设置目标。",
   },
   todos: {
     title: "待办",

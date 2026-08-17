@@ -205,7 +205,7 @@ export default async function DashboardPage() {
           {t.sectionTodayPlan}
         </h2>
         <div className="grid gap-4 lg:grid-cols-2">
-          <TodayGoalsCard goals={goals} subjects={subjects} />
+          <TodayGoalsCard goals={goals} subjects={subjects} t={messages.goals} />
           <TodayTodosCard todos={todos} t={messages.todos} />
         </div>
         <div className="grid gap-4 lg:grid-cols-3">
