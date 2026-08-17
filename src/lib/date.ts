@@ -71,6 +71,25 @@ export function formatDateOnly(date: Date): string {
 }
 
 /**
+ * Ascending "YYYY-MM-DD" strings for the last `days` calendar days in
+ * `timeZone`, ending with today. Use to build fixed day buckets for
+ * statistics (weekly/monthly trend) so days with zero activity still appear.
+ */
+export function getLastNDateStrings(
+  timeZone: string,
+  days: number,
+  now = new Date(),
+): string[] {
+  const todayStr = getZonedDateString(now, timeZone);
+  const today = parseDateOnly(todayStr);
+  const result: string[] = [];
+  for (let i = days - 1; i >= 0; i--) {
+    result.push(formatDateOnly(new Date(today.getTime() - i * DAY_MS)));
+  }
+  return result;
+}
+
+/**
  * "Today" as a UTC-midnight Date matching the calendar date in `timeZone`.
  * Use for `@db.Date` columns (Todo.dueDate, Goal.date) — Postgres DATE has no
  * timezone, so the value must already carry the right calendar date in UTC.
@@ -99,7 +118,11 @@ export function formatShortDate(date: Date, locale: string): string {
   }).format(date);
 }
 
-const RELATIVE_TIME_UNITS: { limitMs: number; unit: Intl.RelativeTimeFormatUnit; divisorMs: number }[] = [
+const RELATIVE_TIME_UNITS: {
+  limitMs: number;
+  unit: Intl.RelativeTimeFormatUnit;
+  divisorMs: number;
+}[] = [
   { limitMs: 60_000, unit: "second", divisorMs: 1_000 },
   { limitMs: 3_600_000, unit: "minute", divisorMs: 60_000 },
   { limitMs: 86_400_000, unit: "hour", divisorMs: 3_600_000 },
@@ -116,7 +139,8 @@ const RELATIVE_TIME_UNITS: { limitMs: number; unit: Intl.RelativeTimeFormatUnit;
  */
 export function formatRelativeTime(date: Date, locale: string, now = new Date()): string {
   const diffMs = now.getTime() - date.getTime();
-  if (diffMs < 5_000) return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(0, "second");
+  if (diffMs < 5_000)
+    return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(0, "second");
 
   const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
   for (const { limitMs, unit, divisorMs } of RELATIVE_TIME_UNITS) {

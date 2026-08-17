@@ -1,11 +1,24 @@
-import { Clock, Flame, ListChecks } from "lucide-react";
+import { Clock, Flame, Layers, ListChecks } from "lucide-react";
 import { StatCard } from "@/features/dashboard/components/stat-card";
+import { GoalStatsCard } from "@/features/statistics/components/goal-stats-card";
+import { MonthlyStatsCard } from "@/features/statistics/components/monthly-stats-card";
+import { StatsEmptyState } from "@/features/statistics/components/stats-empty-state";
+import { StreakCard } from "@/features/statistics/components/streak-card";
 import { SubjectBreakdownCard } from "@/features/statistics/components/subject-breakdown-card";
+import { SubjectPeriodCard } from "@/features/statistics/components/subject-period-card";
+import { TrendCard } from "@/features/statistics/components/trend-card";
+import { WeeklyStatsCard } from "@/features/statistics/components/weekly-stats-card";
 import {
+  getGoalStatistics,
+  getMonthlyStatistics,
+  getStudyTrend,
+  getSubjectStatistics,
+  getTodayStatistics,
   getTodaySubjectBreakdown,
   getTodayTodoCounts,
+  getWeeklyStatistics,
 } from "@/features/statistics/queries";
-import { getStreak, getTodayStudySeconds } from "@/features/study-sessions/queries";
+import { getStreakStats } from "@/features/study-sessions/queries";
 import { UpgradeNotice } from "@/features/billing/components/upgrade-notice";
 import { accessStateFor } from "@/features/billing/access";
 import { canUseFeature } from "@/features/billing/entitlements";
@@ -17,51 +30,127 @@ import { requireCurrentUser } from "@/lib/session";
 export default async function StatsPage() {
   const user = await requireCurrentUser();
 
-  const [todaySeconds, streak, todoCounts, breakdown] = await Promise.all([
-    getTodayStudySeconds(user.id, user.timezone),
-    getStreak(user.id, user.timezone),
-    getTodayTodoCounts(user.id, user.timezone),
+  const [
+    today,
+    todayBreakdown,
+    todoCounts,
+    weekly,
+    monthly,
+    subjectsWeek,
+    trend7,
+    trend30,
+    streak,
+    goals,
+  ] = await Promise.all([
+    getTodayStatistics(user.id, user.timezone),
     getTodaySubjectBreakdown(user.id, user.timezone),
+    getTodayTodoCounts(user.id, user.timezone),
+    getWeeklyStatistics(user.id, user.timezone),
+    getMonthlyStatistics(user.id, user.timezone),
+    getSubjectStatistics(user.id, user.timezone, "week"),
+    getStudyTrend(user.id, user.timezone, 7),
+    getStudyTrend(user.id, user.timezone, 30),
+    getStreakStats(user.id, user.timezone),
+    getGoalStatistics(user.id, user.timezone),
   ]);
 
-  const completedCount = todoCounts.find((c) => c.completed)?._count._all ?? 0;
-  const totalCount = todoCounts.reduce((sum, c) => sum + c._count._all, 0);
+  const completedTodos = todoCounts.find((c) => c.completed)?._count._all ?? 0;
+  const totalTodos = todoCounts.reduce((sum, c) => sum + c._count._all, 0);
 
   const canAdvancedAnalytics = canUseFeature(accessStateFor(user), "ADVANCED_ANALYTICS");
   const locale = await getServerLocale(user.locale);
   const t = getMessages(locale).stats;
 
+  // A brand-new user has never had a StudySession — show the onboarding
+  // empty state for study-time content instead of a wall of empty charts.
+  // Goals don't depend on study history, so that section stays visible.
+  const hasStudyHistory = streak.lastStudyDate !== null;
+
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-6">
+        <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
 
-      {!canAdvancedAnalytics && (
-        <UpgradeNotice
-          title={t.proNoticeTitle}
-          message={t.proNoticeMessage}
-          cta={t.proNoticeCta}
-        />
-      )}
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard
-          label={t.todayStudyTime}
-          value={formatDuration(todaySeconds, locale)}
-          icon={Clock}
-        />
-        <StatCard
-          label={t.completedTodos}
-          value={`${completedCount}/${totalCount}`}
-          icon={ListChecks}
-        />
-        <StatCard
-          label={t.streak}
-          value={t.streakValue.replace("{count}", String(streak))}
-          icon={Flame}
-        />
+        {!canAdvancedAnalytics && (
+          <UpgradeNotice
+            title={t.proNoticeTitle}
+            message={t.proNoticeMessage}
+            cta={t.proNoticeCta}
+          />
+        )}
       </div>
 
-      <SubjectBreakdownCard breakdown={breakdown} t={t} locale={locale} />
+      {!hasStudyHistory ? (
+        <StatsEmptyState t={t} />
+      ) : (
+        <>
+          <section className="flex flex-col gap-3">
+            <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+              {t.sectionToday}
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                label={t.todayStudyTime}
+                value={formatDuration(today.totalSeconds, locale)}
+                icon={Clock}
+              />
+              <StatCard
+                label={t.todaySessionsLabel}
+                value={String(today.sessionCount)}
+                icon={Layers}
+              />
+              <StatCard
+                label={t.completedTodos}
+                value={`${completedTodos}/${totalTodos}`}
+                icon={ListChecks}
+              />
+              <StatCard
+                label={t.streak}
+                value={t.streakValue.replace("{count}", String(streak.current))}
+                icon={Flame}
+              />
+            </div>
+            <SubjectBreakdownCard breakdown={todayBreakdown} t={t} locale={locale} />
+          </section>
+
+          <section className="flex flex-col gap-3">
+            <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+              {t.sectionWeek}
+            </h2>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <WeeklyStatsCard stats={weekly} t={t} locale={locale} />
+              <TrendCard trend7={trend7} trend30={trend30} t={t} locale={locale} />
+            </div>
+            <SubjectPeriodCard
+              stats={subjectsWeek}
+              t={t}
+              locale={locale}
+              timezone={user.timezone}
+            />
+          </section>
+
+          <section className="flex flex-col gap-3">
+            <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+              {t.sectionMonth}
+            </h2>
+            <MonthlyStatsCard stats={monthly} t={t} locale={locale} />
+          </section>
+
+          <section className="flex flex-col gap-3">
+            <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+              {t.sectionStreak}
+            </h2>
+            <StreakCard streak={streak} t={t} locale={locale} />
+          </section>
+        </>
+      )}
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+          {t.sectionGoals}
+        </h2>
+        <GoalStatsCard stats={goals} t={t} />
+      </section>
     </div>
   );
 }

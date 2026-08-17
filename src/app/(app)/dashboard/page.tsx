@@ -32,6 +32,8 @@ import {
   getTodayStudySeconds,
 } from "@/features/study-sessions/queries";
 import { StudyTimerCard } from "@/features/study-sessions/components/study-timer-card";
+import { WeeklyTrendMiniCard } from "@/features/statistics/components/weekly-trend-mini-card";
+import { getWeeklyStatistics } from "@/features/statistics/queries";
 import { getSubjects } from "@/features/subjects/queries";
 import { TodayTodosCard } from "@/features/todos/components/today-todos-card";
 import { getTodayTodos } from "@/features/todos/queries";
@@ -68,6 +70,7 @@ export default async function DashboardPage() {
     weakProblemBoard,
     onboarding,
     planSummary,
+    weeklyStats,
   ] = await Promise.all([
     getActiveStudySession(user.id),
     getTodayStudySeconds(user.id, user.timezone),
@@ -86,6 +89,7 @@ export default async function DashboardPage() {
     getWeakProblemBoard(user.id, user.timezone),
     getOnboardingState(user.id),
     getPlanSummary(user.id),
+    getWeeklyStatistics(user.id, user.timezone),
   ]);
   const showAds = adsVisibleFor(user);
   const locale = await getServerLocale(user.locale);
@@ -126,7 +130,7 @@ export default async function DashboardPage() {
       <TrialBanner summary={planSummary} />
 
       {/* ── HERO: 인사 + 오늘 할 일 단일 CTA + 진행 요약 ── */}
-      <section className="from-primary/12 border-primary/15 relative overflow-hidden rounded-2xl border bg-gradient-to-br via-primary/5 to-transparent p-5 sm:p-7">
+      <section className="from-primary/12 border-primary/15 via-primary/5 relative overflow-hidden rounded-2xl border bg-gradient-to-br to-transparent p-5 sm:p-7">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-primary text-xs font-semibold tracking-wide uppercase">
@@ -164,7 +168,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* 진행 요약: 스트릭 + 오늘 진행률 */}
-        <div className="mt-5 grid grid-cols-2 gap-3 border-t border-primary/10 pt-4 sm:max-w-md">
+        <div className="border-primary/10 mt-5 grid grid-cols-2 gap-3 border-t pt-4 sm:max-w-md">
           <div className="flex items-center gap-2.5">
             <Flame className="text-warning size-5 shrink-0" />
             <div>
@@ -204,6 +208,7 @@ export default async function DashboardPage() {
           todaySeconds={todaySeconds}
           activeStartedAt={activeSession ? activeSession.startedAt.toISOString() : null}
         />
+        <WeeklyTrendMiniCard stats={weeklyStats} t={messages.stats} locale={locale} />
       </section>
 
       {/* ── 오늘의 계획 (2차) ── */}

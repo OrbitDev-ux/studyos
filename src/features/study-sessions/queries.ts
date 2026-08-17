@@ -1,5 +1,6 @@
 import { getTodayRange, getZonedDateString } from "@/lib/date";
 import { createClient } from "@/lib/supabase/server";
+import { computeStreakStats, type StreakStats } from "@/features/study-sessions/streak";
 
 export async function getActiveStudySession(userId: string) {
   const supabase = await createClient();
@@ -38,7 +39,10 @@ export async function getTodayStudySeconds(
 
 const STREAK_LOOKBACK = 500;
 
-export async function getStreak(userId: string, timezone: string): Promise<number> {
+async function fetchStudyDateStrings(
+  userId: string,
+  timezone: string,
+): Promise<string[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("StudySession")
@@ -49,18 +53,21 @@ export async function getStreak(userId: string, timezone: string): Promise<numbe
     .limit(STREAK_LOOKBACK);
   if (error) throw error;
 
-  const studyDates = new Set(
-    (data ?? []).map((s) => getZonedDateString(new Date(s.startedAt), timezone)),
-  );
+  return (data ?? []).map((s) => getZonedDateString(new Date(s.startedAt), timezone));
+}
 
-  let streak = 0;
-  const cursor = new Date();
-  if (!studyDates.has(getZonedDateString(cursor, timezone))) {
-    cursor.setUTCDate(cursor.getUTCDate() - 1);
-  }
-  while (studyDates.has(getZonedDateString(cursor, timezone))) {
-    streak += 1;
-    cursor.setUTCDate(cursor.getUTCDate() - 1);
-  }
-  return streak;
+export async function getStreak(userId: string, timezone: string): Promise<number> {
+  const dates = await fetchStudyDateStrings(userId, timezone);
+  const todayStr = getZonedDateString(new Date(), timezone);
+  return computeStreakStats(dates, todayStr).current;
+}
+
+/** Current + longest streak + last study date — the fuller stats-page view of getStreak. */
+export async function getStreakStats(
+  userId: string,
+  timezone: string,
+): Promise<StreakStats> {
+  const dates = await fetchStudyDateStrings(userId, timezone);
+  const todayStr = getZonedDateString(new Date(), timezone);
+  return computeStreakStats(dates, todayStr);
 }
