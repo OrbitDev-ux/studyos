@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { ProfileNameplate } from "@/features/profile/components/profile-nameplate";
+import { ConversationLiveRefresh } from "@/features/social/components/conversation-live-refresh";
 import { ConversationPanel } from "@/features/social/components/conversation-panel";
-import { MarkReadRefresh } from "@/features/social/components/mark-read-refresh";
 import { MessageInput } from "@/features/social/components/message-input";
 import { getConversation, markConversationRead } from "@/features/social/queries";
 import { getMessages } from "@/features/i18n/messages";
@@ -53,7 +53,7 @@ export default async function ConversationPage({
         <ConversationPanel conversation={conversation} currentUserId={user.id} t={t} />
       </div>
       <MessageInput conversationId={conversationId} />
-      <MarkReadRefresh />
+      <ConversationLiveRefresh />
     </div>
   );
 }
