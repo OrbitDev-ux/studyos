@@ -11,40 +11,40 @@ datasource db {
 // Shape required by @auth/prisma-adapter.
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
+  id                       String             @id @default(cuid())
+  name                     String?
+  email                    String             @unique
+  emailVerified            DateTime?
+  image                    String?
   /// bcrypt hash; null for accounts that only ever signed in via Google.
-  password      String?
-  timezone      String    @default("Asia/Seoul")
-  school        String?
+  password                 String?
+  timezone                 String             @default("Asia/Seoul")
+  school                   String?
   /// Explicit UI language choice (validated supported locale, e.g. "en-US").
   /// null = AUTO (browser/IP auto-detection). See features/i18n.
-  locale        String?
+  locale                   String?
   /// Set whenever the password changes (reset or future change flow). Sessions
   /// issued before this instant are treated as invalid by requireCurrentUser
   /// (JWT is stateless, so this is how a reset revokes older web sessions).
-  passwordChangedAt DateTime?
+  passwordChangedAt        DateTime?
   /// Short profile status message ("상태 메시지"), shown on the profile card.
   /// Display nickname reuses `name` and avatar reuses `image` — no duplicate
   /// user table, per the profile system's extend-don't-duplicate design.
-  bio           String?
+  bio                      String?
   /// Heartbeat timestamp for online presence. Updated while the user has an
   /// app tab open; online status (ONLINE/IDLE/OFFLINE) is derived from how
   /// stale this is. Null (or stale) means OFFLINE — set null on sign-out.
-  lastSeenAt    DateTime?
+  lastSeenAt               DateTime?
   /// Set when an admin bans this account; null means active. The user's
   /// study data is never deleted on a ban — this is a reversible gate.
-  bannedAt      DateTime?
-  banReason     String?
+  bannedAt                 DateTime?
+  banReason                String?
   /// When the new-user onboarding tutorial was completed (or skipped). Null =
   /// never finished → the tutorial auto-starts on next app load. Set once and
   /// never re-shown automatically; "튜토리얼 다시 보기" clears it back to null.
   /// Lives on User (not a cookie) so it is per-account and works for guests
   /// (a guest is a normal User row) — no separate onboarding model.
-  tutorialCompletedAt DateTime?
+  tutorialCompletedAt      DateTime?
   /// Subscription plan + lifecycle gating feature access/limits (see
   /// features/billing). Kept as columns on User (not a separate Subscription
   /// table yet) — this Phase builds the Subscription/Plan/Entitlement structure
@@ -55,40 +55,42 @@ model User {
   /// all have UPDATE REVOKEd from the Supabase anon role in the migration, so a
   /// client can NEVER change its own plan or trial dates via the public REST
   /// endpoint — only server-side Prisma (owner role) can.
-  plan               Plan               @default(TRIAL)
-  subscriptionStatus SubscriptionStatus @default(TRIALING)
-  trialStartedAt     DateTime?          @default(now())
-  trialEndsAt        DateTime?
+  plan                     Plan               @default(TRIAL)
+  subscriptionStatus       SubscriptionStatus @default(TRIALING)
+  trialStartedAt           DateTime?          @default(now())
+  trialEndsAt              DateTime?
   /// Admin-only TEST override of the effective plan (features/billing/
   /// admin-override). Does NOT touch real billing: when
   /// adminPlanOverrideEnabled is true, entitlement resolution uses
   /// adminPlanOverride instead of `plan`. Only an admin can set these on THEIR
   /// OWN user row (email-matched), and UPDATE is REVOKEd from the Supabase anon
   /// role in the migration so a client can never self-grant a plan.
-  adminPlanOverride         Plan?
-  adminPlanOverrideEnabled  Boolean @default(false)
+  adminPlanOverride        Plan?
+  adminPlanOverrideEnabled Boolean            @default(false)
   /// Per-category opt-out for the notification system (features/notifications).
   /// Null/missing key = enabled (opt-out model, so shipping a brand-new category
   /// never silently mutes it for existing users). Shape: Record<NotificationCategory, boolean>.
-  notificationPreferences Json?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  notificationPreferences  Json?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
 
-  accounts      Account[]
-  sessions      Session[]
-  subjects      Subject[]
-  todos         Todo[]
-  goals         Goal[]
-  studySessions StudySession[]
-  problemSets   ProblemSet[]
-  problems      Problem[]
-  wrongAnswers  WrongAnswer[]
-  mockExams     MockExam[]
-  examResults   ExamResult[]
-  aiAnalyses    AiAnalysis[]
-  problemAttempts ProblemAttempt[]
+  accounts         Account[]
+  sessions         Session[]
+  subjects         Subject[]
+  todos            Todo[]
+  goals            Goal[]
+  studySessions    StudySession[]
+  problemSets      ProblemSet[]
+  problems         Problem[]
+  wrongAnswers     WrongAnswer[]
+  mockExams        MockExam[]
+  examResults      ExamResult[]
+  aiAnalyses       AiAnalysis[]
+  problemAttempts  ProblemAttempt[]
   aiGenerationLogs AiGenerationLog[]
-  studyBooks    StudyBook[]
+  studyBooks       StudyBook[]
+  studyMaterials   StudyMaterial[]
+  materialFolders  MaterialFolder[]
 
   sentFriendRequests      Friendship[]              @relation("FriendRequester")
   receivedFriendRequests  Friendship[]              @relation("FriendAddressee")
@@ -151,18 +153,18 @@ enum SupportTicketStatus {
 /// reusing the existing User + admin systems (no external helpdesk). Ownership
 /// is enforced server-side by userId on every read/write.
 model SupportTicket {
-  id     String              @id @default(cuid())
-  userId String
-  type   SupportTicketType
-  title  String
-  status SupportTicketStatus @default(OPEN)
+  id             String              @id @default(cuid())
+  userId         String
+  type           SupportTicketType
+  title          String
+  status         SupportTicketStatus @default(OPEN)
   /// Internal admin-only note. NEVER included in any user-facing response.
-  adminNote String? @db.Text
+  adminNote      String?             @db.Text
   /// Last time the user opened the thread — used to derive "unread admin reply"
   /// for the notifications feed without a separate read-state table.
   userLastReadAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages SupportMessage[]
@@ -260,14 +262,15 @@ model Subject {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  todos         Todo[]
-  goals         Goal[]
-  studySessions StudySession[]
-  problemSets   ProblemSet[]
-  problems      Problem[]
-  mockExams     MockExam[]
-  studyBooks    StudyBook[]
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  todos          Todo[]
+  goals          Goal[]
+  studySessions  StudySession[]
+  problemSets    ProblemSet[]
+  problems       Problem[]
+  mockExams      MockExam[]
+  studyBooks     StudyBook[]
+  studyMaterials StudyMaterial[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -468,6 +471,72 @@ model StudyBookItem {
   @@index([problemId])
 }
 
+// ─── 자료실 (Study Materials) ──────────────────────────────────────────────
+// Private per-user file library (PDF/TXT/MD/images), backed by Supabase
+// Storage (a private bucket, see features/study-materials/storage.ts). All
+// Storage mutations go through a server-only service-role client — the same
+// "server bypasses RLS, app code is the real authorization gate" pattern this
+// schema already uses for Prisma (DATABASE_URL) vs. the REVOKEd anon role.
+// Prisma-only tables: REVOKEd from the Supabase anon role in their migration.
+
+/// A folder in the user's material library. Self-referencing for nesting.
+/// `onDelete: Cascade` on `parent` is a DB-level safety net only — the app
+/// itself blocks deleting a non-empty folder (features/study-materials/actions.ts)
+/// so that cascade should never actually fire in normal use.
+model MaterialFolder {
+  id        String   @id @default(cuid())
+  userId    String
+  parentId  String?
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent    MaterialFolder?  @relation("MaterialFolderChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children  MaterialFolder[] @relation("MaterialFolderChildren")
+  materials StudyMaterial[]
+
+  @@index([userId, parentId])
+}
+
+/// One uploaded file. `storageKey` is the Supabase Storage object path —
+/// always server-generated as `{userId}/{materialId}/{sanitized filename}`,
+/// never taken from client input directly (see features/study-materials/storage.ts) —
+/// and unique so it doubles as the storage↔row consistency key. `status`
+/// mirrors StudyBook's "generating"|"ready"|"failed" convention: a row is
+/// written before the browser's direct-to-storage upload completes, and
+/// confirmUpload() flips it to ready/failed once the object's *actual*
+/// Storage-reported size/mimeType have been verified.
+model StudyMaterial {
+  id               String    @id @default(cuid())
+  userId           String
+  subjectId        String?
+  folderId         String?
+  name             String
+  /// Derived server-side from the verified mimeType, never trusted from the
+  /// client directly: "PDF" | "TXT" | "MD" | "IMAGE".
+  type             String
+  mimeType         String
+  size             Int
+  storageKey       String    @unique
+  status           String    @default("pending")
+  /// Reserved for a future AI document-parsing step (see spec §20/§21).
+  /// Not populated by this phase.
+  extractedText    String?   @db.Text
+  processingStatus String?
+  processedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject Subject?        @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  folder  MaterialFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, folderId])
+  @@index([userId, createdAt])
+  @@index([subjectId])
+}
+
 // ─── AI problems (v2) ───────────────────────────────────────────────────
 
 enum QuestionType {
@@ -523,42 +592,42 @@ model ProblemSet {
 }
 
 model Problem {
-  id           String       @id @default(cuid())
-  userId       String
-  problemSetId String?
-  subjectId    String?
-  type         QuestionType
-  difficulty   Difficulty
-  unit         String?
-  prompt       String       @db.Text
+  id              String       @id @default(cuid())
+  userId          String
+  problemSetId    String?
+  subjectId       String?
+  type            QuestionType
+  difficulty      Difficulty
+  unit            String?
+  prompt          String       @db.Text
   /// Canonical answer for SHORT_ANSWER; the MODEL answer for ESSAY.
   /// MULTIPLE_CHOICE uses Choice.isCorrect instead.
-  answerText   String?
-  explanation  String?      @db.Text
+  answerText      String?
+  explanation     String?      @db.Text
   /// ESSAY only: key scoring points / partial-credit criteria shown to the
   /// student for self-assessment. Null for MC / short-answer.
-  scoringCriteria String?   @db.Text
-  isFavorite   Boolean      @default(false)
+  scoringCriteria String?      @db.Text
+  isFavorite      Boolean      @default(false)
   /// Normalized-content hash for the import pipeline's exact-duplicate detection
   /// + idempotency (features/problems/import). NULL for user-generated problems;
   /// set only on imported ones. `@unique` → Postgres allows many NULLs but keeps
   /// non-null fingerprints unique, so a re-sent/duplicate import can't double-insert.
-  fingerprint   String?     @unique
+  fingerprint     String?      @unique
   /// Origin of the problem: null/"user" = made by a user via AI generation;
   /// "import" = ingested into the shared 문제은행 via the import pipeline.
-  source        String?
+  source          String?
   /// The import batch this problem came in with (for tracing / import events).
-  importBatchId String?
-  createdAt    DateTime     @default(now())
+  importBatchId   String?
+  createdAt       DateTime     @default(now())
 
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  problemSet    ProblemSet?    @relation(fields: [problemSetId], references: [id], onDelete: SetNull)
-  subject       Subject?       @relation(fields: [subjectId], references: [id], onDelete: SetNull)
-  choices       Choice[]
-  wrongAnswers  WrongAnswer[]
-  examQuestions ExamQuestion[]
-  examAnswers   ExamAnswer[]
-  attempts      ProblemAttempt[]
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problemSet     ProblemSet?      @relation(fields: [problemSetId], references: [id], onDelete: SetNull)
+  subject        Subject?         @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  choices        Choice[]
+  wrongAnswers   WrongAnswer[]
+  examQuestions  ExamQuestion[]
+  examAnswers    ExamAnswer[]
+  attempts       ProblemAttempt[]
   studyBookItems StudyBookItem[]
 
   @@index([userId])
@@ -586,18 +655,18 @@ model Choice {
 /// One row per problem the user currently has wrong; re-attempting the same
 /// problem updates this row instead of creating a duplicate (see @@unique).
 model WrongAnswer {
-  id            String   @id @default(cuid())
-  userId        String
-  problemId     String
-  source        String   @default("problem") // "problem" | "mock-exam"
-  aiExplanation String?  @db.Text
-  resolved      Boolean  @default(false)
+  id             String    @id @default(cuid())
+  userId         String
+  problemId      String
+  source         String    @default("problem") // "problem" | "mock-exam"
+  aiExplanation  String?   @db.Text
+  resolved       Boolean   @default(false)
   /// ── 오답 DNA (Phase 4) ── structured "why it was wrong" from the AI, stored
   /// once on demand (analyzedAt set) so it is never re-generated on every read.
-  errorType     String?  // CALCULATION|CONCEPT|READING|FORMULA|CARELESS|UNKNOWN _ERROR
-  errorConcept  String?
-  errorReason   String?  @db.Text
-  analyzedAt    DateTime?
+  errorType      String? // CALCULATION|CONCEPT|READING|FORMULA|CARELESS|UNKNOWN _ERROR
+  errorConcept   String?
+  errorReason    String?   @db.Text
+  analyzedAt     DateTime?
   /// ── 자동 복습 (Phase 5, spaced repetition) ── reviewStage = number of
   /// successful reviews so far; it indexes REVIEW_INTERVALS_DAYS to set
   /// nextReviewAt (when this becomes "due" again). A correct review advances
@@ -611,7 +680,7 @@ model WrongAnswer {
   /// well-known items grow faster. Defaults to DEFAULT_EASE (2.5); existing rows
   /// inherit the default via the migration, so the fixed ladder is preserved.
   easeFactor     Float     @default(2.5)
-  createdAt     DateTime @default(now())
+  createdAt      DateTime  @default(now())
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
@@ -811,12 +880,12 @@ model BattleParticipant {
 /// a wholly separate table from User, so it cannot be a real FK to either
 /// table uniformly. It is a plain informational id; never trust it for auth.
 model Notification {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
   type      String
   title     String
-  body      String?  @db.Text
-  isRead    Boolean  @default(false)
+  body      String?   @db.Text
+  isRead    Boolean   @default(false)
   readAt    DateTime?
   /// The user who caused this notification (friend request sender, DM sender,
   /// battle invite responder). Null for system/admin-originated notifications.
@@ -829,7 +898,7 @@ model Notification {
   /// battleId }) — used for precise mark-as-read-by-target lookups without a
   /// migration per new type. Never trusted for authorization.
   metadata  Json?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -868,8 +937,8 @@ model AdminUser {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  createdBy     AdminUser?         @relation("AdminCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  createdAdmins AdminUser[]        @relation("AdminCreatedBy")
+  createdBy      AdminUser?         @relation("AdminCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAdmins  AdminUser[]        @relation("AdminCreatedBy")
   activityLogs   AdminActivityLog[]
   announcements  Announcement[]
   blockedIps     BlockedIp[]
@@ -1029,7 +1098,7 @@ model LabFeatureState {
   uses        Int      @default(0)
   successes   Int      @default(0)
   failures    Int      @default(0)
-  updatedAt   DateTime @updatedAt @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 }
 
 /// One like/dislike per user per feature (upsert on the unique pair).
@@ -1065,7 +1134,7 @@ model TutorConversation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages TutorMessage[]
 
   @@index([userId, updatedAt])

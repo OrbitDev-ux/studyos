@@ -4,6 +4,7 @@ import {
   BookOpen,
   ClipboardList,
   FlaskConical,
+  FolderOpen,
   GraduationCap,
   Library,
   LayoutDashboard,
@@ -28,7 +29,11 @@ export type NavItem = {
   description?: string;
 };
 
-export type NavGroup = { labelKey: keyof Messages["groups"]; label: string; items: NavItem[] };
+export type NavGroup = {
+  labelKey: keyof Messages["groups"];
+  label: string;
+  items: NavItem[];
+};
 
 /**
  * 사이드바 정보구조 — 학습/콘텐츠/계획/소셜/지원으로 그룹핑한다. 각 라벨은 i18n
@@ -40,9 +45,27 @@ export const navGroups: NavGroup[] = [
     label: "학습",
     items: [
       { key: "dashboard", title: "대시보드", href: "/dashboard", icon: LayoutDashboard },
-      { key: "tutor", title: "AI 과외", href: "/tutor", icon: GraduationCap, description: "AI 선생님과 1:1" },
-      { key: "problems", title: "문제", href: "/problems", icon: Sparkles, description: "내 AI 문제 풀이" },
-      { key: "studyBank", title: "문제은행", href: "/study-bank", icon: Library, description: "공유 문제 탐색" },
+      {
+        key: "tutor",
+        title: "AI 과외",
+        href: "/tutor",
+        icon: GraduationCap,
+        description: "AI 선생님과 1:1",
+      },
+      {
+        key: "problems",
+        title: "문제",
+        href: "/problems",
+        icon: Sparkles,
+        description: "내 AI 문제 풀이",
+      },
+      {
+        key: "studyBank",
+        title: "문제은행",
+        href: "/study-bank",
+        icon: Library,
+        description: "공유 문제 탐색",
+      },
       { key: "review", title: "오답노트", href: "/review", icon: NotebookPen },
       { key: "mockExam", title: "모의고사", href: "/mock-exam", icon: ClipboardList },
     ],
@@ -52,8 +75,20 @@ export const navGroups: NavGroup[] = [
     label: "콘텐츠",
     items: [
       { key: "studyBooks", title: "나만의 교재", href: "/study-books", icon: BookMarked },
+      {
+        key: "studyMaterials",
+        title: "자료실",
+        href: "/study-materials",
+        icon: FolderOpen,
+      },
       { key: "subjects", title: "과목", href: "/subjects", icon: BookOpen },
-      { key: "lab", title: "실험실", href: "/lab", icon: FlaskConical, description: "새 기능 미리보기" },
+      {
+        key: "lab",
+        title: "실험실",
+        href: "/lab",
+        icon: FlaskConical,
+        description: "새 기능 미리보기",
+      },
     ],
   },
   {

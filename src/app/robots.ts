@@ -14,6 +14,7 @@ const disallow = [
   "/problems",
   "/study-books",
   "/study-bank",
+  "/study-materials",
   "/review",
   "/mock-exam",
   "/social",

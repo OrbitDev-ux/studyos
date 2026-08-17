@@ -22,3 +22,13 @@ export function formatDuration(totalSeconds: number, locale: Locale): string {
   if (minutes === 0) return `${hours}${u.hour}`;
   return `${hours}${u.hour}${u.sep}${minutes}${u.minute}`;
 }
+
+/** "340 KB" / "1.2 MB" style file size — units are language-neutral (used
+ * worldwide as-is), so no locale table is needed like formatDuration's. */
+export function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(kb < 10 ? 1 : 0)} KB`;
+  const mb = kb / 1024;
+  return `${mb.toFixed(mb < 10 ? 1 : 0)} MB`;
+}
