@@ -1,3 +1,4 @@
+import { LinkTabs } from "@/components/layout/link-tabs";
 import { ProblemList } from "@/features/problems/components/problem-list";
 import { getProblems } from "@/features/problems/queries";
 import { getMessages } from "@/features/i18n/messages";
@@ -8,6 +9,11 @@ import { requireCurrentUser } from "@/lib/session";
 // timeout — Server Actions inherit the invoking route's maxDuration.
 export const maxDuration = 60;
 
+const PROBLEMS_TABS = [
+  { href: "/problems", labelKey: "problems" },
+  { href: "/study-bank", labelKey: "studyBank" },
+] as const;
+
 export default async function ProblemsPage() {
   const user = await requireCurrentUser();
   const problems = await getProblems(user.id);
@@ -15,7 +21,10 @@ export default async function ProblemsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
+      <div className="flex flex-col gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
+        <LinkTabs items={PROBLEMS_TABS} />
+      </div>
       <ProblemList problems={problems} />
     </div>
   );

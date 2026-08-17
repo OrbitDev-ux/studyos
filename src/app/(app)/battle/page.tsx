@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { LinkTabs } from "@/components/layout/link-tabs";
 import { BattleCard } from "@/features/battle/components/battle-card";
 import { BattleCreateDialog } from "@/features/battle/components/battle-create-dialog";
 import { getBattles } from "@/features/battle/queries";
@@ -6,6 +7,11 @@ import { getFriends } from "@/features/social/queries";
 import { getMessages } from "@/features/i18n/messages";
 import { getServerLocale } from "@/features/i18n/server";
 import { requireCurrentUser } from "@/lib/session";
+
+const BATTLE_TABS = [
+  { href: "/ranking", labelKey: "ranking" },
+  { href: "/battle", labelKey: "battle" },
+] as const;
 
 export default async function BattlePage() {
   const user = await requireCurrentUser();
@@ -18,6 +24,8 @@ export default async function BattlePage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <LinkTabs items={BATTLE_TABS} />
+
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold tracking-tight">{t.listTitle}</h1>
         <BattleCreateDialog

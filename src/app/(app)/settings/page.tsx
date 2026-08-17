@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ChevronRight, FlaskConical } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { LanguageSelect } from "@/features/i18n/components/language-select";
 import { getMessages } from "@/features/i18n/messages";
@@ -34,6 +36,22 @@ export default async function SettingsPage() {
       <Card>
         <CardContent>
           <NotificationPreferencesForm initial={notificationPreferences} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent>
+          <Link href="/lab" className="flex items-center justify-between gap-3 text-sm">
+            <span className="flex items-center gap-2">
+              <FlaskConical className="text-muted-foreground size-4" />
+              <span>
+                <span className="block font-semibold">{t.lab.title}</span>
+                <span className="text-muted-foreground block text-xs">
+                  {t.lab.subtitle}
+                </span>
+              </span>
+            </span>
+            <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+          </Link>
         </CardContent>
       </Card>
     </div>

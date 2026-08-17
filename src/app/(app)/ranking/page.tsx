@@ -1,3 +1,4 @@
+import { LinkTabs } from "@/components/layout/link-tabs";
 import { RankingTabs } from "@/features/ranking/components/ranking-tabs";
 import {
   getFriendRanking,
@@ -8,6 +9,11 @@ import {
 import { getMessages } from "@/features/i18n/messages";
 import { getServerLocale } from "@/features/i18n/server";
 import { requireCurrentUser } from "@/lib/session";
+
+const RANKING_TABS = [
+  { href: "/ranking", labelKey: "ranking" },
+  { href: "/battle", labelKey: "battle" },
+] as const;
 
 export default async function RankingPage() {
   const user = await requireCurrentUser();
@@ -22,7 +28,10 @@ export default async function RankingPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
+      <div className="flex flex-col gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
+        <LinkTabs items={RANKING_TABS} />
+      </div>
       <RankingTabs
         currentUserId={user.id}
         global={global}

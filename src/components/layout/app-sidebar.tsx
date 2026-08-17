@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GraduationCap, Sparkles, TerminalSquare } from "lucide-react";
+import { GraduationCap, Sparkles } from "lucide-react";
 import type { Session } from "next-auth";
 import { UserMenu } from "@/components/layout/user-menu";
 import {
@@ -81,25 +81,11 @@ export function AppSidebar({
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
-        {/* Study OS Dev entry point (§3) — separate area, its own layout at /dev. */}
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname.startsWith("/dev")}
-                  tooltip={messages.dev.sidebarLabel}
-                >
-                  <Link href="/dev">
-                    <TerminalSquare />
-                    <span>{messages.dev.sidebarLabel}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Study OS Dev (features/dev) is intentionally not linked from the
+            main sidebar: its container backend isn't connected yet, so every
+            page under /dev renders as a dead end for a normal user (Product
+            Audit §Navigation). The routes/code/data are untouched — only
+            this entry point is hidden. Reachable directly at /dev. */}
       </SidebarContent>
       <SidebarFooter>
         {showUpgrade && (

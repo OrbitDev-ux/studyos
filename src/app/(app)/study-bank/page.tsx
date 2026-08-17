@@ -1,5 +1,6 @@
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LinkTabs } from "@/components/layout/link-tabs";
 import { PaginationNav } from "@/features/admin/components/pagination-nav";
 import { ProblemGeneratorForm } from "@/features/problems/components/problem-generator-form";
 import { StudyBankCard } from "@/features/study-bank/components/study-bank-card";
@@ -23,6 +24,11 @@ import { requireCurrentUser } from "@/lib/session";
 // Action regularly runs past the default serverless timeout.
 export const maxDuration = 60;
 
+const STUDY_BANK_TABS = [
+  { href: "/problems", labelKey: "problems" },
+  { href: "/study-bank", labelKey: "studyBank" },
+] as const;
+
 export default async function StudyBankPage({
   searchParams,
 }: {
@@ -39,6 +45,8 @@ export default async function StudyBankPage({
 
   return (
     <div className="flex flex-col gap-6">
+      <LinkTabs items={STUDY_BANK_TABS} />
+
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
