@@ -15,16 +15,25 @@ import {
  * ad-hoc "insert WrongAnswer / set resolved=false" logic in the submission
  * paths so the schedule is always consistent. Preserves the existing
  * source-not-overwritten-on-conflict behaviour.
+ *
+ * Accepts an optional transaction client (same pattern as
+ * features/subjects/seed.ts) so a caller grading inside its own
+ * `prisma.$transaction` — e.g. mock-exam submission — can register the wrong
+ * answer atomically with the rest of that transaction instead of duplicating
+ * this upsert logic inline (Product Audit: the mock-exam path had its own
+ * copy that silently skipped the ease-factor adaptation on a repeat lapse and
+ * overwrote `source` on conflict, unlike this one).
  */
 export async function registerWrongAnswerForReview(
   userId: string,
   problemId: string,
   source: string,
   now: Date = new Date(),
+  client: Prisma.TransactionClient | typeof prisma = prisma,
 ): Promise<void> {
   const s = scheduleForNewWrong(now);
   try {
-    await prisma.wrongAnswer.create({
+    await client.wrongAnswer.create({
       data: {
         userId,
         problemId,
@@ -41,11 +50,11 @@ export async function registerWrongAnswerForReview(
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       // A repeat lapse ("again"): reset the stage and drop the ease so this
       // stubborn item keeps shorter intervals going forward.
-      const existing = await prisma.wrongAnswer.findUnique({
+      const existing = await client.wrongAnswer.findUnique({
         where: { userId_problemId: { userId, problemId } },
         select: { easeFactor: true },
       });
-      await prisma.wrongAnswer.update({
+      await client.wrongAnswer.update({
         where: { userId_problemId: { userId, problemId } },
         data: {
           resolved: false,
@@ -123,7 +132,9 @@ export async function bringForwardConceptReviews(
   const matchedIds = candidates
     .filter(({ problem }) => {
       const unit = problem.unit?.trim().toLowerCase();
-      return !!unit && (normalizedConcept.includes(unit) || unit.includes(normalizedConcept));
+      return (
+        !!unit && (normalizedConcept.includes(unit) || unit.includes(normalizedConcept))
+      );
     })
     .map((c) => c.id);
 

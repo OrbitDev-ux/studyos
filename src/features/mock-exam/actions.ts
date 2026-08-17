@@ -15,7 +15,7 @@ import {
 import { aiProblemSetSchema } from "@/features/problems/schema";
 import { normalizeAnswer } from "@/features/problems/utils";
 import { recordProblemAttempt } from "@/features/learning/record-attempt";
-import { scheduleForNewWrong } from "@/features/review/schedule";
+import { registerWrongAnswerForReview } from "@/features/review/schedule-service";
 import {
   withGenerationQuota,
   generationErrorPayload,
@@ -35,7 +35,9 @@ export async function generateMockExam(
   // oversized 문항 수 (객관식+서술형 합계 상한 포함) with a clear message.
   const validation = mockExamGenerationFormSchema.safeParse(values);
   if (!validation.success) {
-    return { error: validation.error.issues[0]?.message ?? "입력값이 올바르지 않습니다." };
+    return {
+      error: validation.error.issues[0]?.message ?? "입력값이 올바르지 않습니다.",
+    };
   }
   const parsed = validation.data;
 
@@ -252,34 +254,24 @@ export async function submitExam(examId: string, input: SubmitExamInput) {
           answerText:
             problem.type === "MULTIPLE_CHOICE"
               ? (selectedChoice?.content ?? null)
-              : (answer?.text?.trim() || null),
+              : answer?.text?.trim() || null,
         },
         tx,
       );
 
       if (!isCorrect) {
-        // Register into the spaced-repetition schedule (Phase 5): reset to
-        // stage 0, due after the first interval. Kept inline in the exam's
-        // transaction (rather than calling the service) so it commits atomically
-        // with the ExamResult/ExamAnswer rows.
-        const schedule = scheduleForNewWrong();
-        await tx.wrongAnswer.upsert({
-          where: { userId_problemId: { userId: user.id, problemId: problem.id } },
-          create: {
-            userId: user.id,
-            problemId: problem.id,
-            source: "mock-exam",
-            reviewStage: schedule.reviewStage,
-            nextReviewAt: schedule.nextReviewAt,
-          },
-          update: {
-            resolved: false,
-            source: "mock-exam",
-            reviewStage: schedule.reviewStage,
-            nextReviewAt: schedule.nextReviewAt,
-            lastReviewedAt: new Date(),
-          },
-        });
+        // Same spaced-repetition registration /problems uses on a wrong
+        // answer (Product Audit: this used to be a separate inline upsert
+        // that skipped the ease-factor adaptation on a repeat lapse and
+        // incorrectly overwrote `source` on conflict). Passing `tx` keeps it
+        // committing atomically with the ExamResult/ExamAnswer rows.
+        await registerWrongAnswerForReview(
+          user.id,
+          problem.id,
+          "mock-exam",
+          new Date(),
+          tx,
+        );
       }
     }
 

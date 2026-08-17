@@ -4,6 +4,7 @@ import type { Subject } from "@/generated/prisma/client";
 import { CreateGoalDialog } from "@/features/goals/components/create-goal-dialog";
 import { GoalProgressButton } from "@/features/goals/components/goal-progress-button";
 import type { getTodayGoals } from "@/features/goals/queries";
+import { computeGoalFillPercent } from "@/features/statistics/aggregate";
 
 export function TodayGoalsCard({
   goals,
@@ -23,10 +24,7 @@ export function TodayGoalsCard({
           <p className="text-muted-foreground text-sm">오늘 설정한 목표가 없습니다.</p>
         ) : (
           goals.map((goal) => {
-            const percent = Math.min(
-              100,
-              Math.round((goal.currentValue / goal.targetValue) * 100),
-            );
+            const percent = computeGoalFillPercent(goal);
             return (
               <div key={goal.id} className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between text-sm">

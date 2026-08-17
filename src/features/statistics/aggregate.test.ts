@@ -3,6 +3,7 @@ import {
   bucketSecondsByDay,
   compareToPrevious,
   computeGoalCompletionPercent,
+  computeGoalFillPercent,
   countActiveDays,
   groupSecondsBySubject,
   sumDurationSec,
@@ -157,6 +158,28 @@ describe("computeGoalCompletionPercent", () => {
       { targetValue: 5, currentValue: 8 },
     ];
     expect(computeGoalCompletionPercent(goals)).toBe(100);
+  });
+});
+
+describe("computeGoalFillPercent", () => {
+  it("is 0% when nothing has been done", () => {
+    expect(computeGoalFillPercent({ targetValue: 10, currentValue: 0 })).toBe(0);
+  });
+
+  it("rounds a partial fill", () => {
+    expect(computeGoalFillPercent({ targetValue: 3, currentValue: 1 })).toBe(33);
+  });
+
+  it("is 100% exactly at the target", () => {
+    expect(computeGoalFillPercent({ targetValue: 10, currentValue: 10 })).toBe(100);
+  });
+
+  it("clamps above-target progress to 100%", () => {
+    expect(computeGoalFillPercent({ targetValue: 5, currentValue: 8 })).toBe(100);
+  });
+
+  it("treats a non-positive target as 0% rather than dividing by zero", () => {
+    expect(computeGoalFillPercent({ targetValue: 0, currentValue: 0 })).toBe(0);
   });
 });
 

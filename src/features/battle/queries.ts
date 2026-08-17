@@ -1,4 +1,5 @@
 import type { Battle, BattleParticipant, User } from "@/generated/prisma/client";
+import { computeGoalFillPercent } from "@/features/statistics/aggregate";
 import { formatDateOnly } from "@/lib/date";
 import { createClient } from "@/lib/supabase/server";
 
@@ -60,10 +61,7 @@ async function computeParticipantScore(
     .gte("date", startDate)
     .lte("date", endDate);
   if (goalError) throw goalError;
-  return (goals ?? []).reduce((sum, goal) => {
-    if (goal.targetValue <= 0) return sum;
-    return sum + Math.min(100, Math.round((goal.currentValue / goal.targetValue) * 100));
-  }, 0);
+  return (goals ?? []).reduce((sum, goal) => sum + computeGoalFillPercent(goal), 0);
 }
 
 export async function getBattles(userId: string) {

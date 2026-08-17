@@ -84,6 +84,22 @@ export function computeGoalCompletionPercent(
   return Math.round((completed / goals.length) * 100);
 }
 
+/**
+ * A single goal's own fill percentage (currentValue against targetValue),
+ * clamped to [0, 100]. Distinct from computeGoalCompletionPercent above,
+ * which counts how many goals in a *list* are fully done — this is the
+ * per-goal progress-bar value (also used to score the Battle goal_progress
+ * metric, one goal at a time). targetValue <= 0 is treated as 0%, never
+ * divide by zero.
+ */
+export function computeGoalFillPercent(goal: {
+  targetValue: number;
+  currentValue: number;
+}): number {
+  if (goal.targetValue <= 0) return 0;
+  return Math.min(100, Math.round((goal.currentValue / goal.targetValue) * 100));
+}
+
 export type TrendDirection = "up" | "down" | "flat";
 
 /** How `currentSeconds` compares to `previousSeconds`, for "vs last week" copy. */
