@@ -1,5 +1,8 @@
 import { Clock, Flame, Layers, ListChecks } from "lucide-react";
 import { StatCard } from "@/features/dashboard/components/stat-card";
+import { WeaknessSummaryCard } from "@/features/ai/components/weakness-summary-card";
+import { WeeklyReportCard } from "@/features/ai/components/weekly-report-card";
+import { getLatestAiAnalysis } from "@/features/ai/queries";
 import { GoalStatsCard } from "@/features/statistics/components/goal-stats-card";
 import { MonthlyStatsCard } from "@/features/statistics/components/monthly-stats-card";
 import { StatsEmptyState } from "@/features/statistics/components/stats-empty-state";
@@ -27,6 +30,11 @@ import { getServerLocale } from "@/features/i18n/server";
 import { formatDuration } from "@/lib/format";
 import { requireCurrentUser } from "@/lib/session";
 
+// generateWeaknessAnalysis/generateWeeklyReport's AI calls regularly run
+// past Vercel's default serverless timeout — Server Actions inherit the
+// invoking route's maxDuration.
+export const maxDuration = 60;
+
 export default async function StatsPage() {
   const user = await requireCurrentUser();
 
@@ -41,6 +49,8 @@ export default async function StatsPage() {
     trend30,
     streak,
     goals,
+    weaknessAnalysis,
+    weeklyReport,
   ] = await Promise.all([
     getTodayStatistics(user.id, user.timezone),
     getTodaySubjectBreakdown(user.id, user.timezone),
@@ -52,6 +62,8 @@ export default async function StatsPage() {
     getStudyTrend(user.id, user.timezone, 30),
     getStreakStats(user.id, user.timezone),
     getGoalStatistics(user.id, user.timezone),
+    getLatestAiAnalysis(user.id, "weakness"),
+    getLatestAiAnalysis(user.id, "weekly-report"),
   ]);
 
   const completedTodos = todoCounts.find((c) => c.completed)?._count._all ?? 0;
@@ -150,6 +162,16 @@ export default async function StatsPage() {
           {t.sectionGoals}
         </h2>
         <GoalStatsCard stats={goals} t={t} />
+      </section>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+          {t.sectionAiAnalysis}
+        </h2>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <WeaknessSummaryCard initialContent={weaknessAnalysis?.content ?? null} />
+          <WeeklyReportCard initialContent={weeklyReport?.content ?? null} />
+        </div>
       </section>
     </div>
   );

@@ -2,9 +2,6 @@ import Link from "next/link";
 import { ArrowRight, Flame, ListChecks, NotebookPen, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LoginExperience } from "@/features/login-experience/login-experience";
-import { WeaknessSummaryCard } from "@/features/ai/components/weakness-summary-card";
-import { WeeklyReportCard } from "@/features/ai/components/weekly-report-card";
-import { getLatestAiAnalysis } from "@/features/ai/queries";
 import { TodayGoalsCard } from "@/features/goals/components/today-goals-card";
 import { getTodayGoals } from "@/features/goals/queries";
 import { TodayMockExamCard } from "@/features/mock-exam/components/today-mock-exam-card";
@@ -42,11 +39,6 @@ import { getMessages } from "@/features/i18n/messages";
 import { getServerLocale } from "@/features/i18n/server";
 import { requireCurrentUser } from "@/lib/session";
 
-// generateWeaknessAnalysis/generateWeeklyReport's AI calls regularly run
-// past Vercel's default serverless timeout — Server Actions inherit the
-// invoking route's maxDuration.
-export const maxDuration = 60;
-
 const CARD_PREVIEW_LIMIT = 3;
 
 export default async function DashboardPage() {
@@ -59,8 +51,6 @@ export default async function DashboardPage() {
     goals,
     todos,
     subjects,
-    weaknessAnalysis,
-    weeklyReport,
     recentProblems,
     dueReviews,
     dueCount,
@@ -78,8 +68,6 @@ export default async function DashboardPage() {
     getTodayGoals(user.id, user.timezone),
     getTodayTodos(user.id, user.timezone),
     getSubjects(user.id),
-    getLatestAiAnalysis(user.id, "weakness"),
-    getLatestAiAnalysis(user.id, "weekly-report"),
     getRecentProblems(user.id, CARD_PREVIEW_LIMIT),
     getDueReviews(user.id, CARD_PREVIEW_LIMIT),
     getDueReviewCount(user.id),
@@ -229,17 +217,15 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* ── 분석 & 리포트 (2차) ── */}
+      {/* ── 학습 분석 (2차) — AI 서술형 분석(약점 분석/주간 리포트)은 /stats로 이동
+          (Product Audit: 같은 "얼마나 잘하고 있나" 질문에 답하는 카드 3개가 대시보드에
+          중복되어 있었음). 여기는 즉시 계산되는 사실 기반 데이터만 남긴다. ── */}
       <section className="flex flex-col gap-3">
         <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
           {t.sectionAnalysis}
         </h2>
-        <div className="grid gap-4 lg:grid-cols-3">
-          <div data-tour="weakness">
-            <WeaknessCard units={topWeaknesses} />
-          </div>
-          <WeaknessSummaryCard initialContent={weaknessAnalysis?.content ?? null} />
-          <WeeklyReportCard initialContent={weeklyReport?.content ?? null} />
+        <div data-tour="weakness">
+          <WeaknessCard units={topWeaknesses} />
         </div>
       </section>
 
