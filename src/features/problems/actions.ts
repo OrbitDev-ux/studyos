@@ -386,6 +386,36 @@ export async function generateSimilarProblem(
   }
 }
 
+/** Remove a generated similar problem after explicit user confirmation. */
+export async function discardSimilarProblem(
+  problemId: string,
+  problemSetId: string,
+): Promise<{ error?: string }> {
+  const user = await requireCurrentUser();
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const problem = await tx.problem.findFirst({
+        where: { id: problemId, problemSetId, userId: user.id },
+        select: { id: true },
+      });
+      if (!problem) return;
+
+      await tx.problem.delete({ where: { id: problem.id } });
+      if ((await tx.problem.count({ where: { problemSetId } })) === 0) {
+        await tx.problemSet.deleteMany({ where: { id: problemSetId, userId: user.id } });
+      }
+    });
+  } catch (err) {
+    console.error("similar problem discard failed:", err);
+    return { error: "유사 문제를 버리지 못했어요. 잠시 후 다시 시도해주세요." };
+  }
+
+  revalidatePath("/problems");
+  revalidatePath("/study-bank");
+  return {};
+}
+
 export async function deleteProblem(problemId: string) {
   const user = await requireCurrentUser();
   const supabase = await createClient();

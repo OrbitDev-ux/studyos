@@ -1,6 +1,6 @@
 export const siteConfig = {
   name: "StudyOS",
-  description: "학생을 위한 올인원 공부 관리 플랫폼",
+  description: "AI가 문제를 만들고 공부를 분석하는 학생용 올인원 학습 플랫폼",
 } as const;
 
 /**

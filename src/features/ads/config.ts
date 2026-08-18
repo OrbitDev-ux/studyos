@@ -34,5 +34,7 @@ export function getAdSlot(placement: AdPlacement): string | undefined {
 
 /** True only when a real AdSense client id + this placement's slot are set. */
 export function isAdSenseConfigured(placement: AdPlacement): boolean {
-  return Boolean(ADSENSE_CLIENT_ID) && Boolean(getAdSlot(placement));
+  const slot = getAdSlot(placement);
+  // Do not send browser requests for placeholders or malformed production envs.
+  return Boolean(ADSENSE_CLIENT_ID?.match(/^ca-pub-\d+$/) && slot?.match(/^\d+$/));
 }

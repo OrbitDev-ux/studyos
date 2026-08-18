@@ -8,6 +8,7 @@ import { AdminShortcut } from "@/features/admin/components/admin-shortcut";
 import { IpUnbanShortcut } from "@/features/admin/components/ip-unban-shortcut";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { SITE_URL } from "@/lib/site-url";
+import { siteConfig } from "@/config/site";
 import "./globals.css";
 
 // 영문·숫자는 Inter, 한글은 Pretendard로 렌더한다. globals.css의 --font-sans
@@ -31,8 +32,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const title = "StudyOS - AI 학습 플랫폼";
-const description = "AI가 문제를 만들고 공부를 분석하는 학습 플랫폼";
+const title = `${siteConfig.name} - AI 학습 플랫폼`;
+const description = siteConfig.description;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

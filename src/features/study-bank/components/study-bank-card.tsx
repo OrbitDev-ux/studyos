@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -20,7 +21,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/toast";
 import { MathText } from "@/components/ui/math-text";
-import { generateSimilarProblem } from "@/features/problems/actions";
+import {
+  discardSimilarProblem,
+  generateSimilarProblem,
+} from "@/features/problems/actions";
 import { useI18n } from "@/features/i18n/provider";
 import { FavoriteButton } from "@/features/problems/components/favorite-button";
 import { SolveProblemPanel } from "@/features/problems/components/solve-problem-panel";
@@ -43,6 +47,7 @@ export function StudyBankCard({
   const [open, setOpen] = useState(false);
   const [similarProblem, setSimilarProblem] = useState<SimilarProblem | null>(null);
   const [isSimilarPending, startSimilarTransition] = useTransition();
+  const [isDiscardPending, startDiscardTransition] = useTransition();
 
   function requestSimilar() {
     startSimilarTransition(async () => {
@@ -54,8 +59,31 @@ export function StudyBankCard({
         }
         setSimilarProblem(result.problem);
         setOpen(true);
+        toast({ title: t.similarSaved });
       } catch (error) {
         console.error("similar problem generation failed:", error);
+        toast({ title: t.similarError, variant: "error" });
+      }
+    });
+  }
+
+  function discardSimilar() {
+    if (!similarProblem) return;
+    startDiscardTransition(async () => {
+      try {
+        const result = await discardSimilarProblem(
+          similarProblem.id,
+          similarProblem.problemSetId,
+        );
+        if (result.error) {
+          toast({ title: result.error, variant: "error" });
+          return;
+        }
+        setSimilarProblem(null);
+        setOpen(false);
+        toast({ title: t.similarDiscarded });
+      } catch (error) {
+        console.error("similar problem discard failed:", error);
         toast({ title: t.similarError, variant: "error" });
       }
     });
@@ -129,10 +157,16 @@ export function StudyBankCard({
               <ProblemDetail
                 problem={similarProblem ?? problem}
                 owned={similarProblem ? true : owned}
+                isSimilar={Boolean(similarProblem)}
                 onSimilar={requestSimilar}
                 similarPending={isSimilarPending}
                 similarLabel={t.similar}
                 similarGeneratingLabel={t.similarGenerating}
+                discardPending={isDiscardPending}
+                onDiscard={discardSimilar}
+                closeLabel={t.similarClose}
+                discardLabel={t.similarDiscard}
+                discardingLabel={t.similarDiscarding}
               />
             </DialogContent>
           </Dialog>
@@ -178,17 +212,29 @@ type ProblemDetailData = Pick<
 function ProblemDetail({
   problem,
   owned,
+  isSimilar,
   onSimilar,
   similarPending,
   similarLabel,
   similarGeneratingLabel,
+  discardPending,
+  onDiscard,
+  closeLabel,
+  discardLabel,
+  discardingLabel,
 }: {
   problem: ProblemDetailData | SimilarProblem;
   owned: boolean;
+  isSimilar: boolean;
   onSimilar: () => void;
   similarPending: boolean;
   similarLabel: string;
   similarGeneratingLabel: string;
+  discardPending: boolean;
+  onDiscard: () => void;
+  closeLabel: string;
+  discardLabel: string;
+  discardingLabel: string;
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -209,7 +255,7 @@ function ProblemDetail({
           WrongAnswer / spaced-repetition path (no new solve system). */}
       <SolveProblemPanel problem={problem} />
 
-      <div className="flex items-center gap-2 border-t pt-3">
+      <div className="flex flex-wrap items-center gap-2 border-t pt-3">
         {owned && (
           <>
             <FavoriteButton problemId={problem.id} isFavorite={problem.isFavorite} />
@@ -231,6 +277,24 @@ function ProblemDetail({
           )}
           {similarPending ? similarGeneratingLabel : similarLabel}
         </Button>
+        {isSimilar && (
+          <>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={onDiscard}
+              disabled={discardPending || similarPending}
+            >
+              {discardPending ? discardingLabel : discardLabel}
+            </Button>
+            <DialogClose asChild>
+              <Button type="button" size="sm" variant="ghost">
+                {closeLabel}
+              </Button>
+            </DialogClose>
+          </>
+        )}
       </div>
     </div>
   );
