@@ -79,9 +79,9 @@ export default async function StatsPage() {
   const hasStudyHistory = streak.lastStudyDate !== null;
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-9 md:gap-10">
       <div className="flex flex-col gap-6">
-        <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{t.title}</h1>
 
         {!canAdvancedAnalytics && (
           <UpgradeNotice
@@ -97,10 +97,10 @@ export default async function StatsPage() {
       ) : (
         <>
           <section className="flex flex-col gap-3">
-            <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+            <h2 className="text-muted-foreground text-sm font-semibold">
               {t.sectionToday}
             </h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard
                 label={t.todayStudyTime}
                 value={formatDuration(today.totalSeconds, locale)}
@@ -126,10 +126,10 @@ export default async function StatsPage() {
           </section>
 
           <section className="flex flex-col gap-3">
-            <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+            <h2 className="text-muted-foreground text-sm font-semibold">
               {t.sectionWeek}
             </h2>
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-5 lg:grid-cols-2">
               <WeeklyStatsCard stats={weekly} t={t} locale={locale} />
               <TrendCard trend7={trend7} trend30={trend30} t={t} locale={locale} />
             </div>
@@ -142,14 +142,14 @@ export default async function StatsPage() {
           </section>
 
           <section className="flex flex-col gap-3">
-            <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+            <h2 className="text-muted-foreground text-sm font-semibold">
               {t.sectionMonth}
             </h2>
             <MonthlyStatsCard stats={monthly} t={t} locale={locale} />
           </section>
 
           <section className="flex flex-col gap-3">
-            <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+            <h2 className="text-muted-foreground text-sm font-semibold">
               {t.sectionStreak}
             </h2>
             <StreakCard streak={streak} t={t} locale={locale} />
@@ -158,17 +158,15 @@ export default async function StatsPage() {
       )}
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-          {t.sectionGoals}
-        </h2>
+        <h2 className="text-muted-foreground text-sm font-semibold">{t.sectionGoals}</h2>
         <GoalStatsCard stats={goals} t={t} />
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+        <h2 className="text-muted-foreground text-sm font-semibold">
           {t.sectionAiAnalysis}
         </h2>
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-5 lg:grid-cols-2">
           <WeaknessSummaryCard initialContent={weaknessAnalysis?.content ?? null} />
           <WeeklyReportCard initialContent={weeklyReport?.content ?? null} />
         </div>

@@ -22,8 +22,7 @@ export function BottomNav({ socialCount = 0 }: { socialCount?: number }) {
     >
       <ul className="flex items-stretch">
         {bottomNavItems.map((item) => {
-          const active =
-            pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const badge = item.href === "/social" ? socialCount : 0;
           return (
             <li key={item.href} className="flex-1">
@@ -31,8 +30,10 @@ export function BottomNav({ socialCount = 0 }: { socialCount?: number }) {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "relative flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[0.65rem] font-medium transition-colors",
-                  active ? "text-primary" : "text-muted-foreground hover:text-foreground",
+                  "focus-visible:outline-ring relative flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[0.65rem] font-medium transition-colors focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-3px]",
+                  active
+                    ? "text-primary after:bg-primary after:absolute after:inset-x-5 after:top-0 after:h-0.5 after:rounded-full"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <span className="relative">

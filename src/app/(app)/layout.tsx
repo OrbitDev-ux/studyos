@@ -55,10 +55,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <OfflineBanner />
         <SidebarProvider>
           <PresenceHeartbeat />
-          <AppSidebar user={session.user} socialCount={socialCount} showUpgrade={showUpgrade} />
+          <AppSidebar
+            user={session.user}
+            socialCount={socialCount}
+            showUpgrade={showUpgrade}
+          />
           <SidebarInset>
             <Header notifications={notifications} />
-            <main className="flex flex-1 flex-col gap-4 p-4 pb-24 md:p-6 md:pb-6">
+            <main className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col gap-5 p-4 pb-24 md:gap-6 md:p-6 md:pb-6">
               {children}
             </main>
             <BottomNav socialCount={socialCount} />

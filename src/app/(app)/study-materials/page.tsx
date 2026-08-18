@@ -56,10 +56,10 @@ export default async function StudyMaterialsPage({
   ]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 md:gap-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
-        <div className="flex gap-2">
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{t.title}</h1>
+        <div className="flex w-full gap-2 sm:w-auto">
           <CreateFolderDialog currentFolderId={currentFolderId} />
           <UploadMaterialDialog
             subjects={subjects}
@@ -69,7 +69,9 @@ export default async function StudyMaterialsPage({
         </div>
       </div>
 
-      <MaterialsSearchBar params={params} />
+      <div className="w-full max-w-xl">
+        <MaterialsSearchBar params={params} />
+      </div>
 
       {isSearching ? (
         <SearchResultsSection
@@ -86,7 +88,7 @@ export default async function StudyMaterialsPage({
 
           {!currentFolderId && recentMaterials.length > 0 && (
             <section className="flex flex-col gap-3">
-              <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+              <h2 className="text-muted-foreground text-sm font-semibold">
                 {t.recentTitle}
               </h2>
               <div className="flex flex-col gap-2">

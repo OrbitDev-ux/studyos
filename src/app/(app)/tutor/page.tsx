@@ -40,10 +40,10 @@ export default async function TutorPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 md:gap-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+          <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight sm:text-2xl">
             🧑‍🏫 {t.title}
           </h1>
           <p className="text-muted-foreground mt-1 text-sm">{t.subtitle}</p>
@@ -61,7 +61,7 @@ export default async function TutorPage() {
 
       {conversations.length === 0 ? (
         <Card>
-          <CardContent className="text-muted-foreground flex flex-col items-center gap-2 py-10 text-center text-sm">
+          <CardContent className="text-muted-foreground flex flex-col items-center gap-2 px-5 py-12 text-center text-sm">
             <GraduationCap className="size-8 opacity-40" />
             <p>{t.emptyTitle}</p>
             <p>{t.emptyDesc}</p>

@@ -31,11 +31,15 @@ export function Header({
   const title = titleKey ? messages.nav[titleKey] : null;
 
   return (
-    <header className="bg-background/80 sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-2 border-b px-4 backdrop-blur">
+    <header className="bg-background/80 sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-2 border-b px-4 backdrop-blur md:px-6">
       <div className="flex min-w-0 items-center gap-2">
         <SidebarTrigger />
         <Separator orientation="vertical" className="h-4" />
-        {title && <span className="truncate text-sm font-semibold tracking-tight">{title}</span>}
+        {title && (
+          <span className="text-muted-foreground truncate text-sm font-medium">
+            {title}
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-1.5">
         <SearchDialog />

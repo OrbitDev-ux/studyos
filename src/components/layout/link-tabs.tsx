@@ -23,7 +23,9 @@ export function LinkTabs({
   const { messages } = useI18n();
 
   return (
-    <div className={cn(tabsListVariants({ variant: "line" }), "w-fit")}>
+    <div
+      className={cn(tabsListVariants({ variant: "line" }), "max-w-full overflow-x-auto")}
+    >
       {items.map((item) => {
         const active = pathname.startsWith(item.href);
         return (

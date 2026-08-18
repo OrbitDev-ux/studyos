@@ -49,12 +49,12 @@ export function AppSidebar({
           <span className="group-data-[collapsible=icon]:hidden">{siteConfig.name}</span>
         </Link>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="gap-1">
         {navGroups.map((group) => (
           <SidebarGroup key={group.labelKey}>
             <SidebarGroupLabel>{messages.groups[group.labelKey]}</SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="gap-0.5">
                 {group.items.map((item) => {
                   const badge = item.href === "/social" ? socialCount : 0;
                   return (
@@ -95,7 +95,7 @@ export function AppSidebar({
                 asChild
                 isActive={pathname.startsWith("/pricing")}
                 tooltip={messages.account.upgrade}
-                className="text-primary"
+                className="text-primary font-medium"
               >
                 <Link href="/pricing">
                   <Sparkles />

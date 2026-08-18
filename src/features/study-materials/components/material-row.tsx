@@ -63,12 +63,12 @@ export function MaterialRow({
   }
 
   return (
-    <div className="hover:bg-muted/50 flex items-center gap-3 rounded-lg border px-3 py-2.5">
+    <div className="hover:bg-muted/50 focus-within:bg-muted/50 flex min-h-14 items-center gap-2 rounded-lg border px-3 py-2.5 transition-colors sm:gap-3">
       <MaterialIcon type={material.type} className="text-muted-foreground shrink-0" />
       <button
         type="button"
         onClick={() => setPreviewOpen(true)}
-        className="min-w-0 flex-1 truncate text-left text-sm font-medium hover:underline"
+        className="focus-visible:ring-ring min-w-0 flex-1 truncate rounded text-left text-sm font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
       >
         {material.name}
       </button>

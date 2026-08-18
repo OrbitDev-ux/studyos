@@ -26,7 +26,7 @@ export function ProblemList({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
         <Tabs value={filter} onValueChange={(value) => setFilter(value as Filter)}>
           <TabsList>
             <TabsTrigger value="all">{t.all}</TabsTrigger>
@@ -43,7 +43,10 @@ export function ProblemList({
         />
       </div>
       {filteredProblems.length === 0 ? (
-        <p className="text-muted-foreground text-sm">{t.empty}</p>
+        <div className="bg-muted/20 flex flex-col items-center gap-2 rounded-xl border border-dashed px-5 py-12 text-center">
+          <Sparkles className="text-muted-foreground size-5" aria-hidden="true" />
+          <p className="text-muted-foreground text-sm">{t.empty}</p>
+        </div>
       ) : (
         <div className="flex flex-col gap-3">
           {filteredProblems.map((problem, i) => (

@@ -27,9 +27,9 @@ export default async function RankingPage() {
   const t = getMessages(await getServerLocale(user.locale)).ranking;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 md:gap-8">
       <div className="flex flex-col gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{t.title}</h1>
         <LinkTabs items={RANKING_TABS} />
       </div>
       <RankingTabs

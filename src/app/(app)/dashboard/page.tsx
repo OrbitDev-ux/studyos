@@ -110,7 +110,7 @@ export default async function DashboardPage() {
         };
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-9 md:gap-10">
       <LoginExperience role="user" />
 
       <MilestoneBanner />
@@ -118,7 +118,7 @@ export default async function DashboardPage() {
       <TrialBanner summary={planSummary} />
 
       {/* ── HERO: 인사 + 오늘 할 일 단일 CTA + 진행 요약 ── */}
-      <section className="from-primary/12 border-primary/15 via-primary/5 relative overflow-hidden rounded-2xl border bg-gradient-to-br to-transparent p-5 sm:p-7">
+      <section className="from-primary/10 border-primary/15 via-primary/5 relative overflow-hidden rounded-2xl border bg-gradient-to-br to-transparent p-5 shadow-sm sm:p-7">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-primary text-xs font-semibold tracking-wide uppercase">
@@ -184,7 +184,7 @@ export default async function DashboardPage() {
         <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
           {t.sectionTodayLearning}
         </h2>
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-5 lg:grid-cols-2">
           <div data-tour="daily-mission">
             <DailyMissionCard board={missionBoard} />
           </div>
@@ -204,11 +204,11 @@ export default async function DashboardPage() {
         <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
           {t.sectionTodayPlan}
         </h2>
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-5 lg:grid-cols-2">
           <TodayGoalsCard goals={goals} subjects={subjects} t={messages.goals} />
           <TodayTodosCard todos={todos} t={messages.todos} />
         </div>
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-5 lg:grid-cols-3">
           <RecommendedProblemsCard problems={recentProblems} />
           <div data-tour="today-review">
             <TodayReviewCard wrongAnswers={dueReviews} totalCount={dueCount} />
