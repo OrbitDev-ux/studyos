@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildProblemGenerationPrompt } from "@/features/ai/prompts/problem-generation";
+import {
+  buildProblemGenerationPrompt,
+  buildSimilarProblemPrompt,
+} from "@/features/ai/prompts/problem-generation";
 import { buildWeaknessAnalysisPrompt } from "@/features/ai/prompts/weakness-analysis";
 import { buildWrongAnswerDnaPrompt } from "@/features/ai/prompts/wrong-answer-dna";
 
@@ -39,6 +42,19 @@ describe("AI prompt PII minimization", () => {
     });
     assertNoPii(prompt);
     expect(prompt).toContain("수학");
+  });
+
+  it("similar problem prompt carries the source problem without identity data", () => {
+    const prompt = buildSimilarProblemPrompt({
+      subjectName: "수학",
+      unit: "미적분",
+      difficulty: "MEDIUM",
+      type: "MULTIPLE_CHOICE",
+      originalPrompt: "함수 f(x)의 도함수를 구하시오.",
+    });
+    assertNoPii(prompt);
+    expect(prompt).toContain("기존 문제");
+    expect(prompt).toContain("도함수");
   });
 
   it("weakness analysis prompt carries only subject/unit/problem", () => {

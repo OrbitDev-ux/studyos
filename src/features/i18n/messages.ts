@@ -97,6 +97,10 @@ const ko = {
     emptyTitle: "문제가 없습니다.",
     emptyDesc: "검색 조건이나 필터를 변경해보세요.",
     resetFilter: "필터 초기화",
+    similar: "유사 문제",
+    similarTitle: "유사 문제",
+    similarGenerating: "유사 문제를 만드는 중...",
+    similarError: "유사 문제를 만들지 못했어요. 잠시 후 다시 시도해주세요.",
   },
   mockExam: {
     title: "모의고사",
@@ -645,6 +649,10 @@ const en: Messages = {
     emptyTitle: "No problems found.",
     emptyDesc: "Try changing your search or filters.",
     resetFilter: "Reset filters",
+    similar: "Similar problem",
+    similarTitle: "Similar problem",
+    similarGenerating: "Creating a similar problem...",
+    similarError: "Couldn't create a similar problem. Please try again shortly.",
   },
   mockExam: {
     title: "Mock Exam",
@@ -1192,6 +1200,10 @@ const ja: Messages = {
     emptyTitle: "問題がありません。",
     emptyDesc: "検索条件やフィルターを変更してみてください。",
     resetFilter: "フィルターをリセット",
+    similar: "類題",
+    similarTitle: "類題",
+    similarGenerating: "類題を作成中です...",
+    similarError: "類題を作成できませんでした。しばらくしてからもう一度お試しください。",
   },
   mockExam: {
     title: "模擬試験",
@@ -1737,6 +1749,10 @@ const zh: Messages = {
     emptyTitle: "暂无题目。",
     emptyDesc: "试试更改搜索条件或筛选。",
     resetFilter: "重置筛选",
+    similar: "相似题目",
+    similarTitle: "相似题目",
+    similarGenerating: "正在创建相似题目……",
+    similarError: "无法创建相似题目，请稍后重试。",
   },
   mockExam: {
     title: "模拟考试",

@@ -5,7 +5,10 @@ import { revalidatePath } from "next/cache";
 import { generateStructured, aiErrorResult } from "@/features/ai/client";
 import { getActivePromptContent } from "@/features/ai/prompt-service";
 import { PROMPT_TYPES } from "@/features/ai/prompt-registry";
-import { buildProblemGenerationPrompt } from "@/features/ai/prompts/problem-generation";
+import {
+  buildProblemGenerationPrompt,
+  buildSimilarProblemPrompt,
+} from "@/features/ai/prompts/problem-generation";
 import {
   aiProblemSetSchema,
   problemGenerationFormSchema,
@@ -33,6 +36,30 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 import { requireCurrentUser } from "@/lib/session";
 import { headers } from "next/headers";
+import type { Difficulty, QuestionType } from "@/generated/prisma/client";
+
+type SimilarProblemResult = {
+  id: string;
+  userId: string;
+  problemSetId: string;
+  subjectId: string;
+  type: QuestionType;
+  difficulty: Difficulty;
+  unit: string | null;
+  prompt: string;
+  explanation: string;
+  answerText: string | null;
+  scoringCriteria: string | null;
+  isFavorite: boolean;
+  choices: {
+    id: string;
+    problemId: string;
+    label: string;
+    content: string;
+    isCorrect: boolean;
+  }[];
+  subject: { id: string; name: string; color: string };
+};
 
 export async function generateProblems(
   values: ProblemGenerationFormValues,
@@ -211,6 +238,151 @@ export async function toggleFavorite(problemId: string) {
   revalidatePath("/problems");
   // Keep the 문제은행 "저장" tab / star state in sync without a manual refresh.
   revalidatePath("/study-bank");
+}
+
+/**
+ * Generate and save one new problem that practices the same skill as a bank
+ * problem. Shared imported problems are readable here, but the generated
+ * problem is always stored under the requesting user's account.
+ */
+export async function generateSimilarProblem(
+  problemId: string,
+): Promise<{ error?: string; problem?: SimilarProblemResult }> {
+  const user = await requireCurrentUser();
+  const supabase = await createClient();
+
+  const { data: source, error: sourceError } = await supabase
+    .from("Problem")
+    .select("*, choices:Choice(*), subject:Subject(name, color)")
+    .eq("id", problemId)
+    .or(`userId.eq.${user.id},source.eq.${IMPORT_SOURCE}`)
+    .maybeSingle();
+  if (sourceError) throw sourceError;
+  if (!source) return { error: "문제를 찾을 수 없습니다." };
+
+  const subjectName = (source.subject as { name?: string } | null)?.name ?? "일반 학습";
+  const basePrompt = buildSimilarProblemPrompt({
+    subjectName,
+    unit: source.unit,
+    difficulty: source.difficulty as Difficulty,
+    type: source.type as QuestionType,
+    originalPrompt: source.prompt,
+  });
+  const localeLine = problemLocaleInstruction(await getServerLocale(user.locale));
+  const prompt = localeLine ? `${basePrompt}\n\n${localeLine}` : basePrompt;
+  const ip = getClientIp(await headers());
+
+  let generated;
+  try {
+    ({ problems: generated } = await withGenerationQuota(
+      {
+        userId: user.id,
+        timezone: user.timezone,
+        ip,
+        kind: "problem",
+        count: 1,
+        state: accessStateFor(user),
+        trialStartedAt: trialStartedDate(user),
+      },
+      async () =>
+        generateStructured({
+          system: await getActivePromptContent(PROMPT_TYPES.PROBLEM_GENERATION),
+          prompt,
+          schema: aiProblemSetSchema,
+        }),
+    ));
+  } catch (err) {
+    const payload = generationErrorPayload(err);
+    if (payload) return payload;
+    const aiPayload = aiErrorResult(err);
+    if (aiPayload) return { error: aiPayload.error };
+    throw err;
+  }
+
+  const problem = generated[0];
+  if (!problem) return { error: "유사 문제를 만들지 못했어요. 다시 시도해주세요." };
+
+  const subjectColor = (source.subject as { color?: string } | null)?.color;
+  const ownSubject = await prisma.subject.upsert({
+    where: { userId_name: { userId: user.id, name: subjectName } },
+    create: {
+      userId: user.id,
+      name: subjectName,
+      color: subjectColor ?? SUBJECT_COLOR_PALETTE[0],
+    },
+    update: {},
+    select: { id: true, name: true, color: true },
+  });
+
+  const problemSetId = randomUUID();
+  const problemIdToInsert = randomUUID();
+  const insertedChoices = (problem.choices ?? []).map((choice) => ({
+    id: randomUUID(),
+    problemId: problemIdToInsert,
+    label: choice.label,
+    content: choice.content,
+    isCorrect: choice.isCorrect,
+  }));
+  const { error: setError } = await supabase.from("ProblemSet").insert({
+    id: problemSetId,
+    userId: user.id,
+    subjectId: ownSubject.id,
+    title: `${subjectName} · 유사 문제`,
+    unit: source.unit,
+    difficulty: source.difficulty,
+  });
+  if (setError) throw setError;
+
+  try {
+    const { error: insertError } = await supabase.from("Problem").insert({
+      id: problemIdToInsert,
+      userId: user.id,
+      problemSetId,
+      subjectId: ownSubject.id,
+      type: source.type,
+      difficulty: source.difficulty,
+      unit: source.unit,
+      prompt: problem.prompt,
+      explanation: problem.explanation,
+      answerText: problem.answerText || null,
+      scoringCriteria: problem.scoringCriteria || null,
+      isFavorite: false,
+    });
+    if (insertError) throw insertError;
+
+    if (problem.choices?.length) {
+      const { error: choiceError } = await supabase
+        .from("Choice")
+        .insert(insertedChoices);
+      if (choiceError) throw choiceError;
+    }
+  } catch (err) {
+    await supabase.from("Problem").delete().eq("id", problemIdToInsert);
+    await supabase.from("ProblemSet").delete().eq("id", problemSetId);
+    throw err;
+  }
+
+  revalidatePath("/problems");
+  revalidatePath("/study-bank");
+
+  return {
+    problem: {
+      id: problemIdToInsert,
+      userId: user.id,
+      problemSetId,
+      subjectId: ownSubject.id,
+      type: source.type,
+      difficulty: source.difficulty,
+      unit: source.unit,
+      prompt: problem.prompt,
+      explanation: problem.explanation,
+      answerText: problem.answerText || null,
+      scoringCriteria: problem.scoringCriteria || null,
+      isFavorite: false,
+      choices: insertedChoices,
+      subject: ownSubject,
+    },
+  };
 }
 
 export async function deleteProblem(problemId: string) {

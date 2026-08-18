@@ -52,3 +52,40 @@ export function buildProblemGenerationPrompt({
 - 한국 고등학생 수준의 어휘와 배경지식을 기준으로 작성해주세요.
 - 문제끼리 내용이 겹치지 않게 다양하게 만들어주세요.`;
 }
+
+/**
+ * Generate one fresh problem that exercises the same skill as an existing
+ * problem without copying its wording, answer, or distractors.
+ */
+export function buildSimilarProblemPrompt({
+  subjectName,
+  unit,
+  difficulty,
+  type,
+  originalPrompt,
+}: {
+  subjectName: string;
+  unit?: string | null;
+  difficulty: Difficulty;
+  type: QuestionType;
+  originalPrompt: string;
+}): string {
+  const unitLine = unit ? ` "${unit}" 단원` : "";
+  const typeInstruction = questionTypeInstruction(type);
+
+  return `${subjectName} 과목${unitLine}의 기존 문제와 같은 핵심 개념·풀이 능력을 평가하는 새로운 ${QUESTION_TYPE_LABEL[type]} 문제 1개를 생성해주세요.
+
+기존 문제:
+---
+${originalPrompt}
+---
+
+난이도: ${DIFFICULTY_LABEL[difficulty]}
+
+지침:
+- 기존 문제의 문장, 숫자, 보기, 정답을 그대로 복사하지 말고 상황이나 수치를 바꾸세요.
+- 기존 문제를 풀지 않아도 독립적으로 이해할 수 있어야 합니다.
+- ${typeInstruction}
+- 왜 그 답이 맞는지 한국어로 설명(explanation)을 포함해주세요.
+- 결과는 문제 1개만 반환하세요.`;
+}

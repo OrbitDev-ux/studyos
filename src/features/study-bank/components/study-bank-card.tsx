@@ -1,7 +1,7 @@
 "use client";
 
-import { MoreVertical, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { Loader2, MoreVertical, Sparkles } from "lucide-react";
+import { useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/toast";
 import { MathText } from "@/components/ui/math-text";
+import { generateSimilarProblem } from "@/features/problems/actions";
+import { useI18n } from "@/features/i18n/provider";
 import { FavoriteButton } from "@/features/problems/components/favorite-button";
 import { SolveProblemPanel } from "@/features/problems/components/solve-problem-panel";
 import { DIFFICULTY_LABEL, QUESTION_TYPE_LABEL } from "@/features/problems/constants";
@@ -36,14 +38,21 @@ export function StudyBankCard({
   owned: boolean;
 }) {
   const { toast } = useToast();
+  const { messages } = useI18n();
+  const t = messages.studyBank;
   const [open, setOpen] = useState(false);
+  const [similarProblem, setSimilarProblem] = useState<SimilarProblem | null>(null);
+  const [isSimilarPending, startSimilarTransition] = useTransition();
 
-  // 유사 문제: interface only for now (§14). A future POST /api/problems/:id/similar
-  // (or the existing AI pipeline) plugs in here without UI changes.
   function requestSimilar() {
-    toast({
-      title: "유사 문제 생성은 곧 제공됩니다.",
-      description: "현재 문제은행 단계에서는 준비 중인 기능이에요.",
+    startSimilarTransition(async () => {
+      const result = await generateSimilarProblem(problem.id);
+      if (result.error || !result.problem) {
+        toast({ title: result.error ?? t.similarError, variant: "error" });
+        return;
+      }
+      setSimilarProblem(result.problem);
+      setOpen(true);
     });
   }
 
@@ -77,8 +86,8 @@ export function StudyBankCard({
                 <DropdownMenuItem onClick={() => setOpen(true)}>
                   문제 상세
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={requestSimilar}>
-                  <Sparkles className="size-4" /> 유사 문제
+                <DropdownMenuItem onClick={requestSimilar} disabled={isSimilarPending}>
+                  <Sparkles className="size-4" /> {t.similar}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -94,7 +103,13 @@ export function StudyBankCard({
         </MathText>
 
         <div className="mt-auto flex items-center gap-2 pt-1">
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog
+            open={open}
+            onOpenChange={(next) => {
+              setOpen(next);
+              if (!next) setSimilarProblem(null);
+            }}
+          >
             <DialogTrigger asChild>
               <Button type="button" size="sm">
                 풀기
@@ -102,13 +117,33 @@ export function StudyBankCard({
             </DialogTrigger>
             <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
               <DialogHeader>
-                <DialogTitle className="text-base">문제 상세</DialogTitle>
+                <DialogTitle className="text-base">
+                  {similarProblem ? t.similarTitle : "문제 상세"}
+                </DialogTitle>
               </DialogHeader>
-              <ProblemDetail problem={problem} owned={owned} onSimilar={requestSimilar} />
+              <ProblemDetail
+                problem={similarProblem ?? problem}
+                owned={similarProblem ? true : owned}
+                onSimilar={requestSimilar}
+                similarPending={isSimilarPending}
+                similarLabel={t.similar}
+                similarGeneratingLabel={t.similarGenerating}
+              />
             </DialogContent>
           </Dialog>
-          <Button type="button" size="sm" variant="outline" onClick={requestSimilar}>
-            <Sparkles className="size-4" /> 유사 문제
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={requestSimilar}
+            disabled={isSimilarPending}
+          >
+            {isSimilarPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Sparkles className="size-4" />
+            )}
+            {isSimilarPending ? t.similarGenerating : t.similar}
           </Button>
         </div>
       </CardContent>
@@ -116,14 +151,39 @@ export function StudyBankCard({
   );
 }
 
+type SimilarProblem = NonNullable<
+  Awaited<ReturnType<typeof generateSimilarProblem>>["problem"]
+>;
+
+type ProblemDetailData = Pick<
+  BankProblem,
+  | "id"
+  | "type"
+  | "difficulty"
+  | "unit"
+  | "prompt"
+  | "answerText"
+  | "explanation"
+  | "scoringCriteria"
+  | "isFavorite"
+  | "choices"
+  | "subject"
+>;
+
 function ProblemDetail({
   problem,
   owned,
   onSimilar,
+  similarPending,
+  similarLabel,
+  similarGeneratingLabel,
 }: {
-  problem: BankProblem;
+  problem: ProblemDetailData | SimilarProblem;
   owned: boolean;
   onSimilar: () => void;
+  similarPending: boolean;
+  similarLabel: string;
+  similarGeneratingLabel: string;
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -157,8 +217,14 @@ function ProblemDetail({
           variant="outline"
           className="ml-auto"
           onClick={onSimilar}
+          disabled={similarPending}
         >
-          <Sparkles className="size-4" /> 유사 문제
+          {similarPending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Sparkles className="size-4" />
+          )}
+          {similarPending ? similarGeneratingLabel : similarLabel}
         </Button>
       </div>
     </div>
