@@ -249,18 +249,16 @@ export async function generateSimilarProblem(
   problemId: string,
 ): Promise<{ error?: string; problem?: SimilarProblemResult }> {
   const user = await requireCurrentUser();
-  const supabase = await createClient();
-
-  const { data: source, error: sourceError } = await supabase
-    .from("Problem")
-    .select("*, choices:Choice(*), subject:Subject(name, color)")
-    .eq("id", problemId)
-    .or(`userId.eq.${user.id},source.eq.${IMPORT_SOURCE}`)
-    .maybeSingle();
-  if (sourceError) throw sourceError;
+  const source = await prisma.problem.findFirst({
+    where: {
+      id: problemId,
+      OR: [{ userId: user.id }, { source: IMPORT_SOURCE }],
+    },
+    include: { choices: true, subject: true },
+  });
   if (!source) return { error: "문제를 찾을 수 없습니다." };
 
-  const subjectName = (source.subject as { name?: string } | null)?.name ?? "일반 학습";
+  const subjectName = source.subject?.name ?? "일반 학습";
   const basePrompt = buildSimilarProblemPrompt({
     subjectName,
     unit: source.unit,
@@ -302,87 +300,90 @@ export async function generateSimilarProblem(
   const problem = generated[0];
   if (!problem) return { error: "유사 문제를 만들지 못했어요. 다시 시도해주세요." };
 
-  const subjectColor = (source.subject as { color?: string } | null)?.color;
-  const ownSubject = await prisma.subject.upsert({
-    where: { userId_name: { userId: user.id, name: subjectName } },
-    create: {
-      userId: user.id,
-      name: subjectName,
-      color: subjectColor ?? SUBJECT_COLOR_PALETTE[0],
-    },
-    update: {},
-    select: { id: true, name: true, color: true },
-  });
-
-  const problemSetId = randomUUID();
-  const problemIdToInsert = randomUUID();
-  const insertedChoices = (problem.choices ?? []).map((choice) => ({
-    id: randomUUID(),
-    problemId: problemIdToInsert,
-    label: choice.label,
-    content: choice.content,
-    isCorrect: choice.isCorrect,
-  }));
-  const { error: setError } = await supabase.from("ProblemSet").insert({
-    id: problemSetId,
-    userId: user.id,
-    subjectId: ownSubject.id,
-    title: `${subjectName} · 유사 문제`,
-    unit: source.unit,
-    difficulty: source.difficulty,
-  });
-  if (setError) throw setError;
-
   try {
-    const { error: insertError } = await supabase.from("Problem").insert({
-      id: problemIdToInsert,
-      userId: user.id,
-      problemSetId,
-      subjectId: ownSubject.id,
-      type: source.type,
-      difficulty: source.difficulty,
-      unit: source.unit,
-      prompt: problem.prompt,
-      explanation: problem.explanation,
-      answerText: problem.answerText || null,
-      scoringCriteria: problem.scoringCriteria || null,
-      isFavorite: false,
+    const persisted = await prisma.$transaction(async (tx) => {
+      const ownSubject = await tx.subject.upsert({
+        where: { userId_name: { userId: user.id, name: subjectName } },
+        create: {
+          userId: user.id,
+          name: subjectName,
+          color: source.subject?.color ?? SUBJECT_COLOR_PALETTE[0],
+        },
+        update: {},
+        select: { id: true, name: true, color: true },
+      });
+
+      const problemSet = await tx.problemSet.create({
+        data: {
+          id: randomUUID(),
+          userId: user.id,
+          subjectId: ownSubject.id,
+          title: `${subjectName} · 유사 문제`,
+          unit: source.unit,
+          difficulty: source.difficulty,
+        },
+      });
+      const createdProblem = await tx.problem.create({
+        data: {
+          id: randomUUID(),
+          userId: user.id,
+          problemSetId: problemSet.id,
+          subjectId: ownSubject.id,
+          type: source.type,
+          difficulty: source.difficulty,
+          unit: source.unit,
+          prompt: problem.prompt,
+          explanation: problem.explanation,
+          answerText: problem.answerText || null,
+          scoringCriteria: problem.scoringCriteria || null,
+          isFavorite: false,
+        },
+      });
+
+      if (problem.choices?.length) {
+        await tx.choice.createMany({
+          data: problem.choices.map((choice) => ({
+            id: randomUUID(),
+            problemId: createdProblem.id,
+            label: choice.label,
+            content: choice.content,
+            isCorrect: choice.isCorrect,
+          })),
+        });
+      }
+
+      const choices = await tx.choice.findMany({
+        where: { problemId: createdProblem.id },
+        orderBy: { id: "asc" },
+      });
+      return { problemSet, createdProblem, choices, subject: ownSubject };
     });
-    if (insertError) throw insertError;
 
-    if (problem.choices?.length) {
-      const { error: choiceError } = await supabase
-        .from("Choice")
-        .insert(insertedChoices);
-      if (choiceError) throw choiceError;
-    }
+    revalidatePath("/problems");
+    revalidatePath("/study-bank");
+
+    return {
+      problem: {
+        id: persisted.createdProblem.id,
+        userId: user.id,
+        problemSetId: persisted.problemSet.id,
+        subjectId: persisted.subject.id,
+        type: persisted.createdProblem.type,
+        difficulty: persisted.createdProblem.difficulty,
+        unit: persisted.createdProblem.unit,
+        prompt: persisted.createdProblem.prompt,
+        explanation: persisted.createdProblem.explanation ?? "",
+        answerText: persisted.createdProblem.answerText,
+        scoringCriteria: persisted.createdProblem.scoringCriteria,
+        isFavorite: persisted.createdProblem.isFavorite,
+        choices: persisted.choices,
+        subject: persisted.subject,
+      },
+    };
   } catch (err) {
-    await supabase.from("Problem").delete().eq("id", problemIdToInsert);
-    await supabase.from("ProblemSet").delete().eq("id", problemSetId);
-    throw err;
+    console.error("similar problem persistence failed:", err);
+    return { error: "유사 문제를 저장하지 못했어요. 잠시 후 다시 시도해주세요." };
   }
-
-  revalidatePath("/problems");
-  revalidatePath("/study-bank");
-
-  return {
-    problem: {
-      id: problemIdToInsert,
-      userId: user.id,
-      problemSetId,
-      subjectId: ownSubject.id,
-      type: source.type,
-      difficulty: source.difficulty,
-      unit: source.unit,
-      prompt: problem.prompt,
-      explanation: problem.explanation,
-      answerText: problem.answerText || null,
-      scoringCriteria: problem.scoringCriteria || null,
-      isFavorite: false,
-      choices: insertedChoices,
-      subject: ownSubject,
-    },
-  };
 }
 
 export async function deleteProblem(problemId: string) {

@@ -46,13 +46,18 @@ export function StudyBankCard({
 
   function requestSimilar() {
     startSimilarTransition(async () => {
-      const result = await generateSimilarProblem(problem.id);
-      if (result.error || !result.problem) {
-        toast({ title: result.error ?? t.similarError, variant: "error" });
-        return;
+      try {
+        const result = await generateSimilarProblem(problem.id);
+        if (result.error || !result.problem) {
+          toast({ title: result.error ?? t.similarError, variant: "error" });
+          return;
+        }
+        setSimilarProblem(result.problem);
+        setOpen(true);
+      } catch (error) {
+        console.error("similar problem generation failed:", error);
+        toast({ title: t.similarError, variant: "error" });
       }
-      setSimilarProblem(result.problem);
-      setOpen(true);
     });
   }
 
