@@ -14,8 +14,8 @@ import {
   problemGenerationFormSchema,
   type ProblemGenerationFormValues,
 } from "@/features/problems/schema";
-import { normalizeAnswer } from "@/features/problems/utils";
 import { filterDuplicateProblems } from "@/features/problems/dedup";
+import { gradeAnswer } from "@/features/problems/grading";
 import { recordProblemAttempt, type AttemptSource } from "@/features/learning/record-attempt";
 import {
   recordReviewSuccess,
@@ -510,27 +510,9 @@ export async function submitProblemAnswer(
     attemptSubjectId = ownSubject.id;
   }
 
-  const selectedChoice =
-    problem.type === "MULTIPLE_CHOICE"
-      ? problem.choices.find(
-          (choice: { id: string; isCorrect: boolean }) => choice.id === answer.choiceId,
-        )
-      : undefined;
-
-  // ESSAY has no auto-grade: the student self-assesses against the model answer
-  // (answer.selfCorrect). MC grades by choice; SHORT_ANSWER by normalized match.
-  const correct =
-    problem.type === "MULTIPLE_CHOICE"
-      ? (selectedChoice?.isCorrect ?? false)
-      : problem.type === "ESSAY"
-        ? (answer.selfCorrect ?? false)
-        : normalizeAnswer(answer.text ?? "") === normalizeAnswer(problem.answerText ?? "");
-
-  // The user's answer in readable form, for the attempt log / 오답 DNA.
-  const userAnswerText =
-    problem.type === "MULTIPLE_CHOICE"
-      ? ((selectedChoice as { content?: string } | undefined)?.content ?? null)
-      : (answer.text?.trim() || null);
+  // Server-authoritative grading — see grading.ts for why this is the only
+  // place "correct" gets decided (never trusts anything the client claims).
+  const { correct, userAnswerText } = gradeAnswer(problem, answer);
 
   // Log every attempt (correct or wrong) to the learning data foundation.
   await recordProblemAttempt({
