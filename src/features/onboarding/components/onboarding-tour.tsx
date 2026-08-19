@@ -111,25 +111,39 @@ export function OnboardingTour({
     : null;
 
   // Tooltip position: under the spotlight if there's room, else above; centered
-  // when there's no target.
-  const CARD_W = 340;
+  // when there's no target. MARGIN keeps the card off the viewport edges (and
+  // off the iOS home-indicator safe area at the bottom). The card's own height
+  // depends on step content (title/body length varies), so instead of trying
+  // to predict it, every branch caps `maxHeight` to whatever vertical space is
+  // actually left and lets the card scroll internally — on a short viewport
+  // (e.g. iPhone 12 mini, 812px tall) a step whose target sits low on the page
+  // no longer pushes the card's buttons off-screen with no way to reach them.
+  const MARGIN = 12;
+  const cardWidth = Math.min(340, window.innerWidth - MARGIN * 2);
   let cardStyle: React.CSSProperties;
   if (spotlight) {
-    const below = spotlight.top + spotlight.height + 12;
+    const below = spotlight.top + spotlight.height + MARGIN;
     const roomBelow = window.innerHeight - below > 220;
-    const top = roomBelow ? below : Math.max(12, spotlight.top - 12 - 200);
+    const top = roomBelow ? below : Math.max(MARGIN, spotlight.top - MARGIN - 200);
     const left = Math.min(
-      Math.max(12, spotlight.left),
-      window.innerWidth - CARD_W - 12,
+      Math.max(MARGIN, spotlight.left),
+      window.innerWidth - cardWidth - MARGIN,
     );
-    cardStyle = { position: "fixed", top, left, width: CARD_W };
+    cardStyle = {
+      position: "fixed",
+      top,
+      left,
+      width: cardWidth,
+      maxHeight: `calc(100vh - ${top}px - ${MARGIN}px - env(safe-area-inset-bottom, 0px))`,
+    };
   } else {
     cardStyle = {
       position: "fixed",
       top: "50%",
       left: "50%",
       transform: "translate(-50%, -50%)",
-      width: CARD_W,
+      width: cardWidth,
+      maxHeight: `calc(100vh - ${MARGIN * 2}px - env(safe-area-inset-bottom, 0px))`,
     };
   }
 
@@ -152,9 +166,11 @@ export function OnboardingTour({
         />
       )}
 
-      {/* Step card. */}
+      {/* Step card. overflow-y-auto is the safety net for cardStyle.maxHeight —
+          content scrolls internally instead of the action buttons getting cut
+          off the bottom of a short viewport. */}
       <div
-        className="bg-background text-foreground flex flex-col gap-3 rounded-xl border p-5 shadow-2xl"
+        className="bg-background text-foreground flex flex-col gap-3 overflow-y-auto rounded-xl border p-5 shadow-2xl"
         style={cardStyle}
       >
         <div className="flex flex-col gap-1">

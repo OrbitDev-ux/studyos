@@ -84,7 +84,7 @@ export async function generateProblems(
     unitId: parsed.unitId,
   });
   if (!resolved.ok) return { error: resolved.error };
-  const { subjectName, unitName } = resolved.value;
+  const { subjectName, unitName, gradeName } = resolved.value;
 
   const supabase = await createClient();
 
@@ -109,6 +109,7 @@ export async function generateProblems(
     difficulty: parsed.difficulty,
     type: parsed.type,
     count: parsed.count,
+    gradeName,
   });
   // Generate in the user's UI language (§16); math stays standard LaTeX (§17).
   const localeLine = problemLocaleInstruction(await getServerLocale(user.locale));
