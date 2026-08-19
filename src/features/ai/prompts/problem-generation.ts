@@ -46,6 +46,8 @@ export function buildProblemGenerationPrompt({
   type,
   count,
   gradeName,
+  schoolLevelName,
+  curriculumLabel,
 }: {
   subjectName: string;
   unit?: string;
@@ -61,6 +63,11 @@ export function buildProblemGenerationPrompt({
    * rather than changing behavior for those callers.
    */
   gradeName?: string;
+  /** e.g. "중학교". Only rendered alongside gradeName. */
+  schoolLevelName?: string;
+  /** e.g. "2022 개정 교육과정". Omitted (never guessed) when the grade's
+   * official rollout year isn't confirmed — features/curriculum/data.ts. */
+  curriculumLabel?: string;
 }): string {
   const unitLine = unit ? ` "${unit}" 단원` : "";
 
@@ -68,10 +75,18 @@ export function buildProblemGenerationPrompt({
   const levelLine = gradeName
     ? `- ${gradeName} 학생 수준의 어휘와 배경지식을 기준으로 작성해주세요.`
     : "- 한국 고등학생 수준의 어휘와 배경지식을 기준으로 작성해주세요.";
+  // Purely additive: only appears when the caller actually has a resolved
+  // curriculum grade (currently just the direct generation flow). Every other
+  // caller's prompt is byte-for-byte unchanged.
+  const curriculumContext = gradeName
+    ? [curriculumLabel ? `교육과정: ${curriculumLabel}` : null, schoolLevelName ? `학교급: ${schoolLevelName}` : null, `학년: ${gradeName}`]
+        .filter((line): line is string => line !== null)
+        .join("\n") + "\n\n"
+    : "";
 
   return `${subjectName} 과목${unitLine}에 대한 ${QUESTION_TYPE_LABEL[type]} 문제를 ${count}개 생성해주세요.
 
-난이도: ${DIFFICULTY_LABEL[difficulty]}
+${curriculumContext}난이도: ${DIFFICULTY_LABEL[difficulty]}
 
 지침:
 - ${typeInstruction}
@@ -91,15 +106,22 @@ export function buildSimilarProblemPrompt({
   difficulty,
   type,
   originalPrompt,
+  gradeName,
 }: {
   subjectName: string;
   unit?: string | null;
   difficulty: Difficulty;
   type: QuestionType;
   originalPrompt: string;
+  /** e.g. "중학교 1학년" — the SOURCE problem's grade (Problem.grade), when
+   * it has one. There's no fresh taxonomy selection for a regen, so this is
+   * inherited rather than resolved. Optional: older problems predate the
+   * grade column and have none. */
+  gradeName?: string | null;
 }): string {
   const unitLine = unit ? ` "${unit}" 단원` : "";
   const typeInstruction = questionTypeInstruction(type);
+  const levelLine = gradeName ? `\n- ${gradeName} 학생 수준의 어휘와 배경지식을 기준으로 작성해주세요.` : "";
 
   return `${subjectName} 과목${unitLine}의 기존 문제와 같은 핵심 개념·풀이 능력을 평가하는 새로운 ${QUESTION_TYPE_LABEL[type]} 문제 1개를 생성해주세요.
 
@@ -112,7 +134,7 @@ ${originalPrompt}
 
 지침:
 - 기존 문제의 문장, 숫자, 보기, 정답을 그대로 복사하지 말고 상황이나 수치를 바꾸세요.
-- 기존 문제를 풀지 않아도 독립적으로 이해할 수 있어야 합니다.
+- 기존 문제를 풀지 않아도 독립적으로 이해할 수 있어야 합니다.${levelLine}
 - ${typeInstruction}
 - 왜 그 답이 맞는지 한국어로 설명(explanation)을 포함해주세요.
 - ${PASSAGE_COMPLETENESS_INSTRUCTION}

@@ -698,6 +698,12 @@ model Problem {
   type            QuestionType
   difficulty      Difficulty
   unit            String?
+  /// Canonical grade name at generation time (e.g. "중학교 1학년"), denormalized
+  /// the same way StudyBook.grade already is. Null for problems generated
+  /// before this field existed, and for flows that don't resolve a taxonomy
+  /// grade (similar-problem regen without a source grade, mock exam, admin
+  /// prompt test panel) — never backfilled/guessed.
+  grade           String?
   prompt          String       @db.Text
   /// Canonical answer for SHORT_ANSWER; the MODEL answer for ESSAY.
   /// MULTIPLE_CHOICE uses Choice.isCorrect instead.

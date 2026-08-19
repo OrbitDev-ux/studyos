@@ -15,6 +15,7 @@ import {
   type ProblemGenerationFormValues,
 } from "@/features/problems/schema";
 import { normalizeAnswer } from "@/features/problems/utils";
+import { filterDuplicateProblems } from "@/features/problems/dedup";
 import { recordProblemAttempt, type AttemptSource } from "@/features/learning/record-attempt";
 import {
   recordReviewSuccess,
@@ -84,7 +85,7 @@ export async function generateProblems(
     unitId: parsed.unitId,
   });
   if (!resolved.ok) return { error: resolved.error };
-  const { subjectName, unitName, gradeName } = resolved.value;
+  const { subjectName, unitName, gradeName, schoolLevelName, curriculumLabel } = resolved.value;
 
   const supabase = await createClient();
 
@@ -110,6 +111,8 @@ export async function generateProblems(
     type: parsed.type,
     count: parsed.count,
     gradeName,
+    schoolLevelName,
+    curriculumLabel,
   });
   // Generate in the user's UI language (§16); math stays standard LaTeX (§17).
   const localeLine = problemLocaleInstruction(await getServerLocale(user.locale));
@@ -155,6 +158,26 @@ export async function generateProblems(
     throw err;
   }
 
+  // First-pass duplicate guard (features/problems/dedup.ts): drop any
+  // generated problem whose normalized prompt text exactly matches one this
+  // user already has in the same subject/unit. Scoped to the same
+  // subject+unit only — comparing across unrelated units would just waste
+  // the check.
+  const existing = await prisma.problem.findMany({
+    where: { userId: user.id, subjectId: subject.id, unit: unitName },
+    select: { prompt: true },
+    take: 200,
+    orderBy: { createdAt: "desc" },
+  });
+  const { kept: dedupedProblems, duplicateCount } = filterDuplicateProblems(
+    problems,
+    existing.map((p) => p.prompt),
+  );
+  if (dedupedProblems.length === 0) {
+    return { error: "이미 같은 문제가 있어요. 다시 시도해주세요." };
+  }
+  if (duplicateCount > 0) problems = dedupedProblems;
+
   const problemSetId = randomUUID();
   const { error: setError } = await supabase.from("ProblemSet").insert({
     id: problemSetId,
@@ -183,6 +206,7 @@ export async function generateProblems(
         type: parsed.type,
         difficulty: parsed.difficulty,
         unit: unitName,
+        grade: gradeName,
         prompt: problem.prompt,
         explanation: problem.explanation,
         answerText: problem.answerText || null,
@@ -266,6 +290,7 @@ export async function generateSimilarProblem(
     difficulty: source.difficulty as Difficulty,
     type: source.type as QuestionType,
     originalPrompt: source.prompt,
+    gradeName: source.grade,
   });
   const localeLine = problemLocaleInstruction(await getServerLocale(user.locale));
   const prompt = localeLine ? `${basePrompt}\n\n${localeLine}` : basePrompt;
@@ -333,6 +358,10 @@ export async function generateSimilarProblem(
           type: source.type,
           difficulty: source.difficulty,
           unit: source.unit,
+          // Inherited, not re-resolved: a similar-problem regen has no grade
+          // selection of its own, so it carries the source problem's grade
+          // forward (null for problems generated before this field existed).
+          grade: source.grade,
           prompt: problem.prompt,
           explanation: problem.explanation,
           answerText: problem.answerText || null,

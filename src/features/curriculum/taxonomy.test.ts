@@ -37,10 +37,27 @@ describe("curriculum taxonomy", () => {
       value: {
         gradeId: "elem-5",
         gradeName: grade.name,
+        schoolLevel: "ELEMENTARY",
+        schoolLevelName: "초등학교",
+        curriculumLabel: "2022 개정 교육과정",
         subjectName: math.name, // "수학"
         unitName: unit.name, // "분수의 곱셈"
       },
     });
+  });
+
+  it("커리큘럼 개정 연도가 미확인인 학년은 curriculumLabel을 임의로 채우지 않는다", () => {
+    // middle-3 is the one grade this data set marks as still on the 2015
+    // revision (its 2022 개정 changeover is 2027) — see data.ts's sourced
+    // comment. This asserts the field reflects that, not a guess.
+    const result = resolveTaxonomy({ gradeId: "middle-3", subjectId: "math" });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.curriculumLabel).toBe("2015 개정 교육과정");
+  });
+
+  it("중학교 1학년 수학에 '소인수분해' 단원이 있다 (2022 개정 실제 1단원, 기존 누락분)", () => {
+    const units = listUnits("middle-1", "math");
+    expect(units.some((u) => u.name === "소인수분해")).toBe(true);
   });
 
   it("allows a subject-wide selection with no unit", () => {

@@ -2,9 +2,12 @@ import {
   CURRICULUM,
   CURRICULUM_ID,
   CURRICULUM_NAME,
+  REVISION_YEAR_LABEL,
+  SCHOOL_LEVEL_LABEL,
   type CurriculumGrade,
   type CurriculumSubject,
   type CurriculumUnit,
+  type SchoolLevel,
 } from "@/features/curriculum/data";
 
 /**
@@ -74,6 +77,12 @@ export type TaxonomySelection = {
 export type ResolvedTaxonomy = {
   gradeId: string;
   gradeName: string;
+  schoolLevel: SchoolLevel;
+  /** e.g. "중학교". Derived, not stored anywhere new. */
+  schoolLevelName: string;
+  /** e.g. "2022 개정 교육과정". Undefined when the grade's rollout year isn't
+   * confirmed (features/curriculum/data.ts) — never guessed. */
+  curriculumLabel: string | undefined;
   /** Canonical subject name → mapped to the user's Subject row by the caller. */
   subjectName: string;
   /** Canonical unit name → stored verbatim into Problem.unit (null if none). */
@@ -107,6 +116,10 @@ export function resolveTaxonomy(
     value: {
       gradeId: grade.id,
       gradeName: grade.name,
+      schoolLevel: grade.level,
+      schoolLevelName: SCHOOL_LEVEL_LABEL[grade.level],
+      curriculumLabel:
+        grade.revisionYear !== undefined ? REVISION_YEAR_LABEL[grade.revisionYear] : undefined,
       subjectName: subject.name,
       unitName,
     },
