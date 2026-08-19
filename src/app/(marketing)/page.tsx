@@ -46,9 +46,9 @@ export default function LandingPage() {
           AI 학습 플랫폼
         </span>
         <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-          AI가 문제를 만들고
+          {siteConfig.name}, 학생을 위한
           <br />
-          공부를 분석하는 학습 플랫폼
+          AI 올인원 학습 플랫폼
         </h1>
         <p className="text-muted-foreground max-w-xl text-base text-balance sm:text-lg">
           {siteConfig.name}는 Todo·목표·통계 같은 기본 공부 관리부터 AI 문제 생성,
