@@ -1,5 +1,6 @@
 "use server";
 
+import * as Sentry from "@sentry/nextjs";
 import { headers } from "next/headers";
 import { signOut } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -40,7 +41,9 @@ export async function deleteMyAccount(confirmation: string): Promise<{ error?: s
   });
   try {
     for (const material of materials) await deleteStorageObject(material.storageKey);
-  } catch {
+  } catch (error) {
+    console.error("[account-deletion] storage cleanup failed", error);
+    Sentry.captureException(error);
     await prisma.dataDeletionRequest.update({
       where: { id: deletionRequest.id },
       data: { status: "FAILED", failureReason: "storage_cleanup_failed" },
@@ -67,7 +70,9 @@ export async function deleteMyAccount(confirmation: string): Promise<{ error?: s
         data: { event: "ACCOUNT_DELETION_COMPLETED", ...metadata },
       });
     });
-  } catch {
+  } catch (error) {
+    console.error("[account-deletion] database cleanup failed", error);
+    Sentry.captureException(error);
     await prisma.dataDeletionRequest.update({
       where: { id: deletionRequest.id },
       data: { status: "FAILED", failureReason: "database_cleanup_failed" },
