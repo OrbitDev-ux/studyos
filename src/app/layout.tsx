@@ -32,7 +32,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const title = `${siteConfig.name} - AI 학습 플랫폼`;
+const title = `${siteConfig.name} - AI 문제 생성부터 오답노트, 모의고사까지 학생을 위한 올인원 학습 플랫폼`;
 const description = siteConfig.description;
 
 export const metadata: Metadata = {

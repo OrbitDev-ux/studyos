@@ -35,7 +35,7 @@ export function StructuredData() {
       operatingSystem: "Web",
       inLanguage: "ko-KR",
       url: SITE_URL,
-      description: "AI가 문제를 만들고 공부를 분석하는 학생용 올인원 학습 플랫폼",
+      description: siteConfig.description,
       offers: PLANS.map((plan) => {
         const meta = PLAN_META[plan];
         return {

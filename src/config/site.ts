@@ -1,6 +1,7 @@
 export const siteConfig = {
   name: "StudyOS",
-  description: "AI가 문제를 만들고 공부를 분석하는 학생용 올인원 학습 플랫폼",
+  description:
+    "StudyOS는 과목별 Todo·목표·공부시간 관리부터 AI 문제 생성, 오답 DNA 분석, 나만의 교재 만들기, 모의고사, 친구와의 랭킹·배틀까지 한 곳에서 관리하는 학생용 올인원 학습 플랫폼입니다. 무료로 시작할 수 있어요.",
 } as const;
 
 /**
