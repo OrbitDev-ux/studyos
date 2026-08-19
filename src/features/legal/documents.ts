@@ -18,10 +18,11 @@
  *  - 학습 데이터: 과목/할일/목표/공부시간/문제풀이 답안/오답노트/모의고사/
  *    교재/AI 분석 결과.
  *  - 소셜: 친구관계(Friendship), 1:1 대화/메시지(Message.content), 학습 배틀.
- *  - 서비스 로그: IP 주소는 AI 생성 로그(AiGenerationLog.ip)와 관리자 로그인/
- *    활동 로그·IP 차단에만 저장된다(부정이용/보안/rate-limit 목적). IP는
+ *  - 서비스 로그: IP 주소는 AI 생성 로그(AiGenerationLog.ip), 비밀번호 재설정
+ *    요청 기록, 관리자 로그인·활동 로그·IP 차단에 저장된다(부정이용/보안/
+ *    rate-limit 목적). IP는
  *    AI provider 로 전달되지 않는다.
- *  - AI provider(Google Gemini)에는 학습 컨텍스트(과목/단원/문제/학생답/정답/
+ *  - 설정된 AI provider(Groq 또는 Google Gemini)에는 학습 컨텍스트(과목/단원/문제/학생답/정답/
  *    난이도/취약개념)만 전달된다. 이메일·비밀번호·토큰·세션·IP·내부 식별자·
  *    결제정보는 전달되지 않는다. (features/ai/prompts/*)
  *  - 구독: Plan(TRIAL/PRO/PREMIUM) + 상태/체험 기간은 User 컬럼으로 존재하나
@@ -228,7 +229,7 @@ const terms: LegalDocument = {
       id: "external",
       title: "제18조 (외부 서비스)",
       paragraphs: [
-        "서비스는 로그인(Google) 및 AI 생성(Google Gemini) 등 일부 기능을 위해 외부 서비스를 이용합니다. 외부 서비스로 전달되는 정보의 범위와 목적은 「개인정보 처리방침」에 기재되어 있습니다.",
+        "서비스는 로그인(Google) 및 설정된 AI provider(Groq 또는 Google Gemini) 등 일부 기능을 위해 외부 서비스를 이용합니다. 외부 서비스로 전달되는 정보의 범위와 목적은 「개인정보 처리방침」에 기재되어 있습니다.",
       ],
     },
     {
@@ -287,9 +288,10 @@ const privacy: LegalDocument = {
       ],
       list: [
         "계정 정보: 이메일 주소, 이름(닉네임), 비밀번호(복호화 불가능한 해시 형태로만 저장)",
-        "Google 로그인 시: 이름, 이메일, 프로필 이미지 및 인증 토큰",
+        "Google 로그인 시: Google이 제공하는 이름·이메일·프로필 이미지 및 OAuth 계정·인증 정보(실제 저장 범위는 Auth.js 설정 확인 필요)",
         "프로필 정보(선택): 학교, 상태 메시지, 프로필 이미지, 시간대",
         "학습 데이터: 과목, 할 일, 목표, 공부 시간, 문제 풀이 기록 및 제출한 답안, 오답 기록, 모의고사 결과, 생성한 교재, AI 분석 결과",
+        "학습자료: 파일명, 파일 형식·MIME 유형, 파일 크기, 저장 상태 및 Supabase Storage에 저장되는 파일. 현재 자동 텍스트 추출·AI 문서 파싱은 구현되지 않음",
         "소셜 데이터: 친구 관계, 1:1 채팅 메시지 내용, 학습 배틀 기록",
         "구독 정보: 요금제(Plan)와 구독 상태, 무료 체험 시작·종료 시각",
         "서비스 이용 로그: 접속 시각(온라인 상태 표시용), AI 생성 요청 기록, 부정 이용 방지·보안을 위한 IP 주소",
@@ -337,8 +339,10 @@ const privacy: LegalDocument = {
         "서비스는 원활한 기능 제공을 위해 아래와 같이 일부 처리를 외부에 위탁하고 있습니다. 정식 위탁계약 및 수탁사 목록은 상용 출시 전 확정하며, 확정되지 않은 세부 사항은 아래와 같이 표시합니다.",
       ],
       list: [
-        "Google LLC — Google 계정 로그인(OAuth) 및 AI 생성(Google Gemini API) 처리",
+        "Google LLC — Google 계정 로그인(OAuth) 및 Google Gemini를 선택한 경우의 AI 처리",
+        "Groq, Inc. — Groq를 선택한 경우의 AI 처리. 실제 계약·리전·보유기간: " + PLACEHOLDER,
         `데이터베이스·호스팅 인프라 제공(예: Supabase, Vercel) — 데이터 저장 및 서비스 운영. 정식 수탁사·계약 정보: ${PLACEHOLDER}`,
+        `오류 모니터링·서비스 분석(예: Sentry, Vercel Analytics) — 실제 전송 항목·수탁사·계약 정보: ${PLACEHOLDER}`,
         `결제대행: 유료 결제 연동은 준비 중이며, 결제대행사(PG) 정보: ${PLACEHOLDER}`,
       ],
     },
@@ -363,14 +367,14 @@ const privacy: LegalDocument = {
       id: "overseas",
       title: "9. 개인정보의 국외 이전",
       paragraphs: [
-        "Google 로그인 및 AI 생성 처리는 국외(미국 등)에 소재한 Google의 인프라를 통해 이루어질 수 있으며, 이 경우 학습 컨텍스트 등 처리에 필요한 정보가 국외로 이전될 수 있습니다. 데이터베이스·호스팅 인프라의 소재 리전 및 국외 이전에 관한 세부 고지는 상용 출시 전 확정합니다.",
+        "Google 로그인 및 선택된 AI 제공자(Groq 또는 Google Gemini)의 처리 과정에서 국외 인프라를 이용할 수 있으며, 이 경우 학습 컨텍스트 등 처리에 필요한 정보가 국외로 이전될 수 있습니다. 데이터베이스·호스팅·모니터링 인프라의 소재 리전, 이전받는 자, 이전 항목, 이전 근거 및 보유기간은 상용 출시 전 확정합니다.",
       ],
     },
     {
       id: "ai-data",
       title: "10. AI 처리 시 전달되는 정보(개인정보 최소화)",
       paragraphs: [
-        "AI 문제·교재 생성 및 오답·약점 분석 시, AI provider(Google Gemini)에는 생성에 필요한 최소한의 학습 컨텍스트만 전달됩니다.",
+        "AI 문제·교재 생성 및 오답·약점 분석 시, 설정된 AI provider(Groq 또는 Google Gemini)에는 생성에 필요한 최소한의 학습 컨텍스트만 전달됩니다.",
         "전달되는 정보는 과목·단원·문제 내용·이용자가 제출한 답안·정답·난이도·취약 개념 등 학습 관련 데이터에 한합니다.",
         "다음 정보는 AI provider에 전달되지 않습니다: 비밀번호, 인증·세션 토큰, IP 주소, 내부 데이터베이스 식별자, 결제 인증정보, 이메일 등 생성에 불필요한 개인정보.",
       ],
@@ -393,7 +397,7 @@ const privacy: LegalDocument = {
       id: "rights",
       title: "12. 이용자의 권리",
       paragraphs: [
-        "이용자는 언제든지 자신의 개인정보에 대한 열람·정정·삭제·처리정지 및 회원 탈퇴를 요청할 수 있습니다. 요청은 서비스 내 기능 또는 아래 문의처를 통해 접수할 수 있으며, 서비스는 관련 법령에 따라 지체 없이 처리합니다.",
+        "이용자는 언제든지 자신의 개인정보에 대한 열람·정정·삭제·처리정지 및 회원 탈퇴를 요청할 수 있습니다. 현재 회원 탈퇴 전용 기능은 별도로 제공되지 않으므로 요청은 아래 문의처를 통해 접수하며, 서비스는 관련 법령에 따라 처리합니다.",
       ],
     },
     {
@@ -433,7 +437,7 @@ const subscription: LegalDocument = {
   effectiveDate: COMMON_EFFECTIVE,
   lastUpdated: COMMON_EFFECTIVE,
   intro:
-    "본 약관은 StudyOS의 유료 정기구독(PRO/PREMIUM) 및 무료 체험(Trial)에 적용됩니다. 현재 유료 결제 연동(PG)은 준비 중이며, 결제·환불의 실행 세부는 결제 연동 확정 후 보완됩니다. 아래 요금·한도는 실제 코드(요금제 정의)와 일치합니다.",
+    "본 약관은 StudyOS의 요금제·무료 체험(Trial) 및 향후 유료 정기구독(PRO/PREMIUM)에 적용됩니다. 현재 유료 결제 연동(PG)은 활성화되지 않았으며, 아래 유료 결제·환불 조항은 결제 연동 전 법률 검토와 실제 상품 확정이 필요합니다. 요금제 접근 한도는 현재 코드 정의를 기준으로 합니다.",
   sections: [
     {
       id: "plans",
@@ -463,7 +467,7 @@ const subscription: LegalDocument = {
       id: "payment",
       title: "4. 결제 및 정기결제·자동 갱신",
       paragraphs: [
-        "유료 구독은 정기결제 방식의 월 자동 갱신을 기본으로 합니다. 다만 현재 결제 연동(PG)은 준비 중으로, 실제 결제 수단·결제 시점·자동 갱신의 구체적 실행 방식은 결제 연동 확정 후 본 약관에 반영합니다.",
+        "현재 유료 결제 연동(PG)은 활성화되지 않았으므로 PRO/PREMIUM 요금제에 대한 실제 결제·자동 갱신은 제공되지 않습니다. 결제 연동을 시작하기 전 결제 수단·결제 시점·자동 갱신·해지·환불 기준을 확정하여 본 약관과 결제 화면에 반영합니다.",
         `· 지원 결제수단 및 결제대행사(PG): ${PLACEHOLDER}`,
       ],
     },
@@ -535,7 +539,7 @@ const refund: LegalDocument = {
   effectiveDate: COMMON_EFFECTIVE,
   lastUpdated: COMMON_EFFECTIVE,
   intro:
-    "본 정책은 StudyOS 유료 구독 결제의 환불 및 청약철회에 적용됩니다. 본 정책은 관련 법령(전자상거래 등에서의 소비자보호에 관한 법률 등)에 따른 소비자의 권리를 제한하지 않으며, 강행규정에 반하는 임의의 환불 제한을 두지 않습니다. 결제 연동이 준비 중인 현재, 실제 환불 실행 절차의 세부는 결제 연동 확정 후 보완됩니다.",
+    "현재 StudyOS는 유료 결제 연동(PG)이 활성화되지 않아 실제 결제·환불을 제공하지 않습니다. 향후 결제 연동 전에 관련 법령과 실제 상품 구조에 맞춰 이 정책을 확정합니다. 본 정책은 관련 법령에 따른 소비자의 권리를 제한하지 않습니다.",
   sections: [
     {
       id: "cancel-vs-refund",
@@ -620,7 +624,7 @@ const ai: LegalDocument = {
   effectiveDate: COMMON_EFFECTIVE,
   lastUpdated: COMMON_EFFECTIVE,
   intro:
-    "StudyOS는 학습을 돕기 위해 AI(Google Gemini)를 활용합니다. 본 안내는 AI 기능의 특성과 한계, 이용 시 유의사항을 설명합니다.",
+    "StudyOS는 운영 설정에 따라 Groq 또는 Google Gemini를 활용하여 학습을 돕습니다. 본 안내는 AI 기능의 특성과 한계, 이용 시 유의사항을 설명합니다.",
   sections: [
     {
       id: "features",
@@ -663,7 +667,7 @@ const ai: LegalDocument = {
       id: "provider",
       title: "5. AI provider",
       paragraphs: [
-        "AI 생성은 Google Gemini API를 통해 처리되며, 이 과정에서 학습 컨텍스트가 국외로 이전될 수 있습니다. 자세한 내용은 「개인정보 처리방침」을 참고하세요.",
+        "AI 생성은 운영 설정에 따라 Groq 또는 Google Gemini API를 통해 처리되며, 이 과정에서 학습 컨텍스트가 국외로 이전될 수 있습니다. 실제 제공자·처리 국가·보유기간·모델 학습 사용 여부는 「개인정보 처리방침」에 확정하여 고지합니다.",
       ],
     },
     {

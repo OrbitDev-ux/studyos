@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { LEGAL_DOCUMENTS, type LegalDocSlug } from "@/features/legal/documents";
+import { prisma } from "@/lib/prisma";
 
 /**
  * Documents a user must agree to when creating an account. The signup schema
@@ -32,4 +33,18 @@ export async function recordConsents(
     })),
     skipDuplicates: true,
   });
+}
+
+/** Returns the latest version recorded for each document for the settings UI. */
+export async function getCurrentConsents(userId: string) {
+  const rows = await prisma.legalConsent.findMany({
+    where: { userId },
+    orderBy: [{ documentType: "asc" }, { agreedAt: "desc" }],
+    select: { documentType: true, version: true, agreedAt: true, required: true, withdrawnAt: true },
+  });
+  const latest = new Map<string, (typeof rows)[number]>();
+  for (const row of rows) {
+    if (!latest.has(row.documentType)) latest.set(row.documentType, row);
+  }
+  return [...latest.values()];
 }

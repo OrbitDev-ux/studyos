@@ -6,6 +6,8 @@ import { getMessages } from "@/features/i18n/messages";
 import { getServerLocale } from "@/features/i18n/server";
 import { NotificationPreferencesForm } from "@/features/notifications/components/notification-preferences-form";
 import { getNotificationPreferences } from "@/features/notifications/service";
+import { AccountDeletionCard } from "@/features/account/components/account-deletion-card";
+import { getCurrentConsents } from "@/features/legal/consent";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/session";
 
@@ -13,9 +15,10 @@ export const metadata = { title: "설정" };
 
 export default async function SettingsPage() {
   const user = await requireCurrentUser();
-  const [row, notificationPreferences] = await Promise.all([
+  const [row, notificationPreferences, consents] = await Promise.all([
     prisma.user.findUnique({ where: { id: user.id }, select: { locale: true } }),
     getNotificationPreferences(user.id),
+    getCurrentConsents(user.id),
   ]);
   const mode: "auto" | "manual" = row?.locale ? "manual" : "auto";
   const locale = await getServerLocale(row?.locale);
@@ -36,10 +39,27 @@ export default async function SettingsPage() {
         </CardContent>
       </Card>
       <Card>
+        <CardContent className="flex flex-col gap-3">
+          <div>
+            <h2 className="text-base font-semibold">{t.consentStatus.title}</h2>
+            <p className="text-muted-foreground text-sm">{t.consentStatus.subtitle}</p>
+          </div>
+          <ul className="text-muted-foreground flex flex-col gap-2 text-sm">
+            {consents.map((consent) => (
+              <li key={`${consent.documentType}-${consent.version}`} className="flex justify-between gap-3">
+                <span>{consent.documentType}</span>
+                <span>{consent.version} · {consent.withdrawnAt ? t.consentStatus.withdrawn : t.consentStatus.agreed}</span>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+      <Card>
         <CardContent>
           <NotificationPreferencesForm initial={notificationPreferences} />
         </CardContent>
       </Card>
+      <AccountDeletionCard />
       <Card>
         <CardContent>
           <Link href="/lab" className="flex items-center justify-between gap-3 text-sm">

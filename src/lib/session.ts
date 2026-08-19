@@ -38,7 +38,13 @@ export async function requireCurrentUser(): Promise<CurrentUser> {
     )
     .eq("id", session.user.id)
     .single();
-  if (error) throw error;
+  if (error) {
+    // A deleted account can still have a stale JWT. Treat the missing row as
+    // an invalid session instead of leaking a database error to the user.
+    if (error.code === "PGRST116") redirect("/login?deleted=1");
+    throw error;
+  }
+  if (!data) redirect("/login?deleted=1");
 
   // A banned account keeps its data but loses access everywhere the app gates
   // through requireCurrentUser. The admin ban action sets bannedAt; without
