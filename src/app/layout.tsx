@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
-import localFont from "next/font/local";
 import { Analytics } from "@vercel/analytics/next";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,21 +9,22 @@ import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register"
 import { SITE_URL } from "@/lib/site-url";
 import { siteConfig } from "@/config/site";
 import "./globals.css";
+// Pretendard: the vendor's "dynamic subset" distribution instead of next/font
+// (see fonts/pretendard-dynamic-subset.css for why) — 92 @font-face rules,
+// each a small (~30KB) unicode-range slice shared across ALL weights via
+// `format('woff2-variations')`. The browser fetches only the slices that
+// intersect glyphs actually rendered on the page, instead of one file
+// carrying the full Korean glyph set. Sets font-family: 'Pretendard
+// Variable'; globals.css's --font-pretendard points at that name.
+import "./fonts/pretendard-dynamic-subset.css";
 
 // 영문·숫자는 Inter, 한글은 Pretendard로 렌더한다. globals.css의 --font-sans
 // 스택에서 Inter를 먼저 두어 라틴/숫자를 Inter가 매칭하고, Inter에 없는 한글
-// 글리프는 Pretendard로 폴백된다. 둘 다 next/font로 셀프호스팅(CSP 'self' 허용).
+// 글리프는 Pretendard로 폴백된다.
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
-});
-
-const pretendard = localFont({
-  src: "./fonts/PretendardVariable.woff2",
-  variable: "--font-pretendard",
-  display: "swap",
-  weight: "100 900",
 });
 
 const geistMono = Geist_Mono({
@@ -61,7 +61,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="ko"
       suppressHydrationWarning
-      className={`${inter.variable} ${pretendard.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <ThemeProvider
