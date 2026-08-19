@@ -18,7 +18,9 @@
 | `AUTH_SECRET` | 세션 서명 불가 → 로그인 실패 | `openssl rand -base64 33` |
 | `AUTH_URL` | 인증 콜백 + **SEO 절대 URL** 어긋남 | 실제 프로덕션 도메인 `https://...` |
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Google 로그인 실패 | Google Cloud Console (아래 2절) |
-| `GEMINI_API_KEY` | **AI 전 기능 실패** (문제/해설/오답DNA/교재/모의고사) | Google AI Studio |
+| `AI_PROVIDER` | (선택, 기본 `groq`) `"groq"` 또는 `"gemini"` | — |
+| `GROQ_API_KEY` | `AI_PROVIDER=groq`(기본)일 때 **AI 전 기능 실패** (문제/해설/오답DNA/교재/모의고사) | [Groq Console](https://console.groq.com/keys) |
+| `GEMINI_API_KEY` | `AI_PROVIDER=gemini`일 때 **AI 전 기능 실패** | Google AI Studio |
 | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase SDK 접근 실패 | Supabase > API |
 | `ADMIN_SECRET` | 관리자 부트스트랩 로그인 불가 | `openssl rand -base64 32` |
 | `ADMIN_SESSION_SECRET` | 관리자 세션 서명 불가 | `openssl rand -base64 32` |
@@ -87,7 +89,7 @@ npm run migrate:deploy
 ## 5. 배포 후 검증
 
 - [ ] 로그인(Google/이메일) 정상 동작
-- [ ] AI 문제 생성 1건 실제 성공(=`GEMINI_API_KEY` 유효)
+- [ ] AI 문제 생성 1건 실제 성공(=선택된 `AI_PROVIDER`의 API 키 유효 — 기본은 `GROQ_API_KEY`)
 - [ ] `/robots.txt`, `/sitemap.xml`이 **프로덕션 도메인** 절대 URL로 출력되는지
 - [ ] 주요 페이지에서 브라우저 콘솔에 CSP 위반 리포트가 없는지 확인(아래 6절)
 - [ ] 유지보수 모드 on/off, 관리자 부트스트랩 로그인
