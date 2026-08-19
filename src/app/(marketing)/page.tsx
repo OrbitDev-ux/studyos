@@ -15,13 +15,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { FAQ_ITEMS } from "@/config/faq";
 import { FEATURES } from "@/config/features";
-import { siteConfig } from "@/config/site";
+import { CONTENT_UPDATED_AT, siteConfig } from "@/config/site";
 import { PLANS, PLAN_META, TRIAL_DAYS } from "@/features/billing/plans";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
   openGraph: { url: "/" },
 };
+
+// "2026년 8월" — bumped by hand in config/site.ts when homepage content
+// actually changes (see CONTENT_UPDATED_AT), not on every render.
+const CONTENT_UPDATED_LABEL = new Date(`${CONTENT_UPDATED_AT}T00:00:00`).toLocaleDateString(
+  "ko-KR",
+  { year: "numeric", month: "long" },
+);
 
 // Icons are presentation-only, so they're mapped here by title rather than
 // living in the shared config/features.ts (which JSON-LD also reads).
@@ -160,6 +167,19 @@ export default function LandingPage() {
           </Button>
         </div>
       </section>
+
+      <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-1.5 px-4 pb-16 text-center sm:px-6">
+        <p className="text-muted-foreground text-xs">
+          <Link href="/legal/ai" className="hover:text-foreground hover:underline">
+            StudyOS의 AI 이용 안내
+          </Link>
+          {" · "}
+          <Link href="/contact" className="hover:text-foreground hover:underline">
+            문의하기
+          </Link>
+        </p>
+        <p className="text-muted-foreground text-xs">마지막 업데이트: {CONTENT_UPDATED_LABEL}</p>
+      </div>
 
       <FaqStructuredData />
     </main>

@@ -21,3 +21,12 @@ export const MILESTONE_BANNER = {
 // 공개 서비스 문의처. 출시 전 실제 운영 도메인 메일로 교체 필요(개인 Gmail 금지).
 // 이 값은 문의 페이지·정지 안내·법적 문서(약관/개인정보)에서 모두 참조된다.
 export const CONTACT_EMAIL = "support@studyos.app";
+
+/**
+ * 마케팅 콘텐츠(랜딩 페이지 등)를 실제로 편집한 마지막 날짜(YYYY-MM-DD). 홈페이지
+ * 콘텐츠나 sitemap.ts의 마케팅 경로 lastModified를 실제 변경 시점에 맞게 유지하기
+ * 위한 단일 지점 — 콘텐츠를 고칠 때만 사람이 직접 갱신한다. 자동으로 오늘 날짜를
+ * 넣지 않는 이유: sitemap의 lastModified는 "실제로 바뀐 날짜"를 의미해야 하며,
+ * 매 방문마다 오늘 날짜가 찍히면 검색엔진에 잘못된 신선도 신호를 준다.
+ */
+export const CONTENT_UPDATED_AT = "2026-08-19";

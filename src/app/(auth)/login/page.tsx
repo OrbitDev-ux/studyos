@@ -1,10 +1,13 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { siteConfig } from "@/config/site";
 import { EmailSignInForm } from "@/features/auth/components/email-sign-in-form";
 import { GuestSignInButton } from "@/features/auth/components/guest-sign-in-button";
+
+export const metadata: Metadata = { title: `로그인 - ${siteConfig.name}` };
 
 export default function LoginPage() {
   return (
