@@ -1,37 +1,38 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BookMarked, Dna, Sparkles, type LucideIcon } from "lucide-react";
+import {
+  BookMarked,
+  ClipboardCheck,
+  Dna,
+  Sparkles,
+  Target,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { ProductPreview } from "@/components/marketing/product-preview";
 import { FaqStructuredData } from "@/components/marketing/structured-data";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { FAQ_ITEMS } from "@/config/faq";
+import { FEATURES } from "@/config/features";
 import { siteConfig } from "@/config/site";
+import { PLANS, PLAN_META, TRIAL_DAYS } from "@/features/billing/plans";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
   openGraph: { url: "/" },
 };
 
-const FEATURES: { title: string; description: string; icon: LucideIcon }[] = [
-  {
-    title: "AI 문제 생성",
-    description: "과목과 단원만 정하면 AI가 난이도별 문제를 바로 만들어줘요.",
-    icon: Sparkles,
-  },
-  {
-    title: "오답 DNA 분석",
-    description:
-      "틀린 문제의 '왜 틀렸는지'까지 유형화해, 반복되는 실수 패턴을 짚어줍니다.",
-    icon: Dna,
-  },
-  {
-    title: "나만의 교재",
-    description:
-      "내 취약점에 맞춰 진화하는 교재. 풀수록 나에게 최적화된 한 권이 완성돼요.",
-    icon: BookMarked,
-  },
-];
+// Icons are presentation-only, so they're mapped here by title rather than
+// living in the shared config/features.ts (which JSON-LD also reads).
+const FEATURE_ICONS: Record<string, LucideIcon> = {
+  "AI 문제 생성": Sparkles,
+  "오답 DNA 분석": Dna,
+  "나만의 교재": BookMarked,
+  "모의고사": ClipboardCheck,
+  "공부시간·목표 관리": Target,
+  "친구·랭킹·배틀": Users,
+};
 
 // No auth() here so this first-impression page stays static and serves from
 // the CDN. The CTA points at /signup for everyone; a logged-in visitor is
@@ -69,19 +70,61 @@ export default function LandingPage() {
       </section>
 
       <section className="mx-auto w-full max-w-5xl px-4 pb-24 sm:px-6">
-        <div className="grid gap-4 sm:grid-cols-3">
-          {FEATURES.map((feature) => (
-            <Card key={feature.title}>
-              <CardContent className="flex flex-col gap-2.5">
-                <span className="bg-primary/10 text-primary flex size-9 items-center justify-center rounded-lg">
-                  <feature.icon className="size-4.5" />
-                </span>
-                <h2 className="text-sm font-semibold">{feature.title}</h2>
-                <p className="text-muted-foreground text-sm">{feature.description}</p>
-              </CardContent>
-            </Card>
-          ))}
+        <h2 className="mb-6 text-center text-2xl font-semibold tracking-tight">
+          학생을 위한 핵심 기능
+        </h2>
+        <p className="text-muted-foreground mx-auto mb-6 max-w-xl text-center text-sm text-balance">
+          {siteConfig.name}는 문제 생성부터 오답 분석, 시험 대비, 일상 공부 관리까지
+          학생에게 필요한 기능을 한 곳에 모았어요.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURES.map((feature) => {
+            const Icon = FEATURE_ICONS[feature.title] ?? Sparkles;
+            return (
+              <Card key={feature.title}>
+                <CardContent className="flex flex-col gap-2.5">
+                  <span className="bg-primary/10 text-primary flex size-9 items-center justify-center rounded-lg">
+                    <Icon className="size-4.5" />
+                  </span>
+                  <h3 className="text-sm font-semibold">{feature.title}</h3>
+                  <p className="text-muted-foreground text-sm">{feature.description}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-5xl px-4 pb-24 sm:px-6">
+        <h2 className="mb-6 text-center text-2xl font-semibold tracking-tight">
+          요금제
+        </h2>
+        <p className="text-muted-foreground mx-auto mb-6 max-w-xl text-center text-sm text-balance">
+          가입하면 {TRIAL_DAYS}일간 모든 기능을 무료로 체험할 수 있어요.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {PLANS.map((plan) => {
+            const meta = PLAN_META[plan];
+            return (
+              <Card key={plan}>
+                <CardHeader>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <h3 className="text-base font-medium">{meta.name}</h3>
+                    <span className="text-muted-foreground text-xs">{meta.priceLabel}</span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground text-sm">{meta.tagline}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+        <p className="mt-6 text-center">
+          <Link href="/pricing" className="text-primary text-sm hover:underline">
+            요금제 자세히 비교하기
+          </Link>
+        </p>
       </section>
 
       <section className="mx-auto w-full max-w-3xl px-4 pb-24 sm:px-6">
@@ -97,6 +140,24 @@ export default function LandingPage() {
               </CardContent>
             </Card>
           ))}
+        </div>
+      </section>
+
+      <section className="mx-auto flex w-full max-w-5xl flex-col items-center gap-4 px-4 pb-24 text-center sm:px-6">
+        <h2 className="text-2xl font-semibold tracking-tight">
+          지금 바로 시작해보세요
+        </h2>
+        <p className="text-muted-foreground max-w-md text-sm text-balance">
+          가입 없이 데모로 먼저 둘러보거나, {TRIAL_DAYS}일 무료 체험으로 바로
+          시작할 수 있어요.
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Button asChild size="lg" className="px-6 text-base">
+            <Link href="/signup">무료로 시작하기</Link>
+          </Button>
+          <Button asChild size="lg" variant="outline" className="px-6 text-base">
+            <Link href="/demo">👀 로그인 없이 둘러보기</Link>
+          </Button>
         </div>
       </section>
 

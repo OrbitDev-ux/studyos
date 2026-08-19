@@ -1,4 +1,5 @@
 import { FAQ_ITEMS } from "@/config/faq";
+import { FEATURES } from "@/config/features";
 import { siteConfig } from "@/config/site";
 import { PLANS, PLAN_META } from "@/features/billing/plans";
 import { SITE_URL } from "@/lib/site-url";
@@ -30,12 +31,16 @@ export function StructuredData() {
     },
     {
       "@type": "SoftwareApplication",
+      "@id": `${SITE_URL}/#software`,
       name: siteConfig.name,
       applicationCategory: "EducationalApplication",
       operatingSystem: "Web",
       inLanguage: "ko-KR",
       url: SITE_URL,
       description: siteConfig.description,
+      isPartOf: { "@id": `${SITE_URL}/#website` },
+      provider: { "@id": `${SITE_URL}/#organization` },
+      featureList: FEATURES.map((feature) => feature.title),
       offers: PLANS.map((plan) => {
         const meta = PLAN_META[plan];
         return {

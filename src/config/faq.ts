@@ -14,7 +14,7 @@ export const FAQ_ITEMS: { question: string; answer: string }[] = [
   },
   {
     question: "무료로 사용할 수 있나요?",
-    answer: `회원가입하면 ${TRIAL_DAYS}일간 무료로 체험할 수 있습니다. 이후에는 ${PLAN_META.PRO.priceLabel}의 Pro, ${PLAN_META.PREMIUM.priceLabel}의 Premium 플랜으로 계속 이용할 수 있습니다.`,
+    answer: `회원가입하면 ${TRIAL_DAYS}일간 무료로 체험할 수 있습니다. 이후에는 ${PLAN_META.PRO.priceLabel}의 Pro, ${PLAN_META.PREMIUM.priceLabel}의 Premium 유료 플랜이 준비되어 있으며, 결제 연동은 순차적으로 열릴 예정입니다.`,
   },
   {
     question: "로그인 없이 둘러볼 수 있나요?",
