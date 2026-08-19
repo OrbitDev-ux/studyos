@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
@@ -6,8 +7,18 @@ import { emailSignInSchema } from "@/features/auth/schema";
 import { verifyPassword } from "@/features/auth/password";
 import { seedDefaultSubjects } from "@/features/subjects/seed";
 import { authConfig } from "@/lib/auth.config";
+import { getClientIp } from "@/lib/ip";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
+
+// Brute-force guard on password sign-in (Security audit: unlike admin login,
+// this had no rate limit at all — only bcrypt's inherent compare delay).
+// IP-scoped (not email-scoped): rate-limiting by attempted email would let an
+// attacker fingerprint which emails exist by how quickly they get throttled,
+// re-opening the user-enumeration hole authorize() otherwise closes. Reuses
+// AuditLog, same pattern as reset-actions.ts's PasswordResetToken counting.
+const LOGIN_RATE_WINDOW_MS = 15 * 60 * 1000;
+const MAX_FAILED_LOGINS_PER_IP = 10;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -27,6 +38,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const parsed = emailSignInSchema.safeParse(credentials);
         if (!parsed.success) return null;
 
+        const ip = getClientIp(await headers());
+        const since = new Date(Date.now() - LOGIN_RATE_WINDOW_MS);
+        const recentFailures = await prisma.auditLog.count({
+          where: { event: "LOGIN_FAILED", ip, createdAt: { gte: since } },
+        });
+        if (recentFailures >= MAX_FAILED_LOGINS_PER_IP) return null;
+
         const supabase = await createClient();
         const { data: user } = await supabase
           .from("User")
@@ -35,7 +53,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           .maybeSingle();
 
         const valid = await verifyPassword(parsed.data.password, user?.password ?? null);
-        if (!user || !valid) return null;
+        if (!user || !valid) {
+          await prisma.auditLog.create({ data: { event: "LOGIN_FAILED", ip } }).catch(() => {});
+          return null;
+        }
 
         return { id: user.id, name: user.name, email: user.email, image: user.image };
       },

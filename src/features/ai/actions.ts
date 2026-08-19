@@ -32,6 +32,19 @@ export async function generateWeaknessAnalysis(): Promise<
   const user = await requireCurrentUser();
   const gate = aiRecommendationGateError(user);
   if (gate) return { error: gate };
+
+  const today = getZonedDateOnly(user.timezone);
+  // Same-day cache — also the anti-abuse guard (Security audit: this endpoint
+  // had no quota at all; a useThinking:true call is the most expensive kind).
+  // The underlying data can't change materially within one day, so this is a
+  // real "don't redo the same work" cache, not just a rate-limit hack.
+  const cached = await prisma.aiAnalysis.findFirst({
+    where: { userId: user.id, type: "weakness", periodStart: today, periodEnd: today },
+    orderBy: { createdAt: "desc" },
+    select: { content: true },
+  });
+  if (cached) return { content: cached.content };
+
   const wrongAnswers = await getWeaknessSourceData(user.id);
 
   let content: string;
@@ -48,7 +61,6 @@ export async function generateWeaknessAnalysis(): Promise<
     throw err;
   }
 
-  const today = getZonedDateOnly(user.timezone);
   await prisma.aiAnalysis.create({
     data: {
       userId: user.id,
@@ -69,6 +81,27 @@ export async function generateWeeklyReport(): Promise<
   const user = await requireCurrentUser();
   const gate = aiRecommendationGateError(user);
   if (gate) return { error: gate };
+
+  const { startDate, endDate } = getRecentDateOnlyRange(
+    user.timezone,
+    WEEKLY_REPORT_WINDOW_DAYS,
+  );
+  // Same-window cache — also the anti-abuse guard (Security audit: this
+  // endpoint had no quota at all). The source window is identical on repeat
+  // calls within the same period, so this is a real cache, not just a
+  // rate-limit hack.
+  const cached = await prisma.aiAnalysis.findFirst({
+    where: {
+      userId: user.id,
+      type: "weekly-report",
+      periodStart: startDate,
+      periodEnd: endDate,
+    },
+    orderBy: { createdAt: "desc" },
+    select: { content: true },
+  });
+  if (cached) return { content: cached.content };
+
   const data = await getWeeklyReportSourceData(user.id, user.timezone);
 
   let content: string;
@@ -84,11 +117,6 @@ export async function generateWeeklyReport(): Promise<
     if (payload) return { error: payload.error };
     throw err;
   }
-
-  const { startDate, endDate } = getRecentDateOnlyRange(
-    user.timezone,
-    WEEKLY_REPORT_WINDOW_DAYS,
-  );
 
   await prisma.aiAnalysis.create({
     data: {

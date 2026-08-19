@@ -25,6 +25,13 @@ export async function requestAiExplanation(
   });
   if (!wrongAnswer) return { error: "오답 기록을 찾을 수 없습니다." };
 
+  // Already generated → return it instead of paying for another AI call
+  // (Security audit: this endpoint had no cache at all, so repeatedly
+  // pressing "AI 설명" on the same wrong answer re-triggered generation every
+  // time — matches the existing analyzeWrongAnswerDna cache-once pattern
+  // below).
+  if (wrongAnswer.aiExplanation) return { explanation: wrongAnswer.aiExplanation };
+
   const correctAnswer =
     wrongAnswer.problem.type === "MULTIPLE_CHOICE"
       ? (wrongAnswer.problem.choices.find((choice) => choice.isCorrect)?.content ?? "")

@@ -55,10 +55,21 @@ export function markConversationRead(conversationId: string, userId: string) {
   });
 }
 
+/**
+ * Unlike getFriends/getConversations (also `include: { user: true }`-shaped),
+ * this result is passed as a prop directly into a "use client" component
+ * (FriendRequestList) — those others stay server-side and re-select safe
+ * fields before ever crossing a client boundary. A client component's props
+ * are serialized to the browser in full regardless of which fields its JSX
+ * actually reads, so `requester` MUST be pre-narrowed here at the query
+ * itself (Security audit: an unscoped `include: { requester: true }`
+ * previously shipped the requester's bcrypt password hash — and email,
+ * banReason, etc. — to whoever received their friend request).
+ */
 export function getReceivedFriendRequests(userId: string) {
   return prisma.friendship.findMany({
     where: { addresseeId: userId, status: "pending" },
-    include: { requester: true },
+    include: { requester: { select: { id: true, name: true, image: true, email: true } } },
     orderBy: { createdAt: "desc" },
   });
 }

@@ -2,6 +2,11 @@ import type { NextAuthConfig } from "next-auth";
 import { ADMIN_SESSION_COOKIE, verifyAdminSessionToken } from "@/lib/admin/session";
 import { getMaintenanceEdge } from "@/lib/maintenance-edge";
 
+// Every src/app/(app)/* segment — that route group's own layout also
+// requires a session (defense in depth), so a path missing here was never
+// actually reachable without auth, just not fast-pathed at the Edge.
+// study-bank/study-materials/notifications/lab were previously missing from
+// this list even though app/robots.ts already disallowed some of them.
 const PROTECTED_PATHS = [
   "/dashboard",
   "/todos",
@@ -9,6 +14,8 @@ const PROTECTED_PATHS = [
   "/stats",
   "/problems",
   "/study-books",
+  "/study-bank",
+  "/study-materials",
   "/review",
   "/mock-exam",
   "/social",
@@ -17,6 +24,8 @@ const PROTECTED_PATHS = [
   "/support",
   "/tutor",
   "/settings",
+  "/notifications",
+  "/lab",
 ];
 
 // Edge-safe subset of the Auth.js config: no adapter, no providers that

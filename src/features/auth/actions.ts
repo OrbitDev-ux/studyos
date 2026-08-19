@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { AuthError } from "next-auth";
 import { hashPassword } from "@/features/auth/password";
 import { recordConsents, SIGNUP_REQUIRED_CONSENTS } from "@/features/legal/consent";
@@ -12,9 +13,18 @@ import {
 import { seedDefaultSubjects } from "@/features/subjects/seed";
 import { Prisma } from "@/generated/prisma/client";
 import { auth, signIn, signOut } from "@/lib/auth";
+import { getClientIp } from "@/lib/ip";
 import { prisma } from "@/lib/prisma";
 
 const INVALID_CREDENTIALS_ERROR = "이메일 또는 비밀번호가 올바르지 않습니다.";
+
+// Guest accounts have no email/CAPTCHA friction, so without this an IP can
+// script "create guest -> burn its AI quota -> create another guest"
+// indefinitely (Security audit finding). Reuses AuditLog (already written on
+// every account-lifecycle event) instead of a new table — same pattern as
+// reset-actions.ts's PasswordResetToken-row-counting rate limit.
+const GUEST_RATE_WINDOW_MS = 15 * 60 * 1000;
+const MAX_GUESTS_PER_IP = 5;
 
 export async function signInWithGoogle() {
   await signIn("google", { redirectTo: "/dashboard?welcome=1" });
@@ -61,6 +71,15 @@ export async function unbanSelf(): Promise<{ error?: string }> {
  * avoiding the redirect-in-catch "failed" flash.
  */
 export async function signInAsGuest(): Promise<{ error?: string }> {
+  const ip = getClientIp(await headers());
+  const since = new Date(Date.now() - GUEST_RATE_WINDOW_MS);
+  const recentGuestCount = await prisma.auditLog.count({
+    where: { event: "GUEST_ACCOUNT_CREATED", ip, createdAt: { gte: since } },
+  });
+  if (recentGuestCount >= MAX_GUESTS_PER_IP) {
+    return { error: "잠시 후 다시 시도해주세요." };
+  }
+
   const token = crypto.randomUUID();
   const email = `guest_${token}@guest.studyos.app`;
   const password = crypto.randomUUID();
@@ -73,6 +92,7 @@ export async function signInAsGuest(): Promise<{ error?: string }> {
         data: { name, email, password: passwordHash },
       });
       await seedDefaultSubjects(user.id, tx);
+      await tx.auditLog.create({ data: { userId: user.id, event: "GUEST_ACCOUNT_CREATED", ip } });
     });
   } catch {
     return { error: "게스트 계정 생성에 실패했어요. 잠시 후 다시 시도해주세요." };
