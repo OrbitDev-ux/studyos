@@ -1,5 +1,6 @@
 "use server";
 
+import * as Sentry from "@sentry/nextjs";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { generateStructured } from "@/features/ai/client";
@@ -12,6 +13,8 @@ import { getRequestIp, requireCapability } from "@/lib/admin/context";
 import { prisma } from "@/lib/prisma";
 
 type Result = { error?: string };
+
+const GENERIC_ERROR = "일시적인 오류가 발생했어요. 다시 시도해주세요.";
 
 const createPromptSchema = z.object({
   type: z
@@ -40,40 +43,48 @@ export async function createPrompt(input: unknown): Promise<Result> {
   const valid = validatePromptContent(parsed.data.content);
   if (!valid.ok) return { error: valid.error };
 
-  const existing = await prisma.prompt.findUnique({ where: { type: parsed.data.type } });
-  if (existing) return { error: "이미 존재하는 타입입니다." };
+  try {
+    const existing = await prisma.prompt.findUnique({
+      where: { type: parsed.data.type },
+    });
+    if (existing) return { error: "이미 존재하는 타입입니다." };
 
-  const ip = await getRequestIp();
-  const created = await prisma.prompt.create({
-    data: {
-      type: parsed.data.type,
-      title: parsed.data.title,
-      description: parsed.data.description || null,
-      enabled: true,
-      activeVersion: 1,
-      versions: {
-        create: {
-          version: 1,
-          content: parsed.data.content,
-          note: "최초 버전",
-          createdById: admin.id,
-          ip,
+    const ip = await getRequestIp();
+    const created = await prisma.prompt.create({
+      data: {
+        type: parsed.data.type,
+        title: parsed.data.title,
+        description: parsed.data.description || null,
+        enabled: true,
+        activeVersion: 1,
+        versions: {
+          create: {
+            version: 1,
+            content: parsed.data.content,
+            note: "최초 버전",
+            createdById: admin.id,
+            ip,
+          },
         },
       },
-    },
-  });
+    });
 
-  invalidatePromptCache(parsed.data.type);
-  await logAdminActivity({
-    adminId: admin.id,
-    action: ADMIN_ACTIONS.PROMPT_CREATE,
-    targetType: "prompt",
-    targetId: created.id,
-    detail: { type: parsed.data.type },
-    ip,
-  });
-  revalidatePath("/admin/prompts");
-  return {};
+    invalidatePromptCache(parsed.data.type);
+    await logAdminActivity({
+      adminId: admin.id,
+      action: ADMIN_ACTIONS.PROMPT_CREATE,
+      targetType: "prompt",
+      targetId: created.id,
+      detail: { type: parsed.data.type },
+      ip,
+    });
+    revalidatePath("/admin/prompts");
+    return {};
+  } catch (err) {
+    console.error("[admin] createPrompt failed", err);
+    Sentry.captureException(err);
+    return { error: GENERIC_ERROR };
+  }
 }
 
 /** Save an edit as a NEW version and activate it (never overwrites). */
@@ -85,82 +96,95 @@ export async function savePromptVersion(input: unknown): Promise<Result> {
   const valid = validatePromptContent(parsed.data.content);
   if (!valid.ok) return { error: valid.error };
 
-  const prompt = await prisma.prompt.findUnique({
-    where: { id: parsed.data.promptId },
-    include: { versions: { orderBy: { version: "desc" }, take: 1 } },
-  });
-  if (!prompt) return { error: "프롬프트를 찾을 수 없습니다." };
+  try {
+    const prompt = await prisma.prompt.findUnique({
+      where: { id: parsed.data.promptId },
+      include: { versions: { orderBy: { version: "desc" }, take: 1 } },
+    });
+    if (!prompt) return { error: "프롬프트를 찾을 수 없습니다." };
 
-  // No-op if identical to the active version — avoid empty versions.
-  const activeContent = prompt.versions.find(
-    (v) => v.version === prompt.activeVersion,
-  )?.content;
-  const nextVersion = (prompt.versions[0]?.version ?? 0) + 1;
-  const ip = await getRequestIp();
+    // No-op if identical to the active version — avoid empty versions.
+    const activeContent = prompt.versions.find(
+      (v) => v.version === prompt.activeVersion,
+    )?.content;
+    const nextVersion = (prompt.versions[0]?.version ?? 0) + 1;
+    const ip = await getRequestIp();
 
-  await prisma.$transaction([
-    prisma.promptVersion.create({
-      data: {
-        promptId: prompt.id,
+    await prisma.$transaction([
+      prisma.promptVersion.create({
+        data: {
+          promptId: prompt.id,
+          version: nextVersion,
+          content: parsed.data.content,
+          note: parsed.data.note || null,
+          createdById: admin.id,
+          ip,
+        },
+      }),
+      prisma.prompt.update({
+        where: { id: prompt.id },
+        data: { activeVersion: nextVersion },
+      }),
+    ]);
+
+    invalidatePromptCache(prompt.type);
+    await logAdminActivity({
+      adminId: admin.id,
+      action: ADMIN_ACTIONS.PROMPT_SAVE,
+      targetType: "prompt",
+      targetId: prompt.id,
+      detail: {
+        type: prompt.type,
         version: nextVersion,
-        content: parsed.data.content,
-        note: parsed.data.note || null,
-        createdById: admin.id,
-        ip,
+        changed: activeContent !== parsed.data.content,
       },
-    }),
-    prisma.prompt.update({
-      where: { id: prompt.id },
-      data: { activeVersion: nextVersion },
-    }),
-  ]);
-
-  invalidatePromptCache(prompt.type);
-  await logAdminActivity({
-    adminId: admin.id,
-    action: ADMIN_ACTIONS.PROMPT_SAVE,
-    targetType: "prompt",
-    targetId: prompt.id,
-    detail: {
-      type: prompt.type,
-      version: nextVersion,
-      changed: activeContent !== parsed.data.content,
-    },
-    ip,
-  });
-  revalidatePath("/admin/prompts");
-  revalidatePath(`/admin/prompts/${prompt.id}`);
-  return {};
+      ip,
+    });
+    revalidatePath("/admin/prompts");
+    revalidatePath(`/admin/prompts/${prompt.id}`);
+    return {};
+  } catch (err) {
+    console.error("[admin] savePromptVersion failed", err);
+    Sentry.captureException(err);
+    return { error: GENERIC_ERROR };
+  }
 }
 
 /** Re-activate an existing older version (rollback). Does not delete newer
  * versions — they remain in history. */
 export async function rollbackPrompt(promptId: string, version: number): Promise<Result> {
   const admin = await requireCapability("managePrompts");
-  const prompt = await prisma.prompt.findUnique({ where: { id: promptId } });
-  if (!prompt) return { error: "프롬프트를 찾을 수 없습니다." };
 
-  const target = await prisma.promptVersion.findUnique({
-    where: { promptId_version: { promptId, version } },
-  });
-  if (!target) return { error: "해당 버전을 찾을 수 없습니다." };
+  try {
+    const prompt = await prisma.prompt.findUnique({ where: { id: promptId } });
+    if (!prompt) return { error: "프롬프트를 찾을 수 없습니다." };
 
-  await prisma.prompt.update({
-    where: { id: promptId },
-    data: { activeVersion: version },
-  });
+    const target = await prisma.promptVersion.findUnique({
+      where: { promptId_version: { promptId, version } },
+    });
+    if (!target) return { error: "해당 버전을 찾을 수 없습니다." };
 
-  invalidatePromptCache(prompt.type);
-  await logAdminActivity({
-    adminId: admin.id,
-    action: ADMIN_ACTIONS.PROMPT_ROLLBACK,
-    targetType: "prompt",
-    targetId: promptId,
-    detail: { type: prompt.type, to: version },
-  });
-  revalidatePath("/admin/prompts");
-  revalidatePath(`/admin/prompts/${promptId}`);
-  return {};
+    await prisma.prompt.update({
+      where: { id: promptId },
+      data: { activeVersion: version },
+    });
+
+    invalidatePromptCache(prompt.type);
+    await logAdminActivity({
+      adminId: admin.id,
+      action: ADMIN_ACTIONS.PROMPT_ROLLBACK,
+      targetType: "prompt",
+      targetId: promptId,
+      detail: { type: prompt.type, to: version },
+    });
+    revalidatePath("/admin/prompts");
+    revalidatePath(`/admin/prompts/${promptId}`);
+    return {};
+  } catch (err) {
+    console.error("[admin] rollbackPrompt failed", err);
+    Sentry.captureException(err);
+    return { error: GENERIC_ERROR };
+  }
 }
 
 export async function setPromptEnabled(
@@ -168,41 +192,55 @@ export async function setPromptEnabled(
   enabled: boolean,
 ): Promise<Result> {
   const admin = await requireCapability("managePrompts");
-  const prompt = await prisma.prompt.findUnique({ where: { id: promptId } });
-  if (!prompt) return { error: "프롬프트를 찾을 수 없습니다." };
 
-  await prisma.prompt.update({ where: { id: promptId }, data: { enabled } });
+  try {
+    const prompt = await prisma.prompt.findUnique({ where: { id: promptId } });
+    if (!prompt) return { error: "프롬프트를 찾을 수 없습니다." };
 
-  invalidatePromptCache(prompt.type);
-  await logAdminActivity({
-    adminId: admin.id,
-    action: ADMIN_ACTIONS.PROMPT_TOGGLE,
-    targetType: "prompt",
-    targetId: promptId,
-    detail: { type: prompt.type, enabled },
-  });
-  revalidatePath("/admin/prompts");
-  revalidatePath(`/admin/prompts/${promptId}`);
-  return {};
+    await prisma.prompt.update({ where: { id: promptId }, data: { enabled } });
+
+    invalidatePromptCache(prompt.type);
+    await logAdminActivity({
+      adminId: admin.id,
+      action: ADMIN_ACTIONS.PROMPT_TOGGLE,
+      targetType: "prompt",
+      targetId: promptId,
+      detail: { type: prompt.type, enabled },
+    });
+    revalidatePath("/admin/prompts");
+    revalidatePath(`/admin/prompts/${promptId}`);
+    return {};
+  } catch (err) {
+    console.error("[admin] setPromptEnabled failed", err);
+    Sentry.captureException(err);
+    return { error: GENERIC_ERROR };
+  }
 }
 
 export async function deletePrompt(promptId: string): Promise<Result> {
   const admin = await requireCapability("managePrompts");
-  const prompt = await prisma.prompt.findUnique({ where: { id: promptId } });
-  if (!prompt) return { error: "프롬프트를 찾을 수 없습니다." };
 
-  await prisma.prompt.delete({ where: { id: promptId } });
+  try {
+    const prompt = await prisma.prompt.findUnique({ where: { id: promptId } });
+    if (!prompt) return { error: "프롬프트를 찾을 수 없습니다." };
 
-  invalidatePromptCache(prompt.type);
-  await logAdminActivity({
-    adminId: admin.id,
-    action: ADMIN_ACTIONS.PROMPT_DELETE,
-    targetType: "prompt",
-    targetId: promptId,
-    detail: { type: prompt.type },
-  });
-  revalidatePath("/admin/prompts");
-  return {};
+    await prisma.prompt.delete({ where: { id: promptId } });
+
+    invalidatePromptCache(prompt.type);
+    await logAdminActivity({
+      adminId: admin.id,
+      action: ADMIN_ACTIONS.PROMPT_DELETE,
+      targetType: "prompt",
+      targetId: promptId,
+      detail: { type: prompt.type },
+    });
+    revalidatePath("/admin/prompts");
+    return {};
+  } catch (err) {
+    console.error("[admin] deletePrompt failed", err);
+    Sentry.captureException(err);
+    return { error: GENERIC_ERROR };
+  }
 }
 
 // ─── Prompt test (preview only — never saved or served) ───────────────────────

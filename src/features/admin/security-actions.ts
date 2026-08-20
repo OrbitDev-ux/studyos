@@ -1,5 +1,6 @@
 "use server";
 
+import * as Sentry from "@sentry/nextjs";
 import { revalidatePath } from "next/cache";
 import {
   blockIpSchema,
@@ -15,6 +16,8 @@ import { prisma } from "@/lib/prisma";
 
 type Result = { error?: string };
 
+const GENERIC_ERROR = "일시적인 오류가 발생했어요. 다시 시도해주세요.";
+
 /**
  * Recovery shortcut (⌘+Option+3): lift the block on the *caller's own* IP so a
  * locked-out operator can reach admin sign-in again. Ungated on purpose — an
@@ -22,24 +25,33 @@ type Result = { error?: string };
  * than deleting, and only ever touches the caller's IP.
  */
 export async function clearMyIpBlock(): Promise<{ removed: number }> {
-  const ip = await getRequestIp();
-  if (ip === "unknown") return { removed: 0 };
+  try {
+    const ip = await getRequestIp();
+    if (ip === "unknown") return { removed: 0 };
 
-  const result = await prisma.blockedIp.updateMany({
-    where: { ip, active: true },
-    data: { active: false },
-  });
-  if (result.count > 0) {
-    await logAdminActivity({
-      action: ADMIN_ACTIONS.IP_UNBLOCK,
-      targetType: "ip",
-      targetId: ip,
-      detail: { via: "recovery_shortcut" },
-      ip,
+    const result = await prisma.blockedIp.updateMany({
+      where: { ip, active: true },
+      data: { active: false },
     });
-    revalidatePath("/admin/security");
+    if (result.count > 0) {
+      await logAdminActivity({
+        action: ADMIN_ACTIONS.IP_UNBLOCK,
+        targetType: "ip",
+        targetId: ip,
+        detail: { via: "recovery_shortcut" },
+        ip,
+      });
+      revalidatePath("/admin/security");
+    }
+    return { removed: result.count };
+  } catch (err) {
+    // This is the lockout-recovery path itself — never let it throw, or a
+    // locked-out operator loses their only way back in. Report as "removed
+    // nothing" rather than surfacing a raw failure.
+    console.error("[admin] clearMyIpBlock failed", err);
+    Sentry.captureException(err);
+    return { removed: 0 };
   }
-  return { removed: result.count };
 }
 
 // ─── Super-admin ban management ───────────────────────────────────────────────
@@ -61,77 +73,97 @@ export async function blockIp(values: BlockIpValues): Promise<Result> {
       : null;
   if (!permanent && !expiresAt) return { error: "차단 기간을 입력해주세요." };
 
-  const existing = await prisma.blockedIp.findUnique({ where: { ip } });
-  if (existing?.active) return { error: "이미 차단된 IP입니다." };
+  try {
+    const existing = await prisma.blockedIp.findUnique({ where: { ip } });
+    if (existing?.active) return { error: "이미 차단된 IP입니다." };
 
-  await prisma.blockedIp.upsert({
-    where: { ip },
-    create: {
-      ip,
-      reason: parsed.data.reason || null,
-      permanent,
-      expiresAt,
-      active: true,
-      createdById: admin.id,
-    },
-    update: {
-      reason: parsed.data.reason || null,
-      permanent,
-      expiresAt,
-      active: true,
-      createdById: admin.id,
-    },
-  });
+    await prisma.blockedIp.upsert({
+      where: { ip },
+      create: {
+        ip,
+        reason: parsed.data.reason || null,
+        permanent,
+        expiresAt,
+        active: true,
+        createdById: admin.id,
+      },
+      update: {
+        reason: parsed.data.reason || null,
+        permanent,
+        expiresAt,
+        active: true,
+        createdById: admin.id,
+      },
+    });
 
-  await logAdminActivity({
-    adminId: admin.id,
-    action: ADMIN_ACTIONS.IP_BLOCK,
-    targetType: "ip",
-    targetId: ip,
-    detail: { reason: parsed.data.reason || null, permanent, expiresAt },
-  });
+    await logAdminActivity({
+      adminId: admin.id,
+      action: ADMIN_ACTIONS.IP_BLOCK,
+      targetType: "ip",
+      targetId: ip,
+      detail: { reason: parsed.data.reason || null, permanent, expiresAt },
+    });
 
-  revalidatePath("/admin/security");
-  return {};
+    revalidatePath("/admin/security");
+    return {};
+  } catch (err) {
+    console.error("[admin] blockIp failed", err);
+    Sentry.captureException(err);
+    return { error: GENERIC_ERROR };
+  }
 }
 
 /** Release a ban (soft — keeps the record, marks inactive). */
 export async function unblockIp(id: string): Promise<Result> {
   const admin = await requireCapability("manageIpBans");
-  const existing = await prisma.blockedIp.findUnique({ where: { id } });
-  if (!existing) return { error: "차단 기록을 찾을 수 없습니다." };
 
-  await prisma.blockedIp.update({ where: { id }, data: { active: false } });
+  try {
+    const existing = await prisma.blockedIp.findUnique({ where: { id } });
+    if (!existing) return { error: "차단 기록을 찾을 수 없습니다." };
 
-  await logAdminActivity({
-    adminId: admin.id,
-    action: ADMIN_ACTIONS.IP_UNBLOCK,
-    targetType: "ip",
-    targetId: existing.ip,
-  });
+    await prisma.blockedIp.update({ where: { id }, data: { active: false } });
 
-  revalidatePath("/admin/security");
-  return {};
+    await logAdminActivity({
+      adminId: admin.id,
+      action: ADMIN_ACTIONS.IP_UNBLOCK,
+      targetType: "ip",
+      targetId: existing.ip,
+    });
+
+    revalidatePath("/admin/security");
+    return {};
+  } catch (err) {
+    console.error("[admin] unblockIp failed", err);
+    Sentry.captureException(err);
+    return { error: GENERIC_ERROR };
+  }
 }
 
 /** Permanently delete a ban record. */
 export async function deleteBan(id: string): Promise<Result> {
   const admin = await requireCapability("manageIpBans");
-  const existing = await prisma.blockedIp.findUnique({ where: { id } });
-  if (!existing) return { error: "차단 기록을 찾을 수 없습니다." };
 
-  await prisma.blockedIp.delete({ where: { id } });
+  try {
+    const existing = await prisma.blockedIp.findUnique({ where: { id } });
+    if (!existing) return { error: "차단 기록을 찾을 수 없습니다." };
 
-  await logAdminActivity({
-    adminId: admin.id,
-    action: ADMIN_ACTIONS.IP_UNBLOCK,
-    targetType: "ip",
-    targetId: existing.ip,
-    detail: { deleted: true },
-  });
+    await prisma.blockedIp.delete({ where: { id } });
 
-  revalidatePath("/admin/security");
-  return {};
+    await logAdminActivity({
+      adminId: admin.id,
+      action: ADMIN_ACTIONS.IP_UNBLOCK,
+      targetType: "ip",
+      targetId: existing.ip,
+      detail: { deleted: true },
+    });
+
+    revalidatePath("/admin/security");
+    return {};
+  } catch (err) {
+    console.error("[admin] deleteBan failed", err);
+    Sentry.captureException(err);
+    return { error: GENERIC_ERROR };
+  }
 }
 
 /** Edit a ban's reason. */
@@ -140,34 +172,47 @@ export async function updateBanReason(values: UpdateBanValues): Promise<Result> 
   const parsed = updateBanSchema.safeParse(values);
   if (!parsed.success) return { error: "입력값이 올바르지 않습니다." };
 
-  const existing = await prisma.blockedIp.findUnique({ where: { id: parsed.data.id } });
-  if (!existing) return { error: "차단 기록을 찾을 수 없습니다." };
+  try {
+    const existing = await prisma.blockedIp.findUnique({ where: { id: parsed.data.id } });
+    if (!existing) return { error: "차단 기록을 찾을 수 없습니다." };
 
-  await prisma.blockedIp.update({
-    where: { id: parsed.data.id },
-    data: { reason: parsed.data.reason || null },
-  });
+    await prisma.blockedIp.update({
+      where: { id: parsed.data.id },
+      data: { reason: parsed.data.reason || null },
+    });
 
-  await logAdminActivity({
-    adminId: admin.id,
-    action: ADMIN_ACTIONS.IP_BLOCK,
-    targetType: "ip",
-    targetId: existing.ip,
-    detail: { edited: true, reason: parsed.data.reason || null },
-  });
+    await logAdminActivity({
+      adminId: admin.id,
+      action: ADMIN_ACTIONS.IP_BLOCK,
+      targetType: "ip",
+      targetId: existing.ip,
+      detail: { edited: true, reason: parsed.data.reason || null },
+    });
 
-  revalidatePath("/admin/security");
-  return {};
+    revalidatePath("/admin/security");
+    return {};
+  } catch (err) {
+    console.error("[admin] updateBanReason failed", err);
+    Sentry.captureException(err);
+    return { error: GENERIC_ERROR };
+  }
 }
 
 /** Invalidate every issued admin session by advancing the epoch. The caller's
  * own cookie is included — they'll be signed out on the next request. */
 export async function clearAdminSessions(): Promise<Result> {
   const admin = await requireCapability("manageSecurity");
-  await setSetting(SETTING_KEYS.ADMIN_SESSION_EPOCH, Date.now(), admin.id);
 
-  await logAdminActivity({ adminId: admin.id, action: ADMIN_ACTIONS.SESSION_CLEAR });
+  try {
+    await setSetting(SETTING_KEYS.ADMIN_SESSION_EPOCH, Date.now(), admin.id);
 
-  revalidatePath("/admin");
-  return {};
+    await logAdminActivity({ adminId: admin.id, action: ADMIN_ACTIONS.SESSION_CLEAR });
+
+    revalidatePath("/admin");
+    return {};
+  } catch (err) {
+    console.error("[admin] clearAdminSessions failed", err);
+    Sentry.captureException(err);
+    return { error: GENERIC_ERROR };
+  }
 }

@@ -1,5 +1,6 @@
 "use server";
 
+import * as Sentry from "@sentry/nextjs";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { AdminUser } from "@/generated/prisma/client";
@@ -85,41 +86,48 @@ export async function verifyAdminCode(
   const parsed = adminCodeSchema.safeParse(values);
   if (!parsed.success) return { error: GENERIC_ERROR };
 
-  // Ban check happens BEFORE any credential check — a blocked IP never
-  // reaches authentication.
-  const ip = await getRequestIp();
-  const ban = await findActiveBan(ip);
-  logBanCheck(ip, ban);
-  if (ban) return { error: BLOCKED_ERROR };
-  if (await isRateLimited(ip)) return { error: RATE_LIMITED_ERROR };
+  try {
+    // Ban check happens BEFORE any credential check — a blocked IP never
+    // reaches authentication.
+    const ip = await getRequestIp();
+    const ban = await findActiveBan(ip);
+    logBanCheck(ip, ban);
+    if (ban) return { error: BLOCKED_ERROR };
+    if (await isRateLimited(ip)) return { error: RATE_LIMITED_ERROR };
 
-  const adminSecret = process.env.ADMIN_SECRET;
-  const valid =
-    Boolean(adminSecret) && (await timingSafeEqual(parsed.data.code, adminSecret!));
+    const adminSecret = process.env.ADMIN_SECRET;
+    const valid =
+      Boolean(adminSecret) && (await timingSafeEqual(parsed.data.code, adminSecret!));
 
-  await prisma.adminLoginAttempt.create({ data: { ip, success: valid } });
-  if (!valid) return { error: GENERIC_ERROR };
+    await prisma.adminLoginAttempt.create({ data: { ip, success: valid } });
+    if (!valid) return { error: GENERIC_ERROR };
 
-  // Upsert the bootstrap super admin. Its password is the passphrase itself,
-  // so it can also sign in via the credential form using BOOTSTRAP_EMAIL.
-  const passwordHash = await hashPassword(adminSecret!);
-  const admin = await prisma.adminUser.upsert({
-    where: { email: BOOTSTRAP_EMAIL },
-    create: {
-      email: BOOTSTRAP_EMAIL,
-      passwordHash,
-      name: "Super Admin",
-      role: "SUPER_ADMIN",
-      isActive: true,
-    },
-    update: { role: "SUPER_ADMIN", isActive: true, passwordHash },
-  });
+    // Upsert the bootstrap super admin. Its password is the passphrase itself,
+    // so it can also sign in via the credential form using BOOTSTRAP_EMAIL.
+    const passwordHash = await hashPassword(adminSecret!);
+    const admin = await prisma.adminUser.upsert({
+      where: { email: BOOTSTRAP_EMAIL },
+      create: {
+        email: BOOTSTRAP_EMAIL,
+        passwordHash,
+        name: "Super Admin",
+        role: "SUPER_ADMIN",
+        isActive: true,
+      },
+      update: { role: "SUPER_ADMIN", isActive: true, passwordHash },
+    });
 
-  await establishSession(admin, ip);
-  // Return success (cookie already set) and let the client navigate — a
-  // server-side redirect() here surfaces to the client form's try/catch as a
-  // thrown signal and flashed a spurious "failed" message before navigating.
-  return {};
+    await establishSession(admin, ip);
+    // Return success (cookie already set) and let the client navigate — a
+    // server-side redirect() here surfaces to the client form's try/catch as a
+    // thrown signal and flashed a spurious "failed" message before navigating.
+    return {};
+  } catch (err) {
+    // Fail closed: any unexpected failure here must never grant access.
+    console.error("[admin] verifyAdminCode failed", err);
+    Sentry.captureException(err);
+    return { error: GENERIC_ERROR };
+  }
 }
 
 /** Credential entry for admins created by a super admin. */
@@ -129,35 +137,42 @@ export async function verifyAdminCredentials(
   const parsed = adminCredentialsSchema.safeParse(values);
   if (!parsed.success) return { error: GENERIC_ERROR };
 
-  // Ban check happens BEFORE any credential check — a blocked IP never
-  // reaches authentication.
-  const ip = await getRequestIp();
-  const ban = await findActiveBan(ip);
-  logBanCheck(ip, ban);
-  if (ban) return { error: BLOCKED_ERROR };
-  if (await isRateLimited(ip)) return { error: RATE_LIMITED_ERROR };
+  try {
+    // Ban check happens BEFORE any credential check — a blocked IP never
+    // reaches authentication.
+    const ip = await getRequestIp();
+    const ban = await findActiveBan(ip);
+    logBanCheck(ip, ban);
+    if (ban) return { error: BLOCKED_ERROR };
+    if (await isRateLimited(ip)) return { error: RATE_LIMITED_ERROR };
 
-  const admin = await prisma.adminUser.findUnique({
-    where: { email: parsed.data.email },
-  });
-  // verifyPassword runs bcrypt.compare even when admin is null (dummy hash),
-  // so a missing account and a wrong password take the same time.
-  const passwordOk = await verifyPassword(
-    parsed.data.password,
-    admin?.passwordHash ?? null,
-  );
-  const valid = Boolean(admin) && admin!.isActive && passwordOk;
+    const admin = await prisma.adminUser.findUnique({
+      where: { email: parsed.data.email },
+    });
+    // verifyPassword runs bcrypt.compare even when admin is null (dummy hash),
+    // so a missing account and a wrong password take the same time.
+    const passwordOk = await verifyPassword(
+      parsed.data.password,
+      admin?.passwordHash ?? null,
+    );
+    const valid = Boolean(admin) && admin!.isActive && passwordOk;
 
-  await prisma.adminLoginAttempt.create({
-    data: { ip, email: parsed.data.email, success: valid },
-  });
-  if (!valid || !admin) return { error: GENERIC_ERROR };
+    await prisma.adminLoginAttempt.create({
+      data: { ip, email: parsed.data.email, success: valid },
+    });
+    if (!valid || !admin) return { error: GENERIC_ERROR };
 
-  await establishSession(admin, ip);
-  // Return success (cookie already set) and let the client navigate — a
-  // server-side redirect() here surfaces to the client form's try/catch as a
-  // thrown signal and flashed a spurious "failed" message before navigating.
-  return {};
+    await establishSession(admin, ip);
+    // Return success (cookie already set) and let the client navigate — a
+    // server-side redirect() here surfaces to the client form's try/catch as a
+    // thrown signal and flashed a spurious "failed" message before navigating.
+    return {};
+  } catch (err) {
+    // Fail closed: any unexpected failure here must never grant access.
+    console.error("[admin] verifyAdminCredentials failed", err);
+    Sentry.captureException(err);
+    return { error: GENERIC_ERROR };
+  }
 }
 
 export async function adminSignOut() {

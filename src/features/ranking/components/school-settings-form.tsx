@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,7 @@ import { useI18n } from "@/features/i18n/provider";
 export function SchoolSettingsForm() {
   const { messages } = useI18n();
   const t = messages.ranking;
+  const [serverError, setServerError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -21,7 +23,13 @@ export function SchoolSettingsForm() {
   });
 
   async function onSubmit(values: SchoolFormValues) {
-    await updateSchool(values.school);
+    setServerError(null);
+    try {
+      const res = await updateSchool(values.school);
+      if (res.error) setServerError(res.error);
+    } catch {
+      setServerError("일시적인 오류가 발생했어요. 다시 시도해주세요.");
+    }
   }
 
   return (
@@ -32,6 +40,7 @@ export function SchoolSettingsForm() {
         {errors.school && (
           <p className="text-destructive text-xs">{errors.school.message}</p>
         )}
+        {serverError && <p className="text-destructive text-xs">{serverError}</p>}
       </div>
       <Button type="submit" size="sm" disabled={isSubmitting} className="self-start">
         {t.schoolSubmit}
