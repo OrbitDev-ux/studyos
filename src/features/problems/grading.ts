@@ -34,23 +34,33 @@ export type GradeResult = {
  * it's actually another problem's choice id — simply finds no match and
  * grades as incorrect; it can never throw or grade a foreign choice correct.
  */
-export function gradeAnswer(problem: GradableProblem, answer: SubmittedAnswer): GradeResult {
+export function gradeAnswer(
+  problem: GradableProblem,
+  answer: SubmittedAnswer,
+): GradeResult {
   const selectedChoice =
     problem.type === "MULTIPLE_CHOICE"
       ? problem.choices.find((choice) => choice.id === answer.choiceId)
       : undefined;
 
+  // SHORT_ANSWER with no reference answerText (the AI generation schema
+  // doesn't enforce it — see problems/schema.ts) is ungradable: without this
+  // guard, an empty submission normalizes to "" and matches an empty
+  // reference ("" === ""), grading a blank answer as correct.
+  const hasReferenceAnswer = Boolean(problem.answerText?.trim());
   const correct =
     problem.type === "MULTIPLE_CHOICE"
       ? (selectedChoice?.isCorrect ?? false)
       : problem.type === "ESSAY"
         ? (answer.selfCorrect ?? false)
-        : normalizeAnswer(answer.text ?? "") === normalizeAnswer(problem.answerText ?? "");
+        : hasReferenceAnswer &&
+          normalizeAnswer(answer.text ?? "") ===
+            normalizeAnswer(problem.answerText ?? "");
 
   const userAnswerText =
     problem.type === "MULTIPLE_CHOICE"
       ? (selectedChoice?.content ?? null)
-      : (answer.text?.trim() || null);
+      : answer.text?.trim() || null;
 
   return { correct, userAnswerText };
 }

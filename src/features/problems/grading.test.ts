@@ -74,7 +74,38 @@ describe("gradeAnswer — SHORT_ANSWER", () => {
   });
 
   it("빈 답안은 오답으로 처리된다", () => {
-    expect(gradeAnswer(shortAnswerProblem, {})).toEqual({ correct: false, userAnswerText: null });
+    expect(gradeAnswer(shortAnswerProblem, {})).toEqual({
+      correct: false,
+      userAnswerText: null,
+    });
+  });
+
+  it("기준 정답이 없는(null) 문제는 채점 불가 — 빈 제출을 정답으로 처리하지 않는다", () => {
+    const noReferenceAnswer: GradableProblem = {
+      type: "SHORT_ANSWER",
+      choices: [],
+      answerText: null,
+    };
+    // Without the guard, normalizeAnswer("") === normalizeAnswer("") would
+    // grade this blank submission as correct.
+    expect(gradeAnswer(noReferenceAnswer, {})).toEqual({
+      correct: false,
+      userAnswerText: null,
+    });
+  });
+
+  it("기준 정답이 빈 문자열/공백뿐인 문제도 채점 불가로 처리된다", () => {
+    const blankReferenceAnswer: GradableProblem = {
+      type: "SHORT_ANSWER",
+      choices: [],
+      answerText: "   ",
+    };
+    expect(
+      gradeAnswer(blankReferenceAnswer, { text: "학생이 실제로 입력한 답" }),
+    ).toEqual({
+      correct: false,
+      userAnswerText: "학생이 실제로 입력한 답",
+    });
   });
 });
 

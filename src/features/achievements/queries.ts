@@ -39,10 +39,13 @@ export const getLearningStats = cache(
       prisma.wrongAnswer.count({ where: { userId } }),
       getDueReviewCount(userId),
       getStreak(userId, timezone),
+      // desc + take: the most recent N attempts — "asc" would instead scan
+      // the OLDEST N, so a heavy user's recent streaks could never be found
+      // once their total attempt count exceeds the scan limit.
       prisma.problemAttempt.findMany({
         where: { userId },
         select: { isCorrect: true },
-        orderBy: { createdAt: "asc" },
+        orderBy: { createdAt: "desc" },
         take: CORRECT_STREAK_SCAN_LIMIT,
       }),
     ]);
