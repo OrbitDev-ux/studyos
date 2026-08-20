@@ -15,8 +15,13 @@ import {
   type ProblemGenerationFormValues,
 } from "@/features/problems/schema";
 import { filterDuplicateProblems } from "@/features/problems/dedup";
+import { generationBudgetFor } from "@/features/problems/generation-budget";
+import { filterUngradableAnswers } from "@/features/problems/validate-generated";
 import { gradeAnswer } from "@/features/problems/grading";
-import { recordProblemAttempt, type AttemptSource } from "@/features/learning/record-attempt";
+import {
+  recordProblemAttempt,
+  type AttemptSource,
+} from "@/features/learning/record-attempt";
 import {
   recordReviewSuccess,
   registerWrongAnswerForReview,
@@ -71,7 +76,9 @@ export async function generateProblems(
   // Zod handles 문자열 숫자(coerce)·소수(int)·0·음수(min)·과도한 수(max) in one step.
   const validation = problemGenerationFormSchema.safeParse(values);
   if (!validation.success) {
-    return { error: validation.error.issues[0]?.message ?? "입력값이 올바르지 않습니다." };
+    return {
+      error: validation.error.issues[0]?.message ?? "입력값이 올바르지 않습니다.",
+    };
   }
   const parsed = validation.data;
 
@@ -85,7 +92,8 @@ export async function generateProblems(
     unitId: parsed.unitId,
   });
   if (!resolved.ok) return { error: resolved.error };
-  const { subjectName, unitName, gradeName, schoolLevelName, curriculumLabel } = resolved.value;
+  const { subjectName, unitName, gradeName, schoolLevelName, curriculumLabel } =
+    resolved.value;
 
   const supabase = await createClient();
 
@@ -141,6 +149,7 @@ export async function generateProblems(
           system: await getActivePromptContent(PROMPT_TYPES.PROBLEM_GENERATION),
           prompt,
           schema: aiProblemSetSchema,
+          ...generationBudgetFor(parsed.count),
         }),
     ));
   } catch (err) {
@@ -157,6 +166,17 @@ export async function generateProblems(
     if (aiPayload) return { error: aiPayload.error };
     throw err;
   }
+
+  // Drop any SHORT_ANSWER item the AI produced without a reference answer
+  // (features/problems/validate-generated.ts) — never persist an ungradable
+  // problem. MULTIPLE_CHOICE/ESSAY are unaffected (grade from choices/
+  // selfCorrect, not answerText).
+  const { kept: gradableProblems, droppedCount: ungradableCount } =
+    filterUngradableAnswers(problems, parsed.type);
+  if (gradableProblems.length === 0) {
+    return { error: "AI가 정답이 포함된 문제를 만들지 못했어요. 다시 시도해주세요." };
+  }
+  if (ungradableCount > 0) problems = gradableProblems;
 
   // First-pass duplicate guard (features/problems/dedup.ts): drop any
   // generated problem whose normalized prompt text exactly matches one this
@@ -313,6 +333,7 @@ export async function generateSimilarProblem(
           system: await getActivePromptContent(PROMPT_TYPES.PROBLEM_GENERATION),
           prompt,
           schema: aiProblemSetSchema,
+          ...generationBudgetFor(1),
         }),
     ));
   } catch (err) {
@@ -325,6 +346,11 @@ export async function generateSimilarProblem(
 
   const problem = generated[0];
   if (!problem) return { error: "유사 문제를 만들지 못했어요. 다시 시도해주세요." };
+  // Same ungradable-answer guard as generateProblems() — a SHORT_ANSWER regen
+  // with no reference answer must not be persisted (see validate-generated.ts).
+  if (filterUngradableAnswers([problem], source.type).kept.length === 0) {
+    return { error: "AI가 정답이 포함된 문제를 만들지 못했어요. 다시 시도해주세요." };
+  }
 
   try {
     const persisted = await prisma.$transaction(async (tx) => {
@@ -503,7 +529,11 @@ export async function submitProblemAnswer(
     const color = DEFAULT_SUBJECTS.find((s) => s.name === subjectName)?.color;
     const ownSubject = await prisma.subject.upsert({
       where: { userId_name: { userId: user.id, name: subjectName } },
-      create: { userId: user.id, name: subjectName, color: color ?? SUBJECT_COLOR_PALETTE[0] },
+      create: {
+        userId: user.id,
+        name: subjectName,
+        color: color ?? SUBJECT_COLOR_PALETTE[0],
+      },
       update: {},
       select: { id: true },
     });

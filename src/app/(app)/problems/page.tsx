@@ -5,8 +5,10 @@ import { getMessages } from "@/features/i18n/messages";
 import { getServerLocale } from "@/features/i18n/server";
 import { requireCurrentUser } from "@/lib/session";
 
-// generateProblems' AI call regularly runs past Vercel's default serverless
-// timeout — Server Actions inherit the invoking route's maxDuration.
+// Server Actions inherit the invoking route's maxDuration. generateProblems()
+// calibrates its own AI-call timeout/retry budget to this value (see
+// generationBudgetFor in features/problems/actions.ts) — keep them in sync if
+// this changes.
 export const maxDuration = 60;
 
 const PROBLEMS_TABS = [
