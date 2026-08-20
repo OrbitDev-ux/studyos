@@ -25,10 +25,35 @@ export type GenerateInput = {
   model: string;
 };
 
+/** Input for generateStream() — deliberately narrower than GenerateInput: no
+ * jsonSchema (free-form text only) and no retryAttempts (see generateStream's
+ * doc comment for why retrying mid-stream doesn't make sense). */
+export type GenerateStreamInput = {
+  system: string;
+  prompt: string;
+  timeoutMs: number;
+  useThinking: boolean;
+  model: string;
+};
+
 export interface AIProvider {
   /** Provider id for logs ("gemini" | "manus"). */
   readonly name: string;
   /** Returns the raw structured result (pre-Zod-parse). Throws on failure; the
    * caller classifies the error into a user-safe AiGenerationError. */
   generate(input: GenerateInput): Promise<unknown>;
+  /**
+   * Streams raw text chunks for free-form (non-JSON-schema) generations, e.g.
+   * the AI Tutor's chat turns (features/tutor/ai.ts#runTutorTurnStream). There
+   * is no jsonSchema here — a caller that needs structure out of a streamed
+   * reply parses it out of the accumulated text itself (see
+   * features/tutor/chat-stream.ts's sentinel convention) rather than forcing
+   * the provider into strict-schema mode, which streams awkwardly as JSON
+   * fragments instead of readable text.
+   *
+   * Only covers connection-establishment retries internally (if at all) — once
+   * a chunk has been yielded to the caller, a retry would duplicate text the
+   * student has already seen on screen, so a mid-stream failure just throws.
+   */
+  generateStream(input: GenerateStreamInput): AsyncGenerator<string, void, void>;
 }

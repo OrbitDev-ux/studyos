@@ -73,3 +73,49 @@ export async function generateStructured<T>({
   // NOT wrapped) so the generation guard records it as validation_failed.
   return schema.parse(raw);
 }
+
+/**
+ * Streaming sibling of generateStructured() for free-form text turns (e.g. the
+ * AI Tutor chat) — same admin kill-switch and error classification, but no
+ * JSON Schema / Zod validation, since the point is to forward text to the
+ * caller as it arrives rather than wait for a complete structured object.
+ * A caller that needs structure out of the reply parses it out of the
+ * accumulated text itself (see features/tutor/chat-stream.ts).
+ */
+export async function* generateStreamingText({
+  system,
+  prompt,
+  useThinking = false,
+  timeoutMs = 30_000,
+}: {
+  system: string;
+  prompt: string;
+  useThinking?: boolean;
+  timeoutMs?: number;
+}): AsyncGenerator<string, void, void> {
+  const { aiEnabled, aiModel } = await getAllSettings();
+  if (!aiEnabled) {
+    throw new AiGenerationError(
+      "disabled",
+      "AI 기능이 현재 비활성화되어 있어요. 잠시 후 다시 시도해주세요.",
+    );
+  }
+
+  const provider = getProvider();
+  try {
+    yield* provider.generateStream({
+      system,
+      prompt,
+      timeoutMs,
+      useThinking,
+      model: aiModel,
+    });
+  } catch (err) {
+    const classified = classifyAiError(err);
+    console.error(
+      `AI generateStream failed (${provider.name}, ${classified.code}):`,
+      err instanceof Error ? err.name : typeof err,
+    );
+    throw classified;
+  }
+}

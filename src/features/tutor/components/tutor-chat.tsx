@@ -15,12 +15,23 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { NewTutorDialog } from "@/features/tutor/components/new-tutor-dialog";
 import { TutorConversationList } from "@/features/tutor/components/tutor-conversation-list";
-import { sendTutorMessage } from "@/features/tutor/actions";
+import { resolveStreamErrorOutcome } from "@/features/tutor/chat-outcome";
 import { tutorGradeLabel, tutorSubjectLabel } from "@/features/tutor/config";
 import { cn } from "@/lib/utils";
 
-type Msg = { id: string; role: string; content: string };
+type Msg = { id: string; role: string; content: string; streaming?: boolean };
 type ConvoSummary = { id: string; title: string; subject: string; updatedAt: string };
+
+type StreamEvent =
+  | { type: "chunk"; text: string }
+  | {
+      type: "done";
+      reviewScheduled?: { concept: string; count: number };
+      understanding?: string;
+    }
+  | { type: "error"; error: string; code?: string; upgradePlan?: string | null };
+
+const GENERIC_ERROR = "일시적인 오류가 발생했어요. 다시 시도해주세요.";
 
 const QUICK_ACTIONS: { label: string; message: string }[] = [
   { label: "개념 설명", message: "이 개념을 쉽게 설명해줘." },
@@ -42,58 +53,127 @@ export function TutorChat({
   const [messages, setMessages] = useState<Msg[]>(initialMessages);
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // The last message that produced no reply at all — offered a "resend" action.
+  // null once nothing needs resending (success, or some reply arrived anyway).
+  const [retryable, setRetryable] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  // Client-side reveal of the received reply (the provider can't token-stream).
-  const [revealId, setRevealId] = useState<string | null>(null);
-  const [revealLen, setRevealLen] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, revealLen, pending]);
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [messages, pending]);
 
-  // Typewriter reveal.
-  useEffect(() => {
-    if (!revealId) return;
-    const msg = messages.find((m) => m.id === revealId);
-    if (!msg) return;
-    if (revealLen >= msg.content.length) {
-      setRevealId(null);
-      return;
+  /**
+   * Consumes the NDJSON stream from POST /api/tutor/[id]/messages (P0-3) —
+   * appends each chunk to the assistant bubble live instead of waiting for
+   * the full reply, replacing the old client-side typewriter replay that
+   * only faked the appearance of streaming after the fact.
+   */
+  async function streamReply(content: string) {
+    const assistantId = `ai-${Date.now()}`;
+    let started = false;
+    let hadVisibleText = false;
+
+    try {
+      const res = await fetch(`/api/tutor/${conversation.id}/messages`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+
+      if (!res.ok || !res.body) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ?? GENERIC_ERROR);
+        setRetryable(content);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const event = JSON.parse(line) as StreamEvent;
+
+          if (event.type === "chunk") {
+            hadVisibleText = true;
+            if (!started) {
+              started = true;
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: assistantId,
+                  role: "assistant",
+                  content: event.text,
+                  streaming: true,
+                },
+              ]);
+            } else {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantId ? { ...m, content: m.content + event.text } : m,
+                ),
+              );
+            }
+          } else if (event.type === "done") {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === assistantId ? { ...m, streaming: false } : m)),
+            );
+            if (event.reviewScheduled) {
+              const { concept, count } = event.reviewScheduled;
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: `note-${Date.now()}`,
+                  role: "note",
+                  content: `'${concept}' 복습 ${count}개를 오늘 복습에 추가했어요.`,
+                },
+              ]);
+            }
+          } else {
+            const outcome = resolveStreamErrorOutcome(event, hadVisibleText, content);
+            setError(outcome.error);
+            setRetryable(outcome.retryableContent);
+            setMessages((prev) =>
+              prev.map((m) => (m.id === assistantId ? { ...m, streaming: false } : m)),
+            );
+          }
+        }
+      }
+    } catch {
+      // Network loss / an unexpected client-side failure mid-stream. Keep
+      // whatever text already reached the screen; only offer a resend if
+      // nothing did.
+      if (!hadVisibleText) {
+        setError(GENERIC_ERROR);
+        setRetryable(content);
+      }
+      setMessages((prev) =>
+        prev.map((m) => (m.id === assistantId ? { ...m, streaming: false } : m)),
+      );
     }
-    const t = setTimeout(() => setRevealLen((n) => Math.min(n + 3, msg.content.length)), 12);
-    return () => clearTimeout(t);
-  }, [revealId, revealLen, messages]);
+  }
 
   function send(text: string) {
     const content = text.trim();
     if (!content || pending) return;
     setError(null);
+    setRetryable(null);
     const userMsg: Msg = { id: `local-${Date.now()}`, role: "user", content };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
-    startTransition(async () => {
-      const res = await sendTutorMessage({ conversationId: conversation.id, content });
-      if (res.error) {
-        setError(res.error);
-        return; // user message stays (preserved)
-      }
-      if (res.reply) {
-        const id = `ai-${Date.now()}`;
-        const next: Msg[] = [{ id, role: "assistant", content: res.reply.content }];
-        // Tutor→SRS: surface a note when the tutor scheduled a concept review.
-        if (res.reviewScheduled) {
-          next.push({
-            id: `note-${Date.now()}`,
-            role: "note",
-            content: `‘${res.reviewScheduled.concept}’ 복습 ${res.reviewScheduled.count}개를 오늘 복습에 추가했어요.`,
-          });
-        }
-        setMessages((prev) => [...prev, ...next]);
-        setRevealId(id);
-        setRevealLen(0);
-      }
-    });
+    startTransition(() => streamReply(content));
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -103,6 +183,8 @@ export function TutorChat({
       send(input);
     }
   }
+
+  const isAwaitingFirstChunk = pending && !messages.some((m) => m.streaming);
 
   return (
     <div className="mx-auto flex h-[calc(100dvh-6rem)] w-full max-w-3xl flex-col">
@@ -119,7 +201,8 @@ export function TutorChat({
               🧑‍🏫 StudyOS AI 선생님
             </p>
             <p className="text-muted-foreground text-xs">
-              {tutorSubjectLabel(conversation.subject)} · {tutorGradeLabel(conversation.grade)}
+              {tutorSubjectLabel(conversation.subject)} ·{" "}
+              {tutorGradeLabel(conversation.grade)}
             </p>
           </div>
         </div>
@@ -137,7 +220,10 @@ export function TutorChat({
                 <SheetTitle>대화 목록</SheetTitle>
               </SheetHeader>
               <div className="mt-3 px-1">
-                <TutorConversationList conversations={conversations} activeId={conversation.id} />
+                <TutorConversationList
+                  conversations={conversations}
+                  activeId={conversation.id}
+                />
               </div>
             </SheetContent>
           </Sheet>
@@ -157,10 +243,11 @@ export function TutorChat({
             );
           }
           const isUser = m.role === "user";
-          const text =
-            m.id === revealId ? m.content.slice(0, revealLen) : m.content;
           return (
-            <div key={m.id} className={cn("flex", isUser ? "justify-end" : "justify-start")}>
+            <div
+              key={m.id}
+              className={cn("flex", isUser ? "justify-end" : "justify-start")}
+            >
               <div
                 className={cn(
                   "max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm",
@@ -168,14 +255,29 @@ export function TutorChat({
                 )}
               >
                 {!isUser && (
-                  <p className="text-muted-foreground mb-0.5 text-xs font-medium">선생님</p>
+                  <p className="text-muted-foreground mb-0.5 text-xs font-medium">
+                    선생님
+                  </p>
                 )}
-                <MathText className={isUser ? "text-primary-foreground" : ""}>{text}</MathText>
+                {m.streaming ? (
+                  // Plain text while streaming — partial LaTeX (e.g. an
+                  // unclosed \frac{) would render broken/flickering through
+                  // KaTeX mid-stream. Switches to MathText once the reply is
+                  // complete (m.streaming cleared on the "done"/"error" event).
+                  <span className="whitespace-pre-wrap">
+                    {m.content}
+                    <span className="animate-pulse">▍</span>
+                  </span>
+                ) : (
+                  <MathText className={isUser ? "text-primary-foreground" : ""}>
+                    {m.content}
+                  </MathText>
+                )}
               </div>
             </div>
           );
         })}
-        {pending && (
+        {isAwaitingFirstChunk && (
           <div className="flex justify-start">
             <div className="bg-muted text-muted-foreground rounded-2xl px-3.5 py-2.5 text-sm">
               선생님이 입력 중<span className="animate-pulse">…</span>
@@ -185,9 +287,20 @@ export function TutorChat({
       </div>
 
       {error && (
-        <p className="text-destructive px-1 pb-1 text-xs" role="alert">
-          {error} 잠시 후 다시 시도해주세요.
-        </p>
+        <div className="flex items-center gap-2 px-1 pb-1" role="alert">
+          <p className="text-destructive text-xs">{error}</p>
+          {retryable && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-6 px-2 text-xs"
+              onClick={() => send(retryable)}
+            >
+              다시 보내기
+            </Button>
+          )}
+        </div>
       )}
 
       {/* Quick actions */}

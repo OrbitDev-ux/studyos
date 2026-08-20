@@ -1,5 +1,9 @@
 import { AiGenerationError } from "@/features/ai/errors";
-import type { AIProvider, GenerateInput } from "@/features/ai/providers/types";
+import type {
+  AIProvider,
+  GenerateInput,
+  GenerateStreamInput,
+} from "@/features/ai/providers/types";
 import { stripNulls, toStrictJsonSchema } from "@/features/ai/providers/strict-schema";
 
 /**
@@ -90,15 +94,22 @@ export class GroqProvider implements AIProvider {
 
         // Retry transient statuses (429 rate limit, 5xx); fail fast on 4xx.
         if ((res.status === 429 || res.status >= 500) && attempt < retries) {
-          lastErr = Object.assign(new Error(`Groq HTTP ${res.status}`), { status: res.status });
+          lastErr = Object.assign(new Error(`Groq HTTP ${res.status}`), {
+            status: res.status,
+          });
           await backoff(attempt);
           continue;
         }
         // Non-retryable / exhausted → throw with status for classifyAiError.
-        const errBody = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
-        throw Object.assign(new Error(errBody?.error?.message ?? `Groq HTTP ${res.status}`), {
-          status: res.status,
-        });
+        const errBody = (await res.json().catch(() => null)) as {
+          error?: { message?: string };
+        } | null;
+        throw Object.assign(
+          new Error(errBody?.error?.message ?? `Groq HTTP ${res.status}`),
+          {
+            status: res.status,
+          },
+        );
       } catch (err) {
         // AiGenerationError (empty response) / abort / network. Retry transient.
         if (err instanceof AiGenerationError) throw err;
@@ -110,6 +121,94 @@ export class GroqProvider implements AIProvider {
         throw err;
       }
     }
-    throw lastErr ?? new AiGenerationError("failed", "AI 요청에 실패했어요. 잠시 후 다시 시도해주세요.");
+    throw (
+      lastErr ??
+      new AiGenerationError("failed", "AI 요청에 실패했어요. 잠시 후 다시 시도해주세요.")
+    );
+  }
+
+  async *generateStream(input: GenerateStreamInput): AsyncGenerator<string, void, void> {
+    const key = this.apiKey();
+    const model = process.env.GROQ_MODEL?.trim() || DEFAULT_MODEL;
+    const body = JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: input.system },
+        { role: "user", content: input.prompt },
+      ],
+      stream: true,
+      temperature: 0.7,
+    });
+
+    // Retries only cover connecting/establishing the stream — once the first
+    // chunk has reached the caller, a retry would duplicate text the student
+    // has already seen, so a mid-stream failure is surfaced as-is instead.
+    const CONNECT_RETRIES = 1;
+    let res: Response | undefined;
+    for (let attempt = 0; attempt <= CONNECT_RETRIES; attempt++) {
+      const candidate = await fetch(GROQ_URL, {
+        method: "POST",
+        headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+        body,
+        signal: AbortSignal.timeout(input.timeoutMs),
+      });
+      if (candidate.ok) {
+        res = candidate;
+        break;
+      }
+      if (
+        (candidate.status === 429 || candidate.status >= 500) &&
+        attempt < CONNECT_RETRIES
+      ) {
+        await backoff(attempt);
+        continue;
+      }
+      const errBody = (await candidate.json().catch(() => null)) as {
+        error?: { message?: string };
+      } | null;
+      throw Object.assign(
+        new Error(errBody?.error?.message ?? `Groq HTTP ${candidate.status}`),
+        {
+          status: candidate.status,
+        },
+      );
+    }
+    if (!res || !res.body) {
+      throw new AiGenerationError(
+        "failed",
+        "AI 응답이 비어 있어요. 잠시 후 다시 시도해주세요.",
+      );
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) continue;
+          const payload = trimmed.slice("data:".length).trim();
+          if (payload === "[DONE]") return;
+          let parsed: { choices?: { delta?: { content?: string } }[] };
+          try {
+            parsed = JSON.parse(payload);
+          } catch {
+            // Ignore malformed/partial keep-alive lines rather than aborting
+            // an otherwise-healthy stream over one unparsable event.
+            continue;
+          }
+          const delta = parsed.choices?.[0]?.delta?.content;
+          if (delta) yield delta;
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
   }
 }

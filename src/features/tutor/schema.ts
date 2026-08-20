@@ -11,9 +11,21 @@ export type CreateConversationValues = z.infer<typeof createConversationSchema>;
 
 export const sendMessageSchema = z.object({
   conversationId: z.string().min(1),
-  content: z.string().trim().min(1, "메시지를 입력해주세요").max(4000, "메시지가 너무 길어요"),
+  content: z
+    .string()
+    .trim()
+    .min(1, "메시지를 입력해주세요")
+    .max(4000, "메시지가 너무 길어요"),
 });
 export type SendMessageValues = z.infer<typeof sendMessageSchema>;
+
+/** Body schema for POST /api/tutor/[conversationId]/messages (P0-3 streaming
+ * turn) — conversationId comes from the route param instead, so only content
+ * is validated here. Reuses sendMessageSchema's exact content rule. */
+export const streamMessageSchema = z.object({
+  content: sendMessageSchema.shape.content,
+});
+export type StreamMessageValues = z.infer<typeof streamMessageSchema>;
 
 /** Structured shape the AI must return (reuses generateStructured/JSON schema).
  * `reply` is markdown + LaTeX rendered by the shared <MathText>. */

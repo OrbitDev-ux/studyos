@@ -2,6 +2,22 @@
  * Tutor 과목/학년 설정 — 코드 config(하드코딩 아님). 새 과목/학년은 여기 한 줄로 추가.
  */
 
+/**
+ * AI turn timeout budget. `/tutor/[conversationId]/page.tsx` sets
+ * `maxDuration = 60` (the Vercel function budget), but generateStructured()'s
+ * default (timeoutMs: 30_000, retryAttempts: 2) can retry up to 3 times under
+ * sustained 429/5xx and exceed that budget before returning — Vercel then kills
+ * the function and the student gets a raw platform error instead of the
+ * classified Korean message. Tutor turns use a tighter budget instead so a
+ * failure is always returned in time: worst case ≈ 20s + backoff(~4s) + 20s ≈
+ * 44s < 60s. A chat also benefits more from failing fast (the client already
+ * offers a one-tap resend, see chat-outcome.ts) than from a slow automatic
+ * retry — do not raise this back toward the 30s/2 defaults without also
+ * re-checking the maxDuration budget above.
+ */
+export const TUTOR_AI_TIMEOUT_MS = 20_000;
+export const TUTOR_AI_RETRY_ATTEMPTS = 1;
+
 export const TUTOR_SUBJECTS = [
   { id: "math", label: "수학", emoji: "🔢" },
   { id: "english", label: "영어", emoji: "🔤" },

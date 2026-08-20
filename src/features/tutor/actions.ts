@@ -1,17 +1,27 @@
 "use server";
 
+import * as Sentry from "@sentry/nextjs";
 import { revalidatePath } from "next/cache";
 import { requireCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { runTutorTurn, type TutorTurnMessage } from "@/features/tutor/ai";
-import { TUTOR_SUBJECTS, tutorSubjectLabel, type TutorSubjectId } from "@/features/tutor/config";
+import { runTutorTurn } from "@/features/tutor/ai";
+import {
+  TUTOR_SUBJECTS,
+  tutorSubjectLabel,
+  type TutorSubjectId,
+} from "@/features/tutor/config";
+import {
+  loadConversationForTurn,
+  persistAssistantReply,
+  persistUserMessage,
+  scheduleReviewIfRecommended,
+} from "@/features/tutor/persistence";
 import {
   createConversationSchema,
   sendMessageSchema,
   type CreateConversationValues,
   type SendMessageValues,
 } from "@/features/tutor/schema";
-import { bringForwardConceptReviews } from "@/features/review/schedule-service";
 
 function greeting(subjectLabel: string): string {
   return `안녕! 나는 너의 ${subjectLabel} 과외 선생님이야. 오늘은 무엇을 공부해볼까? 어려운 문제나 개념이 있으면 편하게 물어봐 😊`;
@@ -54,86 +64,77 @@ export type SendMessageResult = {
   /** Tutor→SRS: existing wrong answers on a concept surfaced for review today. */
   reviewScheduled?: { concept: string; count: number };
   error?: string;
+  /** Known values include the AI-guard codes (see GenerationErrorPayload) plus
+   * "persist_failed" (the AI call succeeded but saving the reply failed — `reply`
+   * is still populated so the client can show it) and "unexpected" (an
+   * unhandled failure elsewhere in this action). */
   code?: string;
   upgradePlan?: string | null;
 };
 
 /** Send a student message and get the tutor's reply. Owner-scoped; the student
- * message is persisted BEFORE the AI call so it survives an AI failure (§23). */
-export async function sendTutorMessage(values: SendMessageValues): Promise<SendMessageResult> {
+ * message is persisted BEFORE the AI call so it survives an AI failure (§23).
+ * Never throws: any unexpected failure below is caught and returned as a safe
+ * {error, code:"unexpected"} so the client always has something to render.
+ * requireCurrentUser() stays OUTSIDE the try below — it may throw Next's
+ * "NEXT_REDIRECT" control-flow error (e.g. an expired session), which must
+ * propagate untouched rather than be swallowed as a generic failure. */
+export async function sendTutorMessage(
+  values: SendMessageValues,
+): Promise<SendMessageResult> {
   const user = await requireCurrentUser();
   const parsed = sendMessageSchema.safeParse(values);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "메시지가 올바르지 않습니다." };
   }
 
-  const convo = await prisma.tutorConversation.findFirst({
-    where: { id: parsed.data.conversationId, userId: user.id },
-    select: {
-      id: true,
-      subject: true,
-      grade: true,
-      messages: { select: { role: true, content: true }, orderBy: { createdAt: "asc" } },
-    },
-  });
-  if (!convo) return { error: "대화를 찾을 수 없습니다." };
+  try {
+    const convo = await loadConversationForTurn(parsed.data.conversationId, user.id);
+    if (!convo) return { error: "대화를 찾을 수 없습니다." };
 
-  const history: TutorTurnMessage[] = convo.messages.map((m) => ({
-    role: m.role === "assistant" ? "assistant" : "user",
-    content: m.content,
-  }));
+    // Persist the student's message first — preserved even if the AI call fails.
+    await persistUserMessage(convo.id, parsed.data.content);
 
-  // Persist the student's message first — preserved even if the AI call fails.
-  await prisma.tutorMessage.create({
-    data: { conversationId: convo.id, role: "user", content: parsed.data.content },
-  });
+    const res = await runTutorTurn(user, convo, convo.history, parsed.data.content);
+    if (!res.ok) {
+      revalidatePath(`/tutor/${convo.id}`);
+      return {
+        error: "error" in res ? res.error : "선생님 답변 생성에 실패했어요.",
+        code: "code" in res ? res.code : undefined,
+        upgradePlan: "upgradePlan" in res ? res.upgradePlan : undefined,
+      };
+    }
 
-  const res = await runTutorTurn(user, convo, history, parsed.data.content);
-  if (!res.ok) {
+    const reviewScheduled = await scheduleReviewIfRecommended(
+      user.id,
+      convo.subject,
+      res.reply.reviewRecommendation,
+    );
+
+    const persisted = await persistAssistantReply(convo.id, res.reply, reviewScheduled);
+    if (!persisted.ok) {
+      return {
+        reply: { content: res.reply.reply, understanding: res.reply.understanding },
+        reviewScheduled,
+        error: persisted.error,
+        code: persisted.code,
+      };
+    }
+
+    if (reviewScheduled) revalidatePath("/review");
     revalidatePath(`/tutor/${convo.id}`);
     return {
-      error: "error" in res ? res.error : "선생님 답변 생성에 실패했어요.",
-      code: "code" in res ? res.code : undefined,
-      upgradePlan: "upgradePlan" in res ? res.upgradePlan : undefined,
+      reply: { content: res.reply.reply, understanding: res.reply.understanding },
+      reviewScheduled,
+    };
+  } catch (err) {
+    console.error("[tutor] sendTutorMessage failed unexpectedly", err);
+    Sentry.captureException(err);
+    return {
+      error: "일시적인 오류가 발생했어요. 다시 시도해주세요.",
+      code: "unexpected",
     };
   }
-
-  // Tutor→SRS: if the AI proposes a review and the recommendation validates,
-  // surface the user's OWN matching wrong answers for review today. The service
-  // scopes strictly to this user's rows; the AI string never touches the schema.
-  let reviewScheduled: { concept: string; count: number } | undefined;
-  const rec = res.reply.reviewRecommendation;
-  if (rec?.shouldSchedule) {
-    const count = await bringForwardConceptReviews(
-      user.id,
-      tutorSubjectLabel(convo.subject),
-      rec.concept,
-    );
-    if (count > 0) reviewScheduled = { concept: rec.concept, count };
-  }
-
-  await prisma.tutorMessage.create({
-    data: {
-      conversationId: convo.id,
-      role: "assistant",
-      content: res.reply.reply,
-      metadata:
-        res.reply.understanding || reviewScheduled
-          ? { understanding: res.reply.understanding, reviewScheduled }
-          : undefined,
-    },
-  });
-  await prisma.tutorConversation.update({
-    where: { id: convo.id },
-    data: { updatedAt: new Date() },
-  });
-
-  if (reviewScheduled) revalidatePath("/review");
-  revalidatePath(`/tutor/${convo.id}`);
-  return {
-    reply: { content: res.reply.reply, understanding: res.reply.understanding },
-    reviewScheduled,
-  };
 }
 
 /**
