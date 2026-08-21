@@ -1,6 +1,7 @@
 import { AddFriendForm } from "@/features/social/components/add-friend-form";
 import { ActivityFeed } from "@/features/social/components/activity-feed";
 import { ConversationList } from "@/features/social/components/conversation-list";
+import { ConversationLiveRefresh } from "@/features/social/components/conversation-live-refresh";
 import { FriendList } from "@/features/social/components/friend-list";
 import { FriendRequestList } from "@/features/social/components/friend-request-list";
 import { getFriendActivityFeed } from "@/features/social/activity";
@@ -36,10 +37,16 @@ export default async function SocialPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <FriendList friends={friends} t={t} />
-        <ConversationList conversations={conversations} currentUserId={user.id} t={t} />
+        <ConversationList
+          conversations={conversations}
+          currentUserId={user.id}
+          locale={locale}
+          t={t}
+        />
       </div>
 
       <ActivityFeed items={activity} t={t} locale={locale} />
+      <ConversationLiveRefresh />
     </div>
   );
 }

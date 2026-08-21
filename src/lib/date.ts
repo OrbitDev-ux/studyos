@@ -118,6 +118,13 @@ export function formatShortDate(date: Date, locale: string): string {
   }).format(date);
 }
 
+/** "3:45 PM" / "15:45" style clock time (locale-appropriate), in the
+ * viewer's own local time zone — used for message timestamps, where the
+ * exact minute matters more than the date. */
+export function formatTimeOnly(date: Date, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit" }).format(date);
+}
+
 const RELATIVE_TIME_UNITS: {
   limitMs: number;
   unit: Intl.RelativeTimeFormatUnit;

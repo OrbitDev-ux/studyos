@@ -102,6 +102,7 @@ model User {
   receivedFriendRequests  Friendship[]              @relation("FriendAddressee")
   conversationMemberships ConversationParticipant[]
   messages                Message[]
+  messageReactions        MessageReaction[]
   blockedUsers            BlockedUser[]             @relation("Blocker")
   blockedByUsers          BlockedUser[]             @relation("Blocked")
 
@@ -948,6 +949,15 @@ model ConversationParticipant {
   /// When this participant last opened the thread; messages after this from
   /// the other person are "unread" and feed the sidebar badge.
   lastReadAt     DateTime?
+  /// Last time this participant was actively typing. Read-only signal, not a
+  /// stored "is typing" boolean — the other participant's client derives
+  /// "typing now" by checking this is within the last few seconds, the same
+  /// stale-timestamp-as-state approach User.lastSeenAt already uses for
+  /// ONLINE/IDLE/OFFLINE (features/profile/presence.ts). Written at most once
+  /// per few seconds (client-side throttled in MessageInput), and picked up
+  /// by the existing 4s conversation poll — no new write-per-keystroke, no
+  /// new realtime transport.
+  typingAt       DateTime?
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -957,16 +967,45 @@ model ConversationParticipant {
 }
 
 model Message {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   conversationId String
   senderId       String
-  content        String   @db.Text
-  createdAt      DateTime @default(now())
+  content        String    @db.Text
+  createdAt      DateTime  @default(now())
+  /// Set when the sender has edited the content; null = never edited.
+  editedAt       DateTime?
+  /// Soft delete — content is cleared at delete time (not just hidden client-
+  /// side) and a tombstone renders instead, but the row itself stays so
+  /// reply chains pointing at it don't break.
+  deletedAt      DateTime?
+  replyToId      String?
 
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  conversation Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User              @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo      Message?          @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies      Message[]         @relation("MessageReplies")
+  reactions    MessageReaction[]
 
   @@index([conversationId, createdAt])
+  @@index([replyToId])
+}
+
+/// One row per (message, user, emoji) — a user can react to the same message
+/// with several different emoji, but not the same emoji twice (toggling it
+/// again removes the row). Restricted server-side to a fixed quick-reaction
+/// set (features/social/reactions.ts), not arbitrary strings.
+model MessageReaction {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
 }
 
 /// A timed friend challenge over one metric (study_time/todo_count/

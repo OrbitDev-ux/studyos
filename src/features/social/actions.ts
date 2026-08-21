@@ -235,7 +235,17 @@ const MAX_MESSAGE_LENGTH = 1000;
 
 const NOTIFICATION_PREVIEW_LENGTH = 120;
 
-export async function sendMessage(conversationId: string, content: string) {
+// Rate limit — same query-based, no-new-table approach as the login rate
+// limit (lib/auth.ts): count this sender's own recent messages rather than
+// standing up a shared rate-limiter/dependency for a friends-only DM surface.
+const MESSAGE_RATE_WINDOW_MS = 10_000;
+const MESSAGE_RATE_LIMIT = 15;
+
+export async function sendMessage(
+  conversationId: string,
+  content: string,
+  replyToId?: string,
+) {
   const user = await requireCurrentUser();
   const trimmed = content.trim().slice(0, MAX_MESSAGE_LENGTH);
   if (!trimmed) return;
@@ -246,9 +256,32 @@ export async function sendMessage(conversationId: string, content: string) {
   });
   if (!participant) throw new Error("대화에 참여하고 있지 않습니다.");
 
+  const recentCount = await prisma.message.count({
+    where: {
+      senderId: user.id,
+      createdAt: { gte: new Date(Date.now() - MESSAGE_RATE_WINDOW_MS) },
+    },
+  });
+  if (recentCount >= MESSAGE_RATE_LIMIT) {
+    throw new Error("메시지를 너무 빠르게 보내고 있어요. 잠시 후 다시 시도해주세요.");
+  }
+
+  // A reply target must be a real message in THIS conversation — otherwise a
+  // client could pass an arbitrary messageId from a conversation it isn't
+  // even part of and have its snippet rendered here (an IDOR-shaped content
+  // leak, not just a broken link).
+  const validReplyToId = replyToId
+    ? ((
+        await prisma.message.findFirst({
+          where: { id: replyToId, conversationId },
+          select: { id: true },
+        })
+      )?.id ?? null)
+    : null;
+
   await prisma.$transaction([
     prisma.message.create({
-      data: { conversationId, senderId: user.id, content: trimmed },
+      data: { conversationId, senderId: user.id, content: trimmed, replyToId: validReplyToId },
     }),
     prisma.conversation.update({
       where: { id: conversationId },

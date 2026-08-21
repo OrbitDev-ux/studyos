@@ -34,7 +34,8 @@ export function getReceivedFriendRequestCount(userId: string): Promise<number> {
 }
 
 /** Unread DM count: messages from other people, in the user's conversations,
- * newer than when they last opened each thread. One query via OR conditions. */
+ * newer than when they last opened each thread. One query via OR conditions.
+ * Excludes soft-deleted messages — nothing left to read. */
 export async function getUnreadMessageCount(userId: string): Promise<number> {
   const parts = await prisma.conversationParticipant.findMany({
     where: { userId },
@@ -47,7 +48,7 @@ export async function getUnreadMessageCount(userId: string): Promise<number> {
     ...(p.lastReadAt ? { createdAt: { gt: p.lastReadAt } } : {}),
   }));
   return prisma.message.count({
-    where: { senderId: { not: userId }, OR: conditions },
+    where: { senderId: { not: userId }, deletedAt: null, OR: conditions },
   });
 }
 
@@ -73,9 +74,9 @@ export function markConversationRead(conversationId: string, userId: string) {
  * this result is passed as a prop directly into a "use client" component
  * (FriendRequestList) — those others stay server-side and re-select safe
  * fields before ever crossing a client boundary. A client component's props
- * are serialized to the browser in full regardless of which fields its JSX
- * actually reads, so `requester` MUST be pre-narrowed here at the query
- * itself (Security audit: an unscoped `include: { requester: true }`
+ * are serialized to the browser in full regardless of which fields that
+ * component's JSX actually reads, so `requester` MUST be pre-narrowed here at
+ * the query itself (Security audit: an unscoped `include: { requester: true }`
  * previously shipped the requester's bcrypt password hash — and email,
  * banReason, etc. — to whoever received their friend request).
  */
@@ -100,23 +101,135 @@ export function getBlockedUsers(userId: string) {
   });
 }
 
-export function getConversations(userId: string) {
-  return prisma.conversation.findMany({
+/**
+ * Same field-narrowing rationale as getReceivedFriendRequests, applied to
+ * every participant.user select below (Security audit: getConversations/
+ * getConversation previously used a bare `include: { user: true }`, pulling
+ * the full User row — password hash included — into data these two queries'
+ * callers go on to hand to client chat components). `lastSeenAt` is included
+ * on purpose: it's how the conversation list/header derive the other
+ * person's ONLINE/IDLE/OFFLINE dot (features/profile/presence.ts's
+ * deriveOnlineStatus), reusing the existing presence system rather than
+ * building a second one.
+ */
+const CONVERSATION_USER_SELECT = {
+  id: true,
+  name: true,
+  image: true,
+  email: true,
+  lastSeenAt: true,
+} as const;
+
+/** Narrower still — this is only ever shown as "replying to {name}", never a
+ * clickable profile entry point, so email/presence aren't needed. */
+const REPLY_SENDER_SELECT = { id: true, name: true, image: true } as const;
+
+export async function getConversations(userId: string) {
+  const conversations = await prisma.conversation.findMany({
     where: { participants: { some: { userId } } },
     include: {
-      participants: { include: { user: true } },
-      messages: { orderBy: { createdAt: "desc" }, take: 1 },
+      participants: { include: { user: { select: CONVERSATION_USER_SELECT } } },
+      messages: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: {
+          id: true,
+          content: true,
+          senderId: true,
+          createdAt: true,
+          deletedAt: true,
+        },
+      },
     },
     orderBy: { updatedAt: "desc" },
   });
+
+  // Per-conversation unread count (bounded by how many conversations one user
+  // has — same N+1-but-small-N tradeoff the rest of this file already makes,
+  // e.g. getSocialNotificationCount). Each conversation has its own
+  // lastReadAt cutoff, so this can't collapse into one groupBy.
+  return Promise.all(
+    conversations.map(async (conversation) => {
+      const me = conversation.participants.find((p) => p.userId === userId);
+      const unreadCount = await prisma.message.count({
+        where: {
+          conversationId: conversation.id,
+          senderId: { not: userId },
+          deletedAt: null,
+          ...(me?.lastReadAt ? { createdAt: { gt: me.lastReadAt } } : {}),
+        },
+      });
+      return { ...conversation, unreadCount };
+    }),
+  );
 }
 
-export function getConversation(conversationId: string, userId: string) {
-  return prisma.conversation.findFirst({
+export async function getConversation(conversationId: string, userId: string) {
+  const conversation = await prisma.conversation.findFirst({
     where: { id: conversationId, participants: { some: { userId } } },
     include: {
-      participants: { include: { user: true } },
-      messages: { orderBy: { createdAt: "asc" } },
+      participants: { include: { user: { select: CONVERSATION_USER_SELECT } } },
+      messages: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          replyTo: {
+            select: {
+              id: true,
+              content: true,
+              deletedAt: true,
+              sender: { select: REPLY_SENDER_SELECT },
+            },
+          },
+          reactions: { select: { id: true, emoji: true, userId: true } },
+        },
+      },
     },
   });
+  if (!conversation) return null;
+
+  // Redact soft-deleted content defense-in-depth (deleteMessage already
+  // clears it in the DB at delete time — this keeps the redaction rule
+  // enforced in exactly one place regardless of how a row got here).
+  return {
+    ...conversation,
+    messages: conversation.messages.map((message) => ({
+      ...message,
+      content: message.deletedAt ? "" : message.content,
+      replyTo:
+        message.replyTo && message.replyTo.deletedAt
+          ? { ...message.replyTo, content: "" }
+          : message.replyTo,
+    })),
+  };
 }
+
+/**
+ * Simple substring search over one conversation's own messages — scoped by
+ * the same participant check every other conversation query uses, so a
+ * conversationId that isn't the caller's returns an empty result rather than
+ * throwing or leaking a count. Deliberately basic (ILIKE, no ranking/index):
+ * a DM thread's message volume doesn't need full-text search infrastructure,
+ * and this is written as its own query so a real index can be dropped in
+ * later without changing the call site.
+ */
+export async function searchMessages(conversationId: string, userId: string, query: string) {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  const isParticipant = await prisma.conversationParticipant.findUnique({
+    where: { conversationId_userId: { conversationId, userId } },
+  });
+  if (!isParticipant) return [];
+
+  return prisma.message.findMany({
+    where: {
+      conversationId,
+      deletedAt: null,
+      content: { contains: trimmed, mode: "insensitive" },
+    },
+    select: { id: true, content: true, senderId: true, createdAt: true },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+}
+

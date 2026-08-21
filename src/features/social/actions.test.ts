@@ -6,11 +6,28 @@ import { Prisma } from "@/generated/prisma/client";
  * requests), and sendFriendRequest must refuse a blocked relationship in
  * EITHER direction. No test coverage existed for this file before.
  */
-const { friendship, blockedUser } = vi.hoisted(() => ({
-  friendship: { findFirst: vi.fn(), create: vi.fn(), deleteMany: vi.fn() },
-  blockedUser: { findFirst: vi.fn(), create: vi.fn(), deleteMany: vi.fn() },
+const { friendship, blockedUser, conversationParticipant, message, transaction } = vi.hoisted(
+  () => {
+    const message = { count: vi.fn(), create: vi.fn(), findFirst: vi.fn() };
+    return {
+      friendship: { findFirst: vi.fn(), create: vi.fn(), deleteMany: vi.fn() },
+      blockedUser: { findFirst: vi.fn(), create: vi.fn(), deleteMany: vi.fn() },
+      conversationParticipant: { findUnique: vi.fn() },
+      message,
+      transaction: vi.fn((ops: unknown[]) => Promise.all(ops)),
+    };
+  },
+);
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    friendship,
+    blockedUser,
+    conversationParticipant,
+    message,
+    conversation: { update: vi.fn().mockResolvedValue({}) },
+    $transaction: transaction,
+  },
 }));
-vi.mock("@/lib/prisma", () => ({ prisma: { friendship, blockedUser } }));
 
 const { requireCurrentUser } = vi.hoisted(() => ({ requireCurrentUser: vi.fn() }));
 vi.mock("@/lib/session", () => ({ requireCurrentUser }));
@@ -26,7 +43,7 @@ vi.mock("@/lib/supabase/server", () => ({ createClient }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-import { blockUser, sendFriendRequest, unblockUser } from "@/features/social/actions";
+import { blockUser, sendFriendRequest, sendMessage, unblockUser } from "@/features/social/actions";
 
 const USER = { id: "user-1", email: "me@example.com" };
 const TARGET_ID = "user-2";
@@ -131,6 +148,77 @@ describe("unblockUser", () => {
 
     expect(blockedUser.deleteMany).toHaveBeenCalledWith({
       where: { blockerId: USER.id, blockedId: TARGET_ID },
+    });
+  });
+});
+
+const CONVERSATION_ID = "conv-1";
+
+describe("sendMessage", () => {
+  beforeEach(() => {
+    conversationParticipant.findUnique.mockResolvedValue({
+      conversation: { participants: [{ userId: USER.id }, { userId: TARGET_ID }] },
+    });
+    message.count.mockResolvedValue(0);
+    message.create.mockResolvedValue({ id: "msg-new" });
+    message.findFirst.mockResolvedValue(null);
+  });
+
+  it("throws when the caller isn't a participant of the conversation", async () => {
+    conversationParticipant.findUnique.mockResolvedValue(null);
+
+    await expect(sendMessage(CONVERSATION_ID, "hi")).rejects.toThrow(
+      "대화에 참여하고 있지 않습니다.",
+    );
+  });
+
+  it("enforces a rate limit on rapid sends", async () => {
+    message.count.mockResolvedValue(15);
+
+    await expect(sendMessage(CONVERSATION_ID, "hi")).rejects.toThrow(
+      "메시지를 너무 빠르게 보내고 있어요. 잠시 후 다시 시도해주세요.",
+    );
+    expect(message.create).not.toHaveBeenCalled();
+  });
+
+  it("only attaches replyToId when the target message is a real message in THIS conversation", async () => {
+    // A messageId from a DIFFERENT conversation (or one that doesn't exist)
+    // must never be attached — otherwise a client could reference an
+    // arbitrary message id and have its content rendered as a reply preview
+    // regardless of which conversation it actually belongs to.
+    message.findFirst.mockResolvedValue(null);
+
+    await sendMessage(CONVERSATION_ID, "hi", "someone-elses-message");
+
+    expect(message.findFirst).toHaveBeenCalledWith({
+      where: { id: "someone-elses-message", conversationId: CONVERSATION_ID },
+      select: { id: true },
+    });
+    expect(message.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ replyToId: null }) }),
+    );
+  });
+
+  it("attaches replyToId when the target message is real and in this conversation", async () => {
+    message.findFirst.mockResolvedValue({ id: "msg-1" });
+
+    await sendMessage(CONVERSATION_ID, "hi", "msg-1");
+
+    expect(message.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ replyToId: "msg-1" }) }),
+    );
+  });
+
+  it("sends normally with no reply target", async () => {
+    await sendMessage(CONVERSATION_ID, "hello");
+
+    expect(message.create).toHaveBeenCalledWith({
+      data: {
+        conversationId: CONVERSATION_ID,
+        senderId: USER.id,
+        content: "hello",
+        replyToId: null,
+      },
     });
   });
 });

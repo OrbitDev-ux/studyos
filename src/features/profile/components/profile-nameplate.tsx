@@ -1,7 +1,9 @@
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { OnlineStatusDot } from "@/features/profile/components/online-status";
 import { ProfileCard } from "@/features/profile/components/profile-card";
+import type { OnlineStatus } from "@/features/profile/presence";
 import { cn } from "@/lib/utils";
 
 /**
@@ -14,6 +16,7 @@ export function ProfileNameplate({
   name,
   image,
   fallbackLabel,
+  status,
   avatarClassName,
   nameClassName,
   className,
@@ -23,6 +26,10 @@ export function ProfileNameplate({
   image: string | null;
   /** Shown (and used for the avatar initial) when name is null, e.g. email. */
   fallbackLabel?: string | null;
+  /** Optional presence dot overlaid on the avatar (chat/friend lists). Omit
+   * to render without one — this is purely additive, every existing caller
+   * is unaffected. */
+  status?: OnlineStatus;
   avatarClassName?: string;
   nameClassName?: string;
   className?: string;
@@ -38,10 +45,18 @@ export function ProfileNameplate({
           className,
         )}
       >
-        <Avatar className={cn("size-8", avatarClassName)}>
-          <AvatarImage src={image ?? undefined} alt={name ?? ""} />
-          <AvatarFallback>{display.at(0)}</AvatarFallback>
-        </Avatar>
+        <span className="relative shrink-0">
+          <Avatar className={cn("size-8", avatarClassName)}>
+            <AvatarImage src={image ?? undefined} alt={name ?? ""} />
+            <AvatarFallback>{display.at(0)}</AvatarFallback>
+          </Avatar>
+          {status && (
+            <OnlineStatusDot
+              status={status}
+              className="ring-background absolute right-0 bottom-0 ring-2"
+            />
+          )}
+        </span>
         <span className={cn("truncate text-sm font-medium", nameClassName)}>{display}</span>
       </button>
     </ProfileCard>
