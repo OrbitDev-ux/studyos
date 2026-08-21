@@ -45,7 +45,13 @@ const { withGenerationQuota, generationErrorPayload } = vi.hoisted(() => ({
 }));
 vi.mock("@/features/ai/generation-guard", () => ({ withGenerationQuota, generationErrorPayload }));
 
-import { requestAiExplanation } from "@/features/review/actions";
+const { gradeReviewById } = vi.hoisted(() => ({ gradeReviewById: vi.fn() }));
+vi.mock("@/features/review/schedule-service", () => ({ gradeReviewById }));
+
+const { onReviewCompleted } = vi.hoisted(() => ({ onReviewCompleted: vi.fn() }));
+vi.mock("@/features/growth/hooks", () => ({ onReviewCompleted }));
+
+import { gradeReview, requestAiExplanation } from "@/features/review/actions";
 
 const USER = { id: "user-1", timezone: "Asia/Seoul" };
 
@@ -102,5 +108,41 @@ describe("requestAiExplanation", () => {
 
     expect(res).toEqual({ error: "사용 한도를 모두 사용했어요." });
     expect(wrongAnswer.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("gradeReview — Growth integration", () => {
+  it("rejects a grade string that isn't a real ReviewGrade before touching the scheduler", async () => {
+    const res = await gradeReview("wa-1", "impossible");
+
+    expect(res).toEqual({ error: "올바르지 않은 복습 결과입니다." });
+    expect(gradeReviewById).not.toHaveBeenCalled();
+    expect(onReviewCompleted).not.toHaveBeenCalled();
+  });
+
+  it("awards Growth XP for real forward progress (hard/good/easy)", async () => {
+    gradeReviewById.mockResolvedValue({ graduated: false, reviewStage: 2 });
+
+    const res = await gradeReview("wa-1", "good");
+
+    expect(res).toEqual({ graduated: false, reviewStage: 2 });
+    expect(onReviewCompleted).toHaveBeenCalledWith("user-1", "wa-1", 2, "Asia/Seoul");
+  });
+
+  it("does not award Growth XP for 'again' — a lapse resets the schedule instead of advancing it", async () => {
+    gradeReviewById.mockResolvedValue({ graduated: false, reviewStage: 0 });
+
+    await gradeReview("wa-1", "again");
+
+    expect(onReviewCompleted).not.toHaveBeenCalled();
+  });
+
+  it("does not award Growth XP when the wrong answer can't be found", async () => {
+    gradeReviewById.mockResolvedValue(null);
+
+    const res = await gradeReview("wa-1", "good");
+
+    expect(res).toEqual({ error: "오답 기록을 찾을 수 없습니다." });
+    expect(onReviewCompleted).not.toHaveBeenCalled();
   });
 });

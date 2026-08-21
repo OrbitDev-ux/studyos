@@ -37,6 +37,17 @@ export async function getTodayStudySeconds(
   return (data ?? []).reduce((sum, session) => sum + session.durationSec, 0);
 }
 
+/** All-time summed study duration — the Growth page's "총 학습 시간" stat. */
+export async function getTotalStudySeconds(userId: string): Promise<number> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("StudySession")
+    .select("durationSec")
+    .eq("userId", userId);
+  if (error) throw error;
+  return (data ?? []).reduce((sum, session) => sum + session.durationSec, 0);
+}
+
 const STREAK_LOOKBACK = 500;
 
 async function fetchStudyDateStrings(

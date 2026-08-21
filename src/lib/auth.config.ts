@@ -11,6 +11,7 @@ import { getMaintenanceEdge } from "@/lib/maintenance-edge";
 // of that same omission (Codebase audit).
 const PROTECTED_PATHS = [
   "/dashboard",
+  "/growth",
   "/todos",
   "/subjects",
   "/stats",

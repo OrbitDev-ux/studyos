@@ -14,6 +14,8 @@ import { WeaknessCard } from "@/features/learning/components/weakness-card";
 import { getTopWeaknesses } from "@/features/learning/weakness";
 import { DailyMissionCard } from "@/features/learning/components/daily-mission-card";
 import { getDailyMissionBoard } from "@/features/learning/mission-queries";
+import { GrowthMissionCard } from "@/features/growth/components/growth-mission-card";
+import { getActiveMissions } from "@/features/growth/mission-queries";
 import { WeakProblemsCard } from "@/features/learning/components/weak-problems-card";
 import { getWeakProblemBoard } from "@/features/learning/weak-problems-queries";
 import { MilestoneBanner } from "@/features/announcements/components/milestone-banner";
@@ -61,6 +63,7 @@ export default async function DashboardPage() {
     onboarding,
     planSummary,
     weeklyStats,
+    activeMissions,
   ] = await Promise.all([
     getActiveStudySession(user.id),
     getTodayStudySeconds(user.id, user.timezone),
@@ -78,6 +81,7 @@ export default async function DashboardPage() {
     getOnboardingState(user.id),
     getPlanSummary(user.id),
     getWeeklyStatistics(user.id, user.timezone),
+    getActiveMissions(user.id),
   ]);
   const showAds = adsVisibleFor(user);
   const locale = await getServerLocale(user.locale);
@@ -208,6 +212,7 @@ export default async function DashboardPage() {
           <TodayGoalsCard goals={goals} subjects={subjects} t={messages.goals} />
           <TodayTodosCard todos={todos} t={messages.todos} />
         </div>
+        <GrowthMissionCard missions={activeMissions} subjects={subjects} t={messages.growth} />
         <div className="grid gap-5 lg:grid-cols-3">
           <RecommendedProblemsCard problems={recentProblems} />
           <div data-tour="today-review">

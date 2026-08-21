@@ -22,6 +22,7 @@ const APP_GROUP_DIR = join(ROOT, "src/app/(app)");
 
 const PROTECTED_PATHS = [
   "/dashboard",
+  "/growth",
   "/todos",
   "/subjects",
   "/stats",

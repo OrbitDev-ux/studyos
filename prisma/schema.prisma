@@ -106,11 +106,11 @@ model User {
   createdBattles       Battle[]            @relation("BattleCreator")
   battleParticipations BattleParticipant[]
 
-  legalConsents LegalConsent[]
+  legalConsents    LegalConsent[]
   deletionRequests DataDeletionRequest[]
-  auditLogs      AuditLog[]
-  subscriptions  Subscription[]
-  payments       Payment[]
+  auditLogs        AuditLog[]
+  subscriptions    Subscription[]
+  payments         Payment[]
 
   passwordResetTokens PasswordResetToken[]
   supportTickets      SupportTicket[]
@@ -119,6 +119,10 @@ model User {
   tutorConversations  TutorConversation[]
   devWorkspace        DevWorkspace?
   notifications       Notification[]
+
+  growth        UserGrowth?
+  xpEvents      GrowthXpEvent[]
+  studyMissions StudyMission[]
 }
 
 /// Password reset tokens. The raw token is emailed to the user and NEVER stored;
@@ -212,12 +216,12 @@ model SupportMessage {
 /// role in its migration so a client can never read or forge another user's
 /// consent through the public REST endpoint.
 model LegalConsent {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   userId       String
   documentType String
   version      String
-  agreedAt     DateTime @default(now())
-  required     Boolean  @default(true)
+  agreedAt     DateTime  @default(now())
+  required     Boolean   @default(true)
   withdrawnAt  DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -246,12 +250,12 @@ model DataDeletionRequest {
 /// Minimal security audit events. Do not store request bodies, tokens, keys,
 /// passwords, or free-form user content in this table.
 model AuditLog {
-  id          String   @id @default(cuid())
-  userId      String?
-  event       String
-  ip          String?
-  userAgent   String?
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String?
+  event     String
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
@@ -262,20 +266,20 @@ model AuditLog {
 /// Payment-ready records only. No card number, CVC, or bank credential is
 /// stored; provider-specific details remain with the future PG adapter.
 model Subscription {
-  id                String   @id @default(cuid())
-  userId            String?
-  plan              Plan
-  status            String   @default("INACTIVE")
-  paymentProvider   String?
-  externalId        String?  @unique
+  id                 String    @id @default(cuid())
+  userId             String?
+  plan               Plan
+  status             String    @default("INACTIVE")
+  paymentProvider    String?
+  externalId         String?   @unique
   currentPeriodStart DateTime?
   currentPeriodEnd   DateTime?
   nextRenewalAt      DateTime?
-  cancelAtPeriodEnd  Boolean  @default(false)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  cancelAtPeriodEnd  Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   payments Payment[]
 
   @@index([userId, status])
@@ -304,15 +308,15 @@ model Payment {
 }
 
 model Refund {
-  id                String    @id @default(cuid())
-  paymentId         String
-  amount            Int
-  status            String    @default("PENDING")
-  reason            String?
-  paymentProvider   String?
-  externalRefundId  String?   @unique
-  processedAt       DateTime?
-  createdAt         DateTime  @default(now())
+  id               String    @id @default(cuid())
+  paymentId        String
+  amount           Int
+  status           String    @default("PENDING")
+  reason           String?
+  paymentProvider  String?
+  externalRefundId String?   @unique
+  processedAt      DateTime?
+  createdAt        DateTime  @default(now())
 
   payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
@@ -376,6 +380,7 @@ model Subject {
   mockExams      MockExam[]
   studyBooks     StudyBook[]
   studyMaterials StudyMaterial[]
+  studyMissions  StudyMission[]
 
   @@unique([userId, name])
   @@index([userId])
@@ -1292,4 +1297,113 @@ model DevWorkspace {
 
   @@unique([userId])
   @@index([userId])
+}
+
+// ─── Growth + Mission System (v1) ──────────────────────────────────────────
+// "공부할수록 성장하는 Learning OS": every learning activity (study time,
+// problem solving, wrong-answer review, goal completion, mission completion)
+// feeds one XP ledger; level/progress is derived from it via pure functions
+// (features/growth/level.ts) — never stored, so the level curve can change
+// without a migration and server/client always agree. Streak is deliberately
+// NOT duplicated here: the Growth Summary (features/growth/queries.ts) calls
+// the EXISTING getStreakStats() (study-sessions/queries.ts, itself derived
+// from StudySession) instead of storing a second counter that could drift
+// from the one StudySession already owns.
+//
+// This is unrelated to features/learning/mission.ts's "오늘의 Study Mission"
+// board — that one is a fully computed, non-persisted, non-rewarded weakness
+// suggestion (recomputed from ProblemAttempt/WrongAnswer on every render,
+// nothing stored). StudyMission below is a real, persisted, completable,
+// XP-rewarding entity the user (or a future system source) creates — a
+// different concept that intentionally does not touch or replace that board.
+
+/// One row per user. `totalXp` is a CACHED aggregate of GrowthXpEvent (the
+/// real source of truth) so reading a user's XP/level is O(1) instead of
+/// summing every event on every page load. Every write to totalXp happens in
+/// the SAME transaction as the GrowthXpEvent it corresponds to (see
+/// features/growth/xp-service.ts), so the two can never drift; if that's ever
+/// in doubt, totalXp is fully recomputable via
+/// `SELECT SUM(amount) FROM "GrowthXpEvent" WHERE "userId" = ...`.
+model UserGrowth {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  totalXp   Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Immutable, append-only XP ledger — the source of truth for totalXp and the
+/// idempotency boundary that makes XP un-farmable (double-submit, refresh
+/// replay, same-problem-spam). `type` is a plain string (not a Postgres enum),
+/// matching this schema's convention for fields expected to grow (see
+/// StudySession.type, Friendship.status): a new XP source is a TS union
+/// change, never a migration.
+///
+/// `sourceId` MUST uniquely identify the one real-world activity this XP is
+/// for (a StudySession id, a "<problemId>:<YYYY-MM-DD>" key, a
+/// "<wrongAnswerId>:<newReviewStage>" key, a Goal id, a Mission id, or an
+/// "all-missions:<YYYY-MM-DD>" bonus key) — @@unique below is what actually
+/// prevents granting the same XP twice. Deliberately NON-nullable (unlike a
+/// typical "sourceId?" sketch): a null sourceId would be exempt from the
+/// unique constraint in Postgres (NULL <> NULL), silently defeating the one
+/// guarantee this table exists for.
+model GrowthXpEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Int
+  /// "MISSION_COMPLETED" | "STUDY_TIME" | "REVIEW_COMPLETED" |
+  /// "PROBLEM_SOLVED" | "GOAL_COMPLETED" | "ALL_MISSIONS_BONUS"
+  type      String
+  sourceId  String
+  /// Free-form, type-specific context for the activity feed (e.g. subject
+  /// name, minutes studied). Never used for authorization or recomputation.
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type, sourceId])
+  @@index([userId, createdAt])
+}
+
+/// A goal-shaped unit of learning work that earns XP on completion. `type` /
+/// `source` / `status` are plain strings (not Postgres enums), matching this
+/// schema's convention for fields expected to grow (see StudySession.type,
+/// Friendship.status) — adding a new mission type is a TS union change, never
+/// a migration.
+model StudyMission {
+  id           String    @id @default(cuid())
+  userId       String
+  title        String
+  description  String?
+  /// "STUDY_TIME" | "PROBLEM_COUNT" | "REVIEW_COUNT" | "GOAL" | "CUSTOM"
+  type         String
+  /// "MANUAL" | "GOAL" | "SYSTEM" — who/what created this mission. Only
+  /// MANUAL is actually produced in v1; GOAL/SYSTEM are reserved for a future
+  /// Goal-sync or auto-suggested daily set (never AI-generated per this
+  /// phase's explicit scope).
+  source       String    @default("MANUAL")
+  subjectId    String?
+  /// STUDY_TIME is tracked in whole minutes; PROBLEM_COUNT/REVIEW_COUNT in
+  /// item counts; CUSTOM defaults to a single manual-complete step (1).
+  targetValue  Int
+  currentValue Int       @default(0)
+  /// "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED" | "EXPIRED"
+  status       String    @default("PENDING")
+  /// XP granted on completion, captured at creation time so a later XP-policy
+  /// change never retroactively alters an already-in-flight mission's reward.
+  xpReward     Int       @default(50)
+  dueAt        DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([userId, dueAt])
 }

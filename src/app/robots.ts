@@ -12,6 +12,7 @@ const disallow = [
   "/admin-auth",
   "/api/",
   "/dashboard",
+  "/growth",
   "/todos",
   "/subjects",
   "/stats",

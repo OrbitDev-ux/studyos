@@ -3,6 +3,7 @@
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { onStudySessionCompleted } from "@/features/growth/hooks";
 import { requireCurrentUser } from "@/lib/session";
 
 const STUDY_SESSION_TYPES = ["FOCUS", "PROBLEM", "MOCK_EXAM", "REVIEW", "AI_TUTOR"] as const;
@@ -74,13 +75,24 @@ export async function stopStudySession() {
   // .eq("endedAt", null) guards against a double-submit (e.g. a doubled form
   // action call) racing this same update twice — the second call's UPDATE
   // then matches zero rows instead of re-closing (and re-durationing) the
-  // same session a second time.
-  const { error } = await supabase
+  // same session a second time. .select().maybeSingle() lets us tell WHICH
+  // call actually performed the close (a row comes back) vs lost the race
+  // (null) — needed below so the Growth hook only ever fires once per
+  // session, from whichever call actually closed it.
+  const { data: closed, error } = await supabase
     .from("StudySession")
     .update({ endedAt: endedAt.toISOString(), durationSec })
     .eq("id", active.id)
-    .is("endedAt", null);
+    .is("endedAt", null)
+    .select("id")
+    .maybeSingle();
   if (error) throw error;
 
   revalidatePath("/dashboard");
+
+  if (closed) {
+    // Growth/Mission progress — server-measured duration only, keyed by this
+    // session's own id so it can never be credited twice (features/growth/hooks.ts).
+    await onStudySessionCompleted(user.id, active.id, durationSec, user.timezone);
+  }
 }

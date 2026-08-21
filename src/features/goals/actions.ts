@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getZonedDateOnly } from "@/lib/date";
+import { onGoalCompleted } from "@/features/growth/hooks";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/session";
 import { goalFormSchema, type GoalFormValues } from "@/features/goals/schema";
@@ -55,5 +56,14 @@ export async function incrementGoalProgress(goalId: string, delta: number) {
   if (clamped !== updated.currentValue) {
     await prisma.goal.update({ where: { id: goalId }, data: { currentValue: clamped } });
   }
+
+  // Growth: +30 XP once per goal, ever. Safe to call every time the goal is
+  // at-or-above target (not just "the first time it crossed") — awardXp's
+  // sourceId=goalId uniqueness is what actually prevents re-awarding on a
+  // later increment call against an already-completed goal.
+  if (clamped >= goal.targetValue) {
+    await onGoalCompleted(user.id, goalId);
+  }
+
   revalidatePath("/dashboard");
 }

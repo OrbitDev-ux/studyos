@@ -12,6 +12,7 @@ import { wrongAnswerDnaSchema, type WrongAnswerDna } from "@/features/review/dna
 import { aiExplanationSchema } from "@/features/review/schema";
 import { gradeReviewById } from "@/features/review/schedule-service";
 import type { ReviewGrade } from "@/features/review/schedule";
+import { onReviewCompleted } from "@/features/growth/hooks";
 import { accessStateFor, trialStartedDate } from "@/features/billing/access";
 import { canUseFeature } from "@/features/billing/entitlements";
 import { getClientIp } from "@/lib/ip";
@@ -215,6 +216,12 @@ export async function gradeReview(
 
   const result = await gradeReviewById(user.id, wrongAnswerId, grade as ReviewGrade);
   if (!result) return { error: "오답 기록을 찾을 수 없습니다." };
+
+  // Growth: +10 XP for real forward progress only — "again" resets the
+  // schedule (the user still got it wrong), so it isn't a completed review.
+  if (grade !== "again") {
+    await onReviewCompleted(user.id, wrongAnswerId, result.reviewStage, user.timezone);
+  }
 
   revalidatePath("/review");
   revalidatePath("/dashboard");

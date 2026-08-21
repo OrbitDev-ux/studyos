@@ -18,6 +18,7 @@ import { filterDuplicateProblems } from "@/features/problems/dedup";
 import { generationBudgetFor } from "@/features/problems/generation-budget";
 import { filterUngradableAnswers } from "@/features/problems/validate-generated";
 import { gradeAnswer } from "@/features/problems/grading";
+import { onProblemAttemptRecorded, onReviewCompleted } from "@/features/growth/hooks";
 import {
   recordProblemAttempt,
   type AttemptSource,
@@ -562,6 +563,12 @@ export async function submitProblemAnswer(
     durationMs: opts?.durationMs ?? null,
   });
 
+  // Growth: +2 XP once per (user, problem, calendar day) — see
+  // features/growth/hooks.ts for why resubmitting the same problem can't
+  // farm this. Fires for every graded attempt, correct or not ("valid
+  // completion" = legitimately graded, not necessarily right).
+  await onProblemAttemptRecorded(user.id, problemId, user.timezone);
+
   // Spaced-repetition scheduling (Phase 5). A correct answer advances the
   // review schedule (and graduates the item after the last interval); a wrong
   // answer registers/re-opens it as due after the first interval. This replaces
@@ -572,7 +579,12 @@ export async function submitProblemAnswer(
     // (다시/어려움/보통/쉬움); every other path auto-advances with a neutral
     // "good" so behaviour there is unchanged.
     if (!opts?.deferReviewGrade) {
-      await recordReviewSuccess(user.id, problemId);
+      const review = await recordReviewSuccess(user.id, problemId);
+      // A no-op (null) means there was no unresolved wrong answer to advance
+      // (e.g. a first-try correct answer) — nothing to reward here.
+      if (review) {
+        await onReviewCompleted(user.id, problemId, review.reviewStage, user.timezone);
+      }
     }
   } else {
     await registerWrongAnswerForReview(user.id, problemId, "problem");

@@ -12,6 +12,7 @@ import {
   Sparkles,
   Trophy,
   Users,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 import type { Messages } from "@/features/i18n/messages";
@@ -42,6 +43,13 @@ export const navGroups: NavGroup[] = [
     label: "학습",
     items: [
       { key: "dashboard", title: "대시보드", href: "/dashboard", icon: LayoutDashboard },
+      {
+        key: "growth",
+        title: "성장",
+        href: "/growth",
+        icon: Zap,
+        description: "레벨 · XP · 미션",
+      },
       {
         key: "tutor",
         title: "AI 과외",

@@ -9,6 +9,9 @@ vi.mock("@/lib/prisma", () => ({ prisma: { goal, subject } }));
 const { requireCurrentUser } = vi.hoisted(() => ({ requireCurrentUser: vi.fn() }));
 vi.mock("@/lib/session", () => ({ requireCurrentUser }));
 
+const { onGoalCompleted } = vi.hoisted(() => ({ onGoalCompleted: vi.fn() }));
+vi.mock("@/features/growth/hooks", () => ({ onGoalCompleted }));
+
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 import { createGoal, incrementGoalProgress } from "@/features/goals/actions";
@@ -90,6 +93,35 @@ describe("incrementGoalProgress", () => {
     expect(goal.update).toHaveBeenNthCalledWith(2, {
       where: { id: "goal-1" },
       data: { currentValue: 0 },
+    });
+  });
+
+  describe("Growth integration", () => {
+    it("awards Growth XP once the goal reaches its target", async () => {
+      goal.findFirst.mockResolvedValue({ targetValue: 10 });
+      goal.update.mockResolvedValueOnce({ currentValue: 10 });
+
+      await incrementGoalProgress("goal-1", 10);
+
+      expect(onGoalCompleted).toHaveBeenCalledWith("user-1", "goal-1");
+    });
+
+    it("does not award Growth XP while still below target", async () => {
+      goal.findFirst.mockResolvedValue({ targetValue: 10 });
+      goal.update.mockResolvedValueOnce({ currentValue: 5 });
+
+      await incrementGoalProgress("goal-1", 5);
+
+      expect(onGoalCompleted).not.toHaveBeenCalled();
+    });
+
+    it("safely calls onGoalCompleted again on a later increment against an already-completed goal (idempotency lives in awardXp, not here)", async () => {
+      goal.findFirst.mockResolvedValue({ targetValue: 10 });
+      goal.update.mockResolvedValueOnce({ currentValue: 10 });
+
+      await incrementGoalProgress("goal-1", 1); // e.g. a stray extra increment call
+
+      expect(onGoalCompleted).toHaveBeenCalledWith("user-1", "goal-1");
     });
   });
 });
