@@ -1,10 +1,23 @@
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 
+/**
+ * `choices` deliberately excludes `isCorrect`: this feeds WrongAnswerActions
+ * (a "use client" component) and is rendered before the retry is graded — the
+ * correct choice is only learned from submitProblemAnswer's result after
+ * submit, never from the initial page payload.
+ */
 export function getWrongAnswers(userId: string) {
   return prisma.wrongAnswer.findMany({
     where: { userId },
-    include: { problem: { include: { choices: true, subject: true } } },
+    include: {
+      problem: {
+        include: {
+          choices: { select: { id: true, label: true, content: true } },
+          subject: true,
+        },
+      },
+    },
     orderBy: [{ resolved: "asc" }, { createdAt: "desc" }],
   });
 }

@@ -71,6 +71,12 @@ model User {
   /// Null/missing key = enabled (opt-out model, so shipping a brand-new category
   /// never silently mutes it for existing users). Shape: Record<NotificationCategory, boolean>.
   notificationPreferences  Json?
+  /// Opt-out for the friend activity feed (features/social/activity): when
+  /// false, this user's StudySession/Goal activity is excluded from friends'
+  /// feeds. Distinct from notificationPreferences (that's about receiving
+  /// alerts; this is about being visible in others' feeds) — defaults to true
+  /// so shipping the feature doesn't silently hide existing users' activity.
+  activitySharingEnabled   Boolean            @default(true)
   createdAt                DateTime           @default(now())
   updatedAt                DateTime           @updatedAt
 

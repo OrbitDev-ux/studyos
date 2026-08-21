@@ -57,12 +57,13 @@ type SimilarProblemResult = {
   answerText: string | null;
   scoringCriteria: string | null;
   isFavorite: boolean;
+  // No `isCorrect` — this crosses into a client component via the Server
+  // Action return value (see SolvableProblem's doc comment).
   choices: {
     id: string;
     problemId: string;
     label: string;
     content: string;
-    isCorrect: boolean;
   }[];
   subject: { id: string; name: string; color: string };
 };
@@ -408,8 +409,12 @@ export async function generateSimilarProblem(
         });
       }
 
+      // select (not the default full-row findMany): isCorrect must never be
+      // fetched here, since `choices` flows straight into this Server Action's
+      // return value — a client component prop.
       const choices = await tx.choice.findMany({
         where: { problemId: createdProblem.id },
+        select: { id: true, problemId: true, label: true, content: true },
         orderBy: { id: "asc" },
       });
       return { problemSet, createdProblem, choices, subject: ownSubject };
@@ -503,7 +508,7 @@ export async function submitProblemAnswer(
      * (다시/어려움/보통/쉬움) the user picks next, instead of auto-advancing. */
     deferReviewGrade?: boolean;
   },
-): Promise<{ correct: boolean; explanation: string | null }> {
+): Promise<{ correct: boolean; explanation: string | null; correctChoiceId: string | null }> {
   const user = await requireCurrentUser();
   const supabase = await createClient();
 
@@ -573,7 +578,17 @@ export async function submitProblemAnswer(
     await registerWrongAnswerForReview(user.id, problemId, "problem");
   }
 
+  // Which choice was correct is only safe to reveal now, after grading — never
+  // as part of the problem's initial page-load payload (see SolvableProblem's
+  // doc comment in solve-problem-panel.tsx).
+  const correctChoiceId =
+    problem.type === "MULTIPLE_CHOICE"
+      ? ((problem.choices as { id: string; isCorrect: boolean }[] | null)?.find(
+          (c) => c.isCorrect,
+        )?.id ?? null)
+      : null;
+
   revalidatePath("/problems");
   revalidatePath("/review");
-  return { correct, explanation: problem.explanation };
+  return { correct, explanation: problem.explanation, correctChoiceId };
 }

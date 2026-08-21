@@ -5,7 +5,16 @@ import { createClient } from "@/lib/supabase/server";
 
 // Hand-typed to match what Prisma used to return — the Supabase client has
 // no generated DB types wired in, so .from().select() is loosely typed.
-type ParticipantWithUser = BattleParticipant & { user: User };
+//
+// `user` is deliberately narrowed to the fields this feature actually reads
+// (name/email for display, image is unused today but kept for parity with
+// other participant lists) — never the full row. Both getBattles/getBattle
+// currently only ever reach server components (Codebase audit confirmed no
+// live leak), but a full `User(*)` — including the password hash — sitting
+// on every participant is exactly the shape that leaked once before in this
+// codebase (see social/queries.ts's getReceivedFriendRequests doc comment).
+type PublicParticipantUser = Pick<User, "id" | "name" | "email" | "image">;
+type ParticipantWithUser = BattleParticipant & { user: PublicParticipantUser };
 type BattleWithParticipants = Battle & { participants: ParticipantWithUser[] };
 
 /**
@@ -82,7 +91,7 @@ export async function getBattles(userId: string) {
 
   const { data, error } = await supabase
     .from("Battle")
-    .select("*, participants:BattleParticipant(*, user:User(*))")
+    .select("*, participants:BattleParticipant(*, user:User(id,name,email,image))")
     .in("id", battleIds)
     .order("createdAt", { ascending: false });
   if (error) throw error;
@@ -109,7 +118,7 @@ export async function getBattle(battleId: string, userId: string) {
 
   const { data, error } = await supabase
     .from("Battle")
-    .select("*, participants:BattleParticipant(*, user:User(*))")
+    .select("*, participants:BattleParticipant(*, user:User(id,name,email,image))")
     .eq("id", battleId)
     .maybeSingle();
   if (error) throw error;

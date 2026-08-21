@@ -30,10 +30,30 @@ export async function createGoal(values: GoalFormValues) {
 
 export async function incrementGoalProgress(goalId: string, delta: number) {
   const user = await requireCurrentUser();
-  const goal = await prisma.goal.findFirst({ where: { id: goalId, userId: user.id } });
+  const goal = await prisma.goal.findFirst({
+    where: { id: goalId, userId: user.id },
+    select: { targetValue: true },
+  });
   if (!goal) return;
 
-  const currentValue = Math.min(goal.targetValue, Math.max(0, goal.currentValue + delta));
-  await prisma.goal.update({ where: { id: goalId }, data: { currentValue } });
+  // Prisma's `increment` compiles to an atomic `SET currentValue =
+  // currentValue + delta` in Postgres — unlike the previous read-then-write
+  // (read goal.currentValue, clamp, write it back), two concurrent taps
+  // (double-click, retry, multiple tabs) can no longer silently lose one of
+  // the increments (Codebase audit: race condition).
+  const updated = await prisma.goal.update({
+    where: { id: goalId },
+    data: { currentValue: { increment: delta } },
+    select: { currentValue: true },
+  });
+
+  // Clamp as a follow-up step, not part of the atomic increment above: even
+  // if this loses a tight race with another increment, it only ever tightens
+  // an already-consistent value back into [0, targetValue] — it can't cause
+  // the lost-update bug the increment above just fixed.
+  const clamped = Math.min(goal.targetValue, Math.max(0, updated.currentValue));
+  if (clamped !== updated.currentValue) {
+    await prisma.goal.update({ where: { id: goalId }, data: { currentValue: clamped } });
+  }
   revalidatePath("/dashboard");
 }

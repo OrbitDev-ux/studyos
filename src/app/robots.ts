@@ -32,6 +32,7 @@ const disallow = [
   "/lab",
   "/maintenance",
   "/suspended",
+  "/dev",
 ];
 
 export default function robots(): MetadataRoute.Robots {

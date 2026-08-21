@@ -1,4 +1,4 @@
-import type { Choice, Problem, Subject } from "@/generated/prisma/client";
+import type { Problem, Subject } from "@/generated/prisma/client";
 import { createClient } from "@/lib/supabase/server";
 import { IMPORT_SOURCE } from "@/features/problems/import/types";
 import { PAGE_SIZE, type StudyBankParams } from "@/features/study-bank/search-params";
@@ -10,7 +10,10 @@ import { PAGE_SIZE, type StudyBankParams } from "@/features/study-bank/search-pa
  * pipeline) show up automatically because the page reads live from the DB.
  */
 
-export type BankProblem = Problem & { choices: Choice[]; subject: Subject | null };
+// No `isCorrect` — this flows into StudyBankCard's SolveProblemPanel before
+// the problem is solved (see problems/queries.ts's PublicChoice doc comment).
+type PublicChoice = { id: string; problemId: string; label: string; content: string };
+export type BankProblem = Problem & { choices: PublicChoice[]; subject: Subject | null };
 
 export type StudyBankFacets = {
   /** Subject options for the filter — value is the subject NAME (works across the
@@ -91,7 +94,9 @@ export async function getStudyBankProblems(
 
   let query = supabase
     .from("Problem")
-    .select("*, choices:Choice(*), subject:Subject(*)", { count: "exact" });
+    .select("*, choices:Choice(id,problemId,label,content), subject:Subject(*)", {
+      count: "exact",
+    });
 
   // Scope. "저장" is the user's OWN favorites (isFavorite is owner-specific). Every
   // other tab shows the user's own problems PLUS shared imported bank problems.

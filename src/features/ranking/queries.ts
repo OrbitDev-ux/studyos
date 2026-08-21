@@ -1,4 +1,6 @@
 import type { Prisma } from "@/generated/prisma/client";
+import { getFriendUserIds } from "@/features/social/queries";
+import { getRecentRange, getTodayRange } from "@/lib/date";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 
@@ -60,16 +62,6 @@ async function buildRanking(
   return entries;
 }
 
-async function getFriendUserIds(userId: string): Promise<string[]> {
-  const friendships = await prisma.friendship.findMany({
-    where: { status: "accepted", OR: [{ requesterId: userId }, { addresseeId: userId }] },
-    select: { requesterId: true, addresseeId: true },
-  });
-  return friendships.map((f) =>
-    f.requesterId === userId ? f.addresseeId : f.requesterId,
-  );
-}
-
 /** Calendar-month boundary shared by every viewer, so a "season" leaderboard
  * means the same window for everyone comparing scores — not each viewer's
  * own local month. */
@@ -86,6 +78,30 @@ export function getGlobalRanking(): Promise<RankingEntry[]> {
 export async function getFriendRanking(userId: string): Promise<RankingEntry[]> {
   const friendIds = await getFriendUserIds(userId);
   return buildRanking({ userId: { in: [userId, ...friendIds] } });
+}
+
+export type FriendRankingRange = "today" | "week";
+
+/**
+ * Friend comparison scoped to "today" or "the last 7 days", in the viewer's
+ * own timezone — same computed-at-read-time buildRanking() as the other
+ * ranking scopes, just with a narrower StudySession.startedAt window. Not
+ * gated by activitySharingEnabled (features/social/activity's opt-out): this
+ * reuses the existing, always-on friend ranking, which had no visibility
+ * toggle before this feature either — scope kept intentionally unchanged.
+ */
+export async function getFriendRankingForRange(
+  userId: string,
+  range: FriendRankingRange,
+  timezone: string,
+): Promise<RankingEntry[]> {
+  const friendIds = await getFriendUserIds(userId);
+  const { start } =
+    range === "today" ? getTodayRange(timezone) : getRecentRange(timezone, 7);
+  return buildRanking({
+    userId: { in: [userId, ...friendIds] },
+    startedAt: { gte: start },
+  });
 }
 
 /** `null` means the user hasn't set a school yet — distinct from an empty ranking. */

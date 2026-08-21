@@ -31,6 +31,7 @@ export function WrongAnswerActions({
   const [result, setResult] = useState<{
     correct: boolean;
     explanation: string | null;
+    correctChoiceId: string | null;
   } | null>(null);
   const [explanation, setExplanation] = useState(wrongAnswer.aiExplanation);
   const [dna, setDna] = useState<WrongAnswerDna | null>(
@@ -153,11 +154,11 @@ export function WrongAnswerActions({
                   "rounded-md border px-3 py-2 text-left text-sm transition-colors",
                   isSelected && !revealed && "border-primary bg-primary/5",
                   revealed &&
-                    choice.isCorrect &&
+                    choice.id === result?.correctChoiceId &&
                     "border-primary bg-primary/10 font-medium",
                   revealed &&
                     isSelected &&
-                    !choice.isCorrect &&
+                    choice.id !== result?.correctChoiceId &&
                     "border-destructive bg-destructive/5",
                 )}
               >

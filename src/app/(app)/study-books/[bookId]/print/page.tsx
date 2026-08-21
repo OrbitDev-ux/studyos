@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { StudyBookPrintDocument } from "@/features/study-books/components/study-book-print-document";
 import { StudyBookPrintToolbar } from "@/features/study-books/components/study-book-print-toolbar";
-import { parseIncludeLevel } from "@/features/study-books/print/options";
-import { getStudyBook } from "@/features/study-books/queries";
+import { parseIncludeLevel, showAnswers } from "@/features/study-books/print/options";
+import { getMultipleChoiceAnswerText, getStudyBook } from "@/features/study-books/queries";
 import { requireCurrentUser } from "@/lib/session";
 
 /**
@@ -35,10 +35,24 @@ export default async function StudyBookPrintPage({
   // A stale/invalid chapter id (e.g. deleted chapter) → nothing to print.
   if (chapters.length === 0) notFound();
 
+  // Fetched only when the answer key is actually being printed, and kept out
+  // of `book`/`getStudyBook` entirely — the "문제만" mode's payload must never
+  // contain `isCorrect`, even unrendered (see getStudyBook's doc comment).
+  const correctAnswers = showAnswers(include)
+    ? await getMultipleChoiceAnswerText(
+        chapters.flatMap((c) => c.items.flatMap((i) => (i.problem ? [i.problem.id] : []))),
+      )
+    : new Map<string, string>();
+
   return (
     <>
       <StudyBookPrintToolbar bookId={book.id} chapterId={chapterId} include={include} />
-      <StudyBookPrintDocument book={book} chapters={chapters} include={include} />
+      <StudyBookPrintDocument
+        book={book}
+        chapters={chapters}
+        include={include}
+        correctAnswers={correctAnswers}
+      />
     </>
   );
 }

@@ -11,7 +11,9 @@ import { requireCurrentUser } from "@/lib/session";
 /** Match helper for markAsReadByTarget over `friend_request`/DM-shaped metadata. */
 function metadataMatches(key: string, value: string) {
   return (metadata: unknown) =>
-    !!metadata && typeof metadata === "object" && (metadata as Record<string, unknown>)[key] === value;
+    !!metadata &&
+    typeof metadata === "object" &&
+    (metadata as Record<string, unknown>)[key] === value;
 }
 
 export async function sendFriendRequest(email: string) {
@@ -101,9 +103,28 @@ export async function respondToFriendRequest(friendshipId: string, accept: boole
 
   // The request notification (shown to the addressee, i.e. the current user)
   // is now handled either way — accepting or declining both resolve it.
-  await markAsReadByTarget(user.id, "friend_request", metadataMatches("friendshipId", friendshipId));
+  await markAsReadByTarget(
+    user.id,
+    "friend_request",
+    metadataMatches("friendshipId", friendshipId),
+  );
 
   revalidatePath("/social");
+}
+
+/**
+ * Toggle whether the current user's StudySession/Goal activity is visible in
+ * their friends' activity feed (features/social/activity). Off by choice only
+ * (default true) — authorization is implicit and non-forgeable the same way
+ * as updateProfile: the row updated is always `user.id` from the session.
+ */
+export async function updateActivitySharing(enabled: boolean) {
+  const user = await requireCurrentUser();
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { activitySharingEnabled: enabled },
+  });
+  revalidatePath("/settings");
 }
 
 export async function removeFriend(friendshipId: string) {
@@ -183,7 +204,9 @@ export async function sendMessage(conversationId: string, content: string) {
     trimmed.length > NOTIFICATION_PREVIEW_LENGTH
       ? `${trimmed.slice(0, NOTIFICATION_PREVIEW_LENGTH)}…`
       : trimmed;
-  const others = participant.conversation.participants.filter((p) => p.userId !== user.id);
+  const others = participant.conversation.participants.filter(
+    (p) => p.userId !== user.id,
+  );
   await Promise.all(
     others.map((other) =>
       createNotification({

@@ -13,6 +13,19 @@ export async function getFriends(userId: string) {
   }));
 }
 
+/** Accepted-friend user ids only (no name/email) — used by features that
+ * need to scope a query to "my friends" without needing full friend rows
+ * (e.g. the friend activity feed). */
+export async function getFriendUserIds(userId: string): Promise<string[]> {
+  const friendships = await prisma.friendship.findMany({
+    where: { status: "accepted", OR: [{ requesterId: userId }, { addresseeId: userId }] },
+    select: { requesterId: true, addresseeId: true },
+  });
+  return friendships.map((f) =>
+    f.requesterId === userId ? f.addresseeId : f.requesterId,
+  );
+}
+
 /** Number of pending friend requests received — feeds the sidebar badge. */
 export function getReceivedFriendRequestCount(userId: string): Promise<number> {
   return prisma.friendship.count({
@@ -69,7 +82,9 @@ export function markConversationRead(conversationId: string, userId: string) {
 export function getReceivedFriendRequests(userId: string) {
   return prisma.friendship.findMany({
     where: { addresseeId: userId, status: "pending" },
-    include: { requester: { select: { id: true, name: true, image: true, email: true } } },
+    include: {
+      requester: { select: { id: true, name: true, image: true, email: true } },
+    },
     orderBy: { createdAt: "desc" },
   });
 }

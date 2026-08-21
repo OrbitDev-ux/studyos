@@ -16,7 +16,7 @@ export function BottomNav({ socialCount = 0 }: { socialCount?: number }) {
 
   return (
     <nav
-      aria-label="주요 메뉴"
+      aria-label={messages.nav.mainMenu}
       className="bg-background/95 fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >

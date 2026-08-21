@@ -16,6 +16,7 @@ import {
 import { sendEmail } from "@/lib/email";
 import { getClientIp } from "@/lib/ip";
 import { prisma } from "@/lib/prisma";
+import { SITE_URL } from "@/lib/site-url";
 
 /** Same message whether or not an account exists — prevents account enumeration. */
 const GENERIC_FORGOT_MESSAGE =
@@ -27,16 +28,8 @@ const RATE_WINDOW_MS = 15 * 60 * 1000;
 const MAX_PER_IP = 5;
 const MAX_PER_USER = 3;
 
-function resetUrl(origin: string, token: string): string {
-  return `${origin}/reset-password?token=${encodeURIComponent(token)}`;
-}
-
-async function requestOrigin(): Promise<string> {
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-  const proto = h.get("x-forwarded-proto") ?? "https";
-  if (host) return `${proto}://${host}`;
-  return process.env.AUTH_URL ?? "https://studyos.app";
+function resetUrl(token: string): string {
+  return `${SITE_URL}/reset-password?token=${encodeURIComponent(token)}`;
 }
 
 /**
@@ -93,11 +86,10 @@ export async function requestPasswordReset(
       },
     });
 
-    const origin = await requestOrigin();
     await sendEmail({
       to: email,
       subject: "[StudyOS] 비밀번호 재설정 안내",
-      text: `아래 링크에서 비밀번호를 재설정하세요 (1시간 내 유효):\n\n${resetUrl(origin, token)}\n\n본인이 요청하지 않았다면 이 메일을 무시하세요.`,
+      text: `아래 링크에서 비밀번호를 재설정하세요 (1시간 내 유효):\n\n${resetUrl(token)}\n\n본인이 요청하지 않았다면 이 메일을 무시하세요.`,
     });
   } catch {
     // Never surface internal errors here — keep the response uniform.

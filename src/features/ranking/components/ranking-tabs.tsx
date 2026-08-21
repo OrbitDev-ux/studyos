@@ -8,23 +8,36 @@ import type { RankingEntry } from "@/features/ranking/queries";
 import { useI18n } from "@/features/i18n/provider";
 
 type Scope = "global" | "friends" | "school" | "season";
+type FriendPeriod = "all" | "today" | "week";
 
 export function RankingTabs({
   currentUserId,
   global,
   friends,
+  friendsToday,
+  friendsWeek,
   school,
   season,
 }: {
   currentUserId: string;
   global: RankingEntry[];
   friends: RankingEntry[];
+  friendsToday: RankingEntry[];
+  friendsWeek: RankingEntry[];
   school: RankingEntry[] | null;
   season: RankingEntry[];
 }) {
   const [scope, setScope] = useState<Scope>("global");
+  const [friendPeriod, setFriendPeriod] = useState<FriendPeriod>("all");
   const { messages, locale } = useI18n();
   const t = messages.ranking;
+
+  const friendEntries =
+    friendPeriod === "today"
+      ? friendsToday
+      : friendPeriod === "week"
+        ? friendsWeek
+        : friends;
 
   return (
     <div className="flex flex-col gap-4">
@@ -47,13 +60,25 @@ export function RankingTabs({
         />
       )}
       {scope === "friends" && (
-        <RankingList
-          entries={friends}
-          currentUserId={currentUserId}
-          emptyMessage={t.emptyFriends}
-          noNameLabel={t.noName}
-          locale={locale}
-        />
+        <div className="flex flex-col gap-3">
+          <Tabs
+            value={friendPeriod}
+            onValueChange={(value) => setFriendPeriod(value as FriendPeriod)}
+          >
+            <TabsList>
+              <TabsTrigger value="all">{t.periodAll}</TabsTrigger>
+              <TabsTrigger value="today">{t.periodToday}</TabsTrigger>
+              <TabsTrigger value="week">{t.periodWeek}</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <RankingList
+            entries={friendEntries}
+            currentUserId={currentUserId}
+            emptyMessage={t.emptyFriends}
+            noNameLabel={t.noName}
+            locale={locale}
+          />
+        </div>
       )}
       {scope === "school" &&
         (school === null ? (

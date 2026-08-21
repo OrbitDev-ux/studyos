@@ -68,4 +68,17 @@ describe("resolveNotificationText", () => {
     );
     expect(result.title).toBe(`${t.someone}님이 친구 요청을 보냈어요`);
   });
+
+  it("renders a display name containing '$&' literally instead of duplicating the matched text", () => {
+    // Regression: actorName is another user's freely-chosen display name.
+    // String.replace(pattern, someString) interprets `$&` inside someString
+    // as "insert the whole match" — a plain (non-function) replacer would
+    // turn "$&" into "{name}" here, and other $-specials would corrupt the
+    // recipient's notification text in worse ways (Codebase audit).
+    const result = resolveNotificationText(
+      t,
+      row({ type: "friend_request", metadata: { actorName: "$&" } }),
+    );
+    expect(result.title).toBe("$&님이 친구 요청을 보냈어요");
+  });
 });

@@ -35,10 +35,14 @@ export function StudyBookPrintDocument({
   book,
   chapters,
   include,
+  correctAnswers,
 }: {
   book: Book;
   chapters: Chapter[];
   include: IncludeLevel;
+  /** MULTIPLE_CHOICE answer-key text by problemId — see getMultipleChoiceAnswerText's
+   * doc comment for why this is fetched separately from `book`. */
+  correctAnswers: Map<string, string>;
 }) {
   const brand = siteConfig.name;
   const totalProblems = chapters.reduce(
@@ -106,6 +110,7 @@ export function StudyBookPrintDocument({
             chapter={chapter}
             number={ci + 1}
             include={include}
+            correctAnswers={correctAnswers}
           />
         ))}
 
@@ -129,10 +134,12 @@ function ChapterSection({
   chapter,
   number,
   include,
+  correctAnswers,
 }: {
   chapter: Chapter;
   number: number;
   include: IncludeLevel;
+  correctAnswers: Map<string, string>;
 }) {
   let problemNo = 0;
   return (
@@ -159,6 +166,7 @@ function ChapterSection({
               item={item}
               number={problemNo}
               include={include}
+              correctAnswers={correctAnswers}
             />
           );
         }
@@ -188,14 +196,16 @@ function ProblemBlock({
   item,
   number,
   include,
+  correctAnswers,
 }: {
   item: Item;
   number: number;
   include: IncludeLevel;
+  correctAnswers: Map<string, string>;
 }) {
   const problem = item.problem!;
   const isMc = problem.type === "MULTIPLE_CHOICE";
-  const correctChoices = problem.choices.filter((c) => c.isCorrect);
+  const correctAnswerText = correctAnswers.get(problem.id) ?? null;
 
   return (
     <div className="book-problem">
@@ -220,12 +230,8 @@ function ProblemBlock({
         <div className="book-answer">
           <span className="book-block-label">정답</span>{" "}
           {isMc ? (
-            correctChoices.length > 0 ? (
-              <MathText>
-                {correctChoices
-                  .map((c) => `${c.label}. ${c.content}`)
-                  .join(",  ")}
-              </MathText>
+            correctAnswerText ? (
+              <MathText>{correctAnswerText}</MathText>
             ) : (
               <span>—</span>
             )

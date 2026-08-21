@@ -20,11 +20,18 @@ export async function startStudySession(arg?: FormData | StudySessionType) {
       ? (arg as StudySessionType)
       : "FOCUS";
 
+  // .limit(1) + order (not a bare .maybeSingle() on the raw filter): if a past
+  // race ever left more than one open session for this user, .maybeSingle()
+  // would throw on "more than one row" instead of just detecting "one is
+  // open" — this stays resilient to that instead of hard-failing the whole
+  // start action.
   const { data: active } = await supabase
     .from("StudySession")
     .select("id")
     .eq("userId", user.id)
     .is("endedAt", null)
+    .order("startedAt", { ascending: false })
+    .limit(1)
     .maybeSingle();
   if (active) return;
 
@@ -43,11 +50,17 @@ export async function stopStudySession() {
   const user = await requireCurrentUser();
   const supabase = await createClient();
 
+  // Same resilience as startStudySession: if more than one open session ever
+  // exists for this user, close the most recently started one instead of
+  // .maybeSingle() throwing on "more than one row" and leaving the timer
+  // stuck open forever.
   const { data: active } = await supabase
     .from("StudySession")
     .select("id, startedAt")
     .eq("userId", user.id)
     .is("endedAt", null)
+    .order("startedAt", { ascending: false })
+    .limit(1)
     .maybeSingle();
   if (!active) return;
 
@@ -58,10 +71,15 @@ export async function stopStudySession() {
     Math.round((endedAt.getTime() - startedAt.getTime()) / 1000),
   );
 
+  // .eq("endedAt", null) guards against a double-submit (e.g. a doubled form
+  // action call) racing this same update twice — the second call's UPDATE
+  // then matches zero rows instead of re-closing (and re-durationing) the
+  // same session a second time.
   const { error } = await supabase
     .from("StudySession")
     .update({ endedAt: endedAt.toISOString(), durationSec })
-    .eq("id", active.id);
+    .eq("id", active.id)
+    .is("endedAt", null);
   if (error) throw error;
 
   revalidatePath("/dashboard");

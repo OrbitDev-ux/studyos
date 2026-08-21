@@ -125,7 +125,7 @@ export default async function DashboardPage() {
               {hero.eyebrow}
             </p>
             <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
-              {t.greeting.replace("{name}", user.name ?? user.email)}
+              {t.greeting.replace("{name}", () => user.name ?? user.email)}
             </h1>
             <p className="text-muted-foreground mt-1 text-sm">
               {formatLongDate(new Date(), locale, user.timezone)}

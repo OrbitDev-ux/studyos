@@ -6,6 +6,7 @@ import { getMessages } from "@/features/i18n/messages";
 import { getServerLocale } from "@/features/i18n/server";
 import { NotificationPreferencesForm } from "@/features/notifications/components/notification-preferences-form";
 import { getNotificationPreferences } from "@/features/notifications/service";
+import { ActivitySharingToggle } from "@/features/social/components/activity-sharing-toggle";
 import { AccountDeletionCard } from "@/features/account/components/account-deletion-card";
 import { getCurrentConsents } from "@/features/legal/consent";
 import { prisma } from "@/lib/prisma";
@@ -16,7 +17,10 @@ export const metadata = { title: "설정" };
 export default async function SettingsPage() {
   const user = await requireCurrentUser();
   const [row, notificationPreferences, consents] = await Promise.all([
-    prisma.user.findUnique({ where: { id: user.id }, select: { locale: true } }),
+    prisma.user.findUnique({
+      where: { id: user.id },
+      select: { locale: true, activitySharingEnabled: true },
+    }),
     getNotificationPreferences(user.id),
     getCurrentConsents(user.id),
   ]);
@@ -46,9 +50,17 @@ export default async function SettingsPage() {
           </div>
           <ul className="text-muted-foreground flex flex-col gap-2 text-sm">
             {consents.map((consent) => (
-              <li key={`${consent.documentType}-${consent.version}`} className="flex justify-between gap-3">
+              <li
+                key={`${consent.documentType}-${consent.version}`}
+                className="flex justify-between gap-3"
+              >
                 <span>{consent.documentType}</span>
-                <span>{consent.version} · {consent.withdrawnAt ? t.consentStatus.withdrawn : t.consentStatus.agreed}</span>
+                <span>
+                  {consent.version} ·{" "}
+                  {consent.withdrawnAt
+                    ? t.consentStatus.withdrawn
+                    : t.consentStatus.agreed}
+                </span>
               </li>
             ))}
           </ul>
@@ -57,6 +69,11 @@ export default async function SettingsPage() {
       <Card>
         <CardContent>
           <NotificationPreferencesForm initial={notificationPreferences} />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent>
+          <ActivitySharingToggle initial={row?.activitySharingEnabled ?? true} />
         </CardContent>
       </Card>
       <AccountDeletionCard />

@@ -1,7 +1,9 @@
 import { AddFriendForm } from "@/features/social/components/add-friend-form";
+import { ActivityFeed } from "@/features/social/components/activity-feed";
 import { ConversationList } from "@/features/social/components/conversation-list";
 import { FriendList } from "@/features/social/components/friend-list";
 import { FriendRequestList } from "@/features/social/components/friend-request-list";
+import { getFriendActivityFeed } from "@/features/social/activity";
 import {
   getConversations,
   getFriends,
@@ -14,12 +16,14 @@ import { requireCurrentUser } from "@/lib/session";
 export default async function SocialPage() {
   const user = await requireCurrentUser();
 
-  const [friends, requests, conversations] = await Promise.all([
+  const [friends, requests, conversations, activity] = await Promise.all([
     getFriends(user.id),
     getReceivedFriendRequests(user.id),
     getConversations(user.id),
+    getFriendActivityFeed(user.id, user.timezone),
   ]);
-  const t = getMessages(await getServerLocale(user.locale)).social;
+  const locale = await getServerLocale(user.locale);
+  const t = getMessages(locale).social;
 
   return (
     <div className="flex flex-col gap-6">
@@ -34,6 +38,8 @@ export default async function SocialPage() {
         <FriendList friends={friends} t={t} />
         <ConversationList conversations={conversations} currentUserId={user.id} t={t} />
       </div>
+
+      <ActivityFeed items={activity} t={t} locale={locale} />
     </div>
   );
 }

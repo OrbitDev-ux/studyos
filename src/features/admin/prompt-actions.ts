@@ -99,15 +99,28 @@ export async function savePromptVersion(input: unknown): Promise<Result> {
   try {
     const prompt = await prisma.prompt.findUnique({
       where: { id: parsed.data.promptId },
-      include: { versions: { orderBy: { version: "desc" }, take: 1 } },
     });
     if (!prompt) return { error: "프롬프트를 찾을 수 없습니다." };
 
-    // No-op if identical to the active version — avoid empty versions.
-    const activeContent = prompt.versions.find(
-      (v) => v.version === prompt.activeVersion,
-    )?.content;
-    const nextVersion = (prompt.versions[0]?.version ?? 0) + 1;
+    // Two DIFFERENT versions, fetched separately: the next version number
+    // must always be highest-existing + 1, but the audit log's "changed"
+    // flag must compare against whatever is actually ACTIVE right now — after
+    // a rollback those are no longer the same version, so a single "latest
+    // version" fetch (the previous bug here) silently mis-tagged every save
+    // right after a rollback as "changed" regardless of the real diff.
+    const [activeVersionRow, latestVersionRow] = await Promise.all([
+      prisma.promptVersion.findUnique({
+        where: { promptId_version: { promptId: prompt.id, version: prompt.activeVersion } },
+        select: { content: true },
+      }),
+      prisma.promptVersion.findFirst({
+        where: { promptId: prompt.id },
+        orderBy: { version: "desc" },
+        select: { version: true },
+      }),
+    ]);
+    const activeContent = activeVersionRow?.content;
+    const nextVersion = (latestVersionRow?.version ?? 0) + 1;
     const ip = await getRequestIp();
 
     await prisma.$transaction([

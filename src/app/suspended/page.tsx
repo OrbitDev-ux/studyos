@@ -1,9 +1,8 @@
 import { Ban } from "lucide-react";
 import { CONTACT_EMAIL } from "@/config/site";
-import { SuspendedShortcut } from "@/features/auth/components/suspended-shortcut";
 
 export const metadata = {
-  title: "이용 정지",
+  title: "이용 영구 정지",
   robots: { index: false, follow: false },
 };
 
@@ -21,7 +20,6 @@ export default function SuspendedPage() {
         </p>
         <p className="text-sm font-medium">{CONTACT_EMAIL}</p>
       </div>
-      <SuspendedShortcut />
     </div>
   );
 }

@@ -1,17 +1,20 @@
 "use server";
 
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { buildAnswerExplanationPrompt } from "@/features/ai/prompts/answer-explanation";
 import { buildWrongAnswerDnaPrompt } from "@/features/ai/prompts/wrong-answer-dna";
 import { generateStructured, aiErrorResult } from "@/features/ai/client";
 import { getActivePromptContent } from "@/features/ai/prompt-service";
 import { PROMPT_TYPES } from "@/features/ai/prompt-registry";
+import { generationErrorPayload, withGenerationQuota } from "@/features/ai/generation-guard";
 import { wrongAnswerDnaSchema, type WrongAnswerDna } from "@/features/review/dna";
 import { aiExplanationSchema } from "@/features/review/schema";
 import { gradeReviewById } from "@/features/review/schedule-service";
 import type { ReviewGrade } from "@/features/review/schedule";
-import { accessStateFor } from "@/features/billing/access";
+import { accessStateFor, trialStartedDate } from "@/features/billing/access";
 import { canUseFeature } from "@/features/billing/entitlements";
+import { getClientIp } from "@/lib/ip";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/session";
 
@@ -37,20 +40,42 @@ export async function requestAiExplanation(
       ? (wrongAnswer.problem.choices.find((choice) => choice.isCorrect)?.content ?? "")
       : (wrongAnswer.problem.answerText ?? "");
 
+  // AI cost protection (Codebase audit: this endpoint had NO quota gate at
+  // all — the "already generated → return cached" check above only prevents
+  // re-paying for the SAME wrong answer, not fan-out across many different
+  // ones). Shares the "problem" bucket with AI problem/tutor/planner
+  // generation, the same convention every other on-demand AI call in this app
+  // already uses.
+  const ip = getClientIp(await headers());
   let explanation: string;
   try {
-    ({ explanation } = await generateStructured({
-      system: await getActivePromptContent(PROMPT_TYPES.ANSWER_EXPLANATION),
-      prompt: buildAnswerExplanationPrompt({
-        prompt: wrongAnswer.problem.prompt,
-        correctAnswer,
-      }),
-      schema: aiExplanationSchema,
-      useThinking: true,
-    }));
+    ({ explanation } = await withGenerationQuota(
+      {
+        userId: user.id,
+        timezone: user.timezone,
+        ip,
+        kind: "problem",
+        count: 1,
+        state: accessStateFor(user),
+        trialStartedAt: trialStartedDate(user),
+      },
+      async () =>
+        generateStructured({
+          system: await getActivePromptContent(PROMPT_TYPES.ANSWER_EXPLANATION),
+          prompt: buildAnswerExplanationPrompt({
+            prompt: wrongAnswer.problem.prompt,
+            correctAnswer,
+          }),
+          schema: aiExplanationSchema,
+          useThinking: true,
+        }),
+    ));
   } catch (err) {
     // Return an accurate, client-safe message (thrown Server Action errors are
-    // masked in production) — most commonly a transient Gemini 429 rate limit.
+    // masked in production) — most commonly a transient Gemini 429 rate limit,
+    // or now also a quota/plan-limit rejection from withGenerationQuota above.
+    const quotaPayload = generationErrorPayload(err);
+    if (quotaPayload) return { error: quotaPayload.error };
     const payload = aiErrorResult(err);
     if (payload) return { error: payload.error };
     throw err;
@@ -112,21 +137,37 @@ export async function analyzeWrongAnswerDna(
     select: { answerText: true },
   });
 
+  // Same quota gate as requestAiExplanation above — previously unguarded.
+  const ip = getClientIp(await headers());
   let dna: WrongAnswerDna;
   try {
-    dna = await generateStructured({
-      system: await getActivePromptContent(PROMPT_TYPES.WRONG_ANSWER_DNA),
-      prompt: buildWrongAnswerDnaPrompt({
-        prompt: problem.prompt,
-        userAnswer: lastWrongAttempt?.answerText ?? null,
-        correctAnswer,
-        subject: problem.subject?.name ?? "미지정",
-        unit: problem.unit,
-      }),
-      schema: wrongAnswerDnaSchema,
-      useThinking: true,
-    });
+    dna = await withGenerationQuota(
+      {
+        userId: user.id,
+        timezone: user.timezone,
+        ip,
+        kind: "problem",
+        count: 1,
+        state: accessStateFor(user),
+        trialStartedAt: trialStartedDate(user),
+      },
+      async () =>
+        generateStructured({
+          system: await getActivePromptContent(PROMPT_TYPES.WRONG_ANSWER_DNA),
+          prompt: buildWrongAnswerDnaPrompt({
+            prompt: problem.prompt,
+            userAnswer: lastWrongAttempt?.answerText ?? null,
+            correctAnswer,
+            subject: problem.subject?.name ?? "미지정",
+            unit: problem.unit,
+          }),
+          schema: wrongAnswerDnaSchema,
+          useThinking: true,
+        }),
+    );
   } catch (err) {
+    const quotaPayload = generationErrorPayload(err);
+    if (quotaPayload) return { error: quotaPayload.error };
     const payload = aiErrorResult(err);
     if (payload) return { error: payload.error };
     throw err;

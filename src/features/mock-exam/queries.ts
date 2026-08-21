@@ -24,13 +24,25 @@ export function getRecentMockExams(userId: string, limit: number) {
   });
 }
 
+/**
+ * Fetched BEFORE the exam is taken (take-exam-view / the printable paper), so
+ * `choices` must never include `isCorrect` here — that would ship the answer
+ * key to the client before submission. Post-submission review (getExamResult
+ * below) is a separate query and legitimately includes it.
+ */
 export function getMockExam(examId: string, userId: string) {
   return prisma.mockExam.findFirst({
     where: { id: examId, userId },
     include: {
       subject: true,
       questions: {
-        include: { problem: { include: { choices: true } } },
+        include: {
+          problem: {
+            include: {
+              choices: { select: { id: true, label: true, content: true } },
+            },
+          },
+        },
         orderBy: { order: "asc" },
       },
     },

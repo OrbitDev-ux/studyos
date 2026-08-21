@@ -26,6 +26,15 @@ const INVALID_CREDENTIALS_ERROR = "이메일 또는 비밀번호가 올바르지
 const GUEST_RATE_WINDOW_MS = 15 * 60 * 1000;
 const MAX_GUESTS_PER_IP = 5;
 
+// Same rationale as the guest limit above, applied to real email signup
+// (Codebase audit: this was the one account-creation path with no rate limit
+// at all — an easier mass-account script than the guest path even was, since
+// it never even hit that check). A higher ceiling than guests: a real signup
+// already requires a distinct email + password, so shared-IP environments
+// (school labs, NAT) legitimately produce more of these per window.
+const SIGNUP_RATE_WINDOW_MS = 15 * 60 * 1000;
+const MAX_SIGNUPS_PER_IP = 10;
+
 export async function signInWithGoogle() {
   await signIn("google", { redirectTo: "/dashboard?welcome=1" });
 }
@@ -40,26 +49,6 @@ export async function signOutAction() {
       .catch(() => {});
   }
   await signOut({ redirectTo: "/login" });
-}
-
-/**
- * Lift the ban on the currently signed-in account (the ⌘+1 recovery shortcut
- * on /suspended). The JWT session is still valid while banned, so the user id
- * comes from auth(); we just clear the bannedAt/banReason flags.
- *
- * NOTE: this is a self-service unban — any banned user who reaches /suspended
- * can lift their own ban with it. It exists as an escape hatch; gate it behind
- * the admin code if bans must be enforceable against the account holder.
- */
-export async function unbanSelf(): Promise<{ error?: string }> {
-  const session = await auth();
-  if (!session?.user?.id) return { error: "로그인이 필요합니다." };
-
-  await prisma.user.update({
-    where: { id: session.user.id },
-    data: { bannedAt: null, banReason: null },
-  });
-  return {};
 }
 
 /**
@@ -134,6 +123,17 @@ export async function signUpWithEmail(
   const parsed = emailSignUpSchema.safeParse(values);
   if (!parsed.success) return { error: "입력값을 확인해주세요." };
 
+  const ip = getClientIp(await headers());
+  if (ip) {
+    const since = new Date(Date.now() - SIGNUP_RATE_WINDOW_MS);
+    const recentSignupCount = await prisma.auditLog.count({
+      where: { event: "USER_SIGNED_UP", ip, createdAt: { gte: since } },
+    });
+    if (recentSignupCount >= MAX_SIGNUPS_PER_IP) {
+      return { error: "잠시 후 다시 시도해주세요." };
+    }
+  }
+
   try {
     const passwordHash = await hashPassword(parsed.data.password);
     await prisma.$transaction(async (tx) => {
@@ -148,6 +148,7 @@ export async function signUpWithEmail(
       // Record the required legal consents (약관 · 개인정보 처리방침) at their
       // current versions — the schema already verified agreement server-side.
       await recordConsents(tx, user.id, SIGNUP_REQUIRED_CONSENTS);
+      await tx.auditLog.create({ data: { userId: user.id, event: "USER_SIGNED_UP", ip } });
     });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {

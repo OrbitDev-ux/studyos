@@ -2,6 +2,7 @@ import { LinkTabs } from "@/components/layout/link-tabs";
 import { RankingTabs } from "@/features/ranking/components/ranking-tabs";
 import {
   getFriendRanking,
+  getFriendRankingForRange,
   getGlobalRanking,
   getSchoolRanking,
   getSeasonRanking,
@@ -18,9 +19,11 @@ const RANKING_TABS = [
 export default async function RankingPage() {
   const user = await requireCurrentUser();
 
-  const [global, friends, school, season] = await Promise.all([
+  const [global, friends, friendsToday, friendsWeek, school, season] = await Promise.all([
     getGlobalRanking(),
     getFriendRanking(user.id),
+    getFriendRankingForRange(user.id, "today", user.timezone),
+    getFriendRankingForRange(user.id, "week", user.timezone),
     getSchoolRanking(user.id),
     getSeasonRanking(),
   ]);
@@ -36,6 +39,8 @@ export default async function RankingPage() {
         currentUserId={user.id}
         global={global}
         friends={friends}
+        friendsToday={friendsToday}
+        friendsWeek={friendsWeek}
         school={school}
         season={season}
       />

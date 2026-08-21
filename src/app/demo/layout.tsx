@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { Header } from "@/components/layout/header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { DemoBanner } from "@/features/demo/components/demo-banner";
+import { DemoHeader } from "@/features/demo/components/demo-header";
 import { DemoSidebar } from "@/features/demo/components/demo-sidebar";
 import { DemoTourLauncher } from "@/features/demo/components/demo-tour-launcher";
 import { DemoProvider } from "@/features/demo/state";
@@ -23,7 +23,7 @@ export default function DemoLayout({ children }: { children: React.ReactNode }) 
       <SidebarProvider>
         <DemoSidebar />
         <SidebarInset>
-          <Header />
+          <DemoHeader />
           <DemoBanner />
           <main className="flex flex-1 flex-col gap-4 p-4 md:p-6">{children}</main>
           {/* Onboarding tour auto-starts once per tab; no server state written. */}

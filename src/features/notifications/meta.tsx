@@ -46,28 +46,32 @@ export function resolveNotificationText(
   notification: Pick<NotificationListItem, "type" | "title" | "body" | "metadata">,
 ): { title: string; body: string | null } {
   const name = actorNameFrom(notification.metadata, t.someone);
+  // A FUNCTION replacer (not a string) — `name` is another user's freely
+  // chosen display name, and String.replace(pattern, someString) interprets
+  // `$&`/`$$`/`` $` ``/`$'` specials inside someString. A name literally set
+  // to e.g. "$&" would otherwise corrupt this notification's text on the
+  // RECIPIENT's screen (Codebase audit). Function replacers never do that
+  // substitution — the return value is inserted verbatim.
+  const withName = (template: string) => template.replace("{name}", () => name);
 
   switch (notification.type) {
     case "friend_request":
-      return { title: t.friendRequestTitle.replace("{name}", name), body: null };
+      return { title: withName(t.friendRequestTitle), body: null };
     case "friend_request_accepted":
-      return { title: t.friendRequestAcceptedTitle.replace("{name}", name), body: null };
+      return { title: withName(t.friendRequestAcceptedTitle), body: null };
     case "dm_message":
-      return { title: t.dmMessageTitle.replace("{name}", name), body: notification.body };
+      return { title: withName(t.dmMessageTitle), body: notification.body };
     case "support_reply":
       return { title: t.supportReplyTitle, body: notification.body };
     case "battle_invite":
-      return { title: t.battleInviteTitle.replace("{name}", name), body: null };
+      return { title: withName(t.battleInviteTitle), body: null };
     case "battle_invite_response": {
       const accepted =
         !!notification.metadata &&
         typeof notification.metadata === "object" &&
         (notification.metadata as { accepted?: unknown }).accepted === true;
       return {
-        title: (accepted ? t.battleInviteAcceptedTitle : t.battleInviteDeclinedTitle).replace(
-          "{name}",
-          name,
-        ),
+        title: withName(accepted ? t.battleInviteAcceptedTitle : t.battleInviteDeclinedTitle),
         body: null,
       };
     }

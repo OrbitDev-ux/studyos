@@ -74,6 +74,19 @@ export async function applyPaymentEvent(input: PaymentEvent) {
         },
         update: { status: "ACTIVE", plan: input.plan },
       });
+
+      // Entitlements are resolved entirely from User.plan/subscriptionStatus
+      // (see billing/subscription.ts's effectivePlan/resolveAccessState) —
+      // the Subscription row above is a billing record, not what gates
+      // feature access. Without this, a successful payment would be recorded
+      // but never actually upgrade the user.
+      await tx.user.update({
+        where: { id: input.userId },
+        data: {
+          plan: input.plan,
+          subscriptionStatus: "ACTIVE" satisfies SubscriptionStatus,
+        },
+      });
     }
     return updated;
   });
@@ -88,15 +101,43 @@ export async function applyRefundEvent(input: {
   externalRefundId?: string;
   processedAt?: Date;
 }) {
-  return prisma.refund.create({
-    data: {
-      paymentId: input.paymentId,
-      amount: input.amount,
-      status: input.status,
-      reason: input.reason,
-      paymentProvider: input.provider,
-      externalRefundId: input.externalRefundId,
-      processedAt: input.processedAt,
-    },
+  return prisma.$transaction(async (tx) => {
+    const refund = await tx.refund.create({
+      data: {
+        paymentId: input.paymentId,
+        amount: input.amount,
+        status: input.status,
+        reason: input.reason,
+        paymentProvider: input.provider,
+        externalRefundId: input.externalRefundId,
+        processedAt: input.processedAt,
+      },
+    });
+
+    // Mirror the payment-success side: a completed refund must revoke the
+    // entitlement it granted, not just record itself. Without this, a fully
+    // refunded payment leaves the user's paid access in place indefinitely.
+    // Simplification: reverts straight to TRIAL rather than any prior paid
+    // tier — this app has no plan-upgrade-history model yet to fall back to.
+    if (input.status === "SUCCEEDED") {
+      const payment = await tx.payment.findUnique({
+        where: { id: input.paymentId },
+        select: { userId: true, subscriptionId: true },
+      });
+      if (payment?.userId) {
+        await tx.user.update({
+          where: { id: payment.userId },
+          data: { plan: "TRIAL", subscriptionStatus: "CANCELED" satisfies SubscriptionStatus },
+        });
+      }
+      if (payment?.subscriptionId) {
+        await tx.subscription.update({
+          where: { id: payment.subscriptionId },
+          data: { status: "CANCELED" },
+        });
+      }
+    }
+
+    return refund;
   });
 }

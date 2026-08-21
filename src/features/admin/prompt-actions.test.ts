@@ -7,7 +7,7 @@ vi.mock("server-only", () => ({}));
 
 const { prompt, promptVersion, transaction } = vi.hoisted(() => ({
   prompt: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  promptVersion: { create: vi.fn(), findUnique: vi.fn() },
+  promptVersion: { create: vi.fn(), findUnique: vi.fn(), findFirst: vi.fn() },
   transaction: vi.fn((ops: unknown[]) => Promise.all(ops)),
 }));
 vi.mock("@/lib/prisma", () => ({
@@ -109,17 +109,36 @@ describe("savePromptVersion", () => {
   });
 
   it("never throws when the transaction fails", async () => {
-    prompt.findUnique.mockResolvedValue({
-      id: "p1",
-      type: "tutor_system",
-      activeVersion: 1,
-      versions: [{ version: 1, content: "old" }],
-    });
+    prompt.findUnique.mockResolvedValue({ id: "p1", type: "tutor_system", activeVersion: 1 });
+    promptVersion.findUnique.mockResolvedValue({ content: "old" });
+    promptVersion.findFirst.mockResolvedValue({ version: 1 });
     transaction.mockRejectedValueOnce(new Error("db down"));
 
     await expect(
       savePromptVersion({ promptId: "p1", content: VALID_CONTENT }),
     ).resolves.toEqual({ error: "일시적인 오류가 발생했어요. 다시 시도해주세요." });
+  });
+
+  it("logs the correct changed/version diff against the ACTIVE version, not just the latest one", async () => {
+    // Regression: after a rollback, activeVersion (2) is no longer the
+    // highest version on record (3) — a prior bug fetched only the latest
+    // version and compared against that, so "changed" was always wrong here.
+    prompt.findUnique.mockResolvedValue({ id: "p1", type: "tutor_system", activeVersion: 2 });
+    promptVersion.findUnique.mockResolvedValue({ content: VALID_CONTENT }); // v2's content
+    promptVersion.findFirst.mockResolvedValue({ version: 3 }); // highest version on record
+
+    const res = await savePromptVersion({ promptId: "p1", content: VALID_CONTENT });
+
+    expect(res).toEqual({});
+    expect(promptVersion.findUnique).toHaveBeenCalledWith({
+      where: { promptId_version: { promptId: "p1", version: 2 } },
+      select: { content: true },
+    });
+    expect(logAdminActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: expect.objectContaining({ version: 4, changed: false }),
+      }),
+    );
   });
 });
 

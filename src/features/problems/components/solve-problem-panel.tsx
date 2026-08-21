@@ -16,7 +16,11 @@ import { cn } from "@/lib/utils";
 export type SolvableProblem = {
   id: string;
   type: "MULTIPLE_CHOICE" | "SHORT_ANSWER" | "ESSAY";
-  choices: { id: string; label: string; content: string; isCorrect: boolean }[];
+  /** Deliberately no `isCorrect` here — the correct answer must never be part
+   * of the initial page payload (it would ship to the client before the
+   * student answers). Which choice was correct is learned only from the
+   * grading result after submit (see `result.correctChoiceId` below). */
+  choices: { id: string; label: string; content: string }[];
   /** ESSAY: model answer. SHORT_ANSWER: canonical answer (not shown here). */
   answerText?: string | null;
   explanation?: string | null;
@@ -47,6 +51,7 @@ export function SolveProblemPanel({
   const [result, setResult] = useState<{
     correct: boolean;
     explanation: string | null;
+    correctChoiceId: string | null;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -239,17 +244,19 @@ export function SolveProblemPanel({
                 className={cn(
                   "flex min-h-11 items-center gap-2 rounded-md border px-3 py-2 text-left text-sm transition-colors",
                   isSelected && !revealedResult && "border-primary bg-primary/5",
-                  revealedResult && choice.isCorrect && "border-success bg-success/10 font-medium",
+                  revealedResult &&
+                    choice.id === result?.correctChoiceId &&
+                    "border-success bg-success/10 font-medium",
                   revealedResult &&
                     isSelected &&
-                    !choice.isCorrect &&
+                    choice.id !== result?.correctChoiceId &&
                     "border-destructive bg-destructive/5",
                 )}
               >
-                {revealedResult && choice.isCorrect && (
+                {revealedResult && choice.id === result?.correctChoiceId && (
                   <Check className="text-success size-4 shrink-0" />
                 )}
-                {revealedResult && isSelected && !choice.isCorrect && (
+                {revealedResult && isSelected && choice.id !== result?.correctChoiceId && (
                   <X className="text-destructive size-4 shrink-0" />
                 )}
                 <span>

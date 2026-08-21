@@ -46,6 +46,8 @@ const ko = {
     support: "문의하기",
     settings: "설정",
     home: "홈",
+    mainMenu: "주요 메뉴",
+    themeToggle: "테마 전환",
   },
   account: {
     profile: "내 프로필",
@@ -53,10 +55,12 @@ const ko = {
   },
   accountDeletion: {
     title: "회원 탈퇴",
-    summary: "계정과 연결된 학습 기록, AI 대화, 업로드 자료가 삭제됩니다. 결제·보존 대상 데이터는 관련 정책에 따라 별도로 처리될 수 있습니다.",
+    summary:
+      "계정과 연결된 학습 기록, AI 대화, 업로드 자료가 삭제됩니다. 결제·보존 대상 데이터는 관련 정책에 따라 별도로 처리될 수 있습니다.",
     open: "회원 탈퇴 진행",
     confirmTitle: "계정을 탈퇴할까요?",
-    confirmDescription: "탈퇴하면 계정과 일반 학습 데이터는 복구할 수 없습니다. 계속하려면 아래에 DELETE를 입력하세요.",
+    confirmDescription:
+      "탈퇴하면 계정과 일반 학습 데이터는 복구할 수 없습니다. 계속하려면 아래에 DELETE를 입력하세요.",
     confirmLabel: "확인 문구",
     cancel: "취소",
     pending: "처리 중...",
@@ -167,6 +171,8 @@ const ko = {
     proNoticeMessage: "단원별 정답률, 성적 추세, 학습 시간 분석 등을 확인할 수 있어요.",
     proNoticeCta: "Pro 알아보기",
     todayStudyTime: "오늘 공부시간",
+    timerStart: "시작",
+    timerStop: "종료",
     completedTodos: "완료한 Todo",
     streak: "연속 공부일",
     streakValue: "{count}일",
@@ -232,6 +238,9 @@ const ko = {
     schoolPrompt: "학교를 설정하면 같은 학교 친구들과 랭킹을 비교할 수 있어요.",
     schoolPlaceholder: "학교명",
     schoolSubmit: "학교 설정",
+    periodAll: "전체",
+    periodToday: "오늘",
+    periodWeek: "이번주",
   },
   subjects: {
     title: "과목",
@@ -381,6 +390,15 @@ const ko = {
     removeConfirmTitle: "친구를 삭제할까요?",
     removeConfirmDesc: "대화 기록은 유지되지만 더 이상 친구 목록에 표시되지 않습니다.",
     unknownUser: "알 수 없는 사용자",
+    activityTitle: "친구 활동",
+    activityEmpty: "최근 친구 활동이 없어요.",
+    activityStudiedWithSubject: "{subject} {duration} 공부했어요",
+    activityStudiedNoSubject: "{duration} 공부했어요",
+    activityGoalCompleted: "'{title}' 목표를 달성했어요",
+    activitySharingTitle: "친구에게 활동 공개",
+    activitySharingDesc:
+      "끄면 친구 활동 피드에 내 공부 기록·목표 달성이 표시되지 않아요.",
+    activitySharingSaveFailed: "설정을 저장하지 못했어요.",
   },
   notifications: {
     title: "알림",
@@ -620,6 +638,8 @@ const en: Messages = {
     support: "Support",
     settings: "Settings",
     home: "Home",
+    mainMenu: "Main menu",
+    themeToggle: "Toggle theme",
   },
   account: {
     profile: "My Profile",
@@ -627,7 +647,8 @@ const en: Messages = {
   },
   accountDeletion: {
     title: "Delete account",
-    summary: "Your study history, AI chats, and uploaded materials linked to this account will be deleted. Payment and legally retained data may be handled separately.",
+    summary:
+      "Your study history, AI chats, and uploaded materials linked to this account will be deleted. Payment and legally retained data may be handled separately.",
     open: "Delete account",
     confirmTitle: "Delete your account?",
     confirmDescription: "This cannot be undone. Type DELETE below to continue.",
@@ -742,6 +763,8 @@ const en: Messages = {
       "See per-unit accuracy, score trends, study-time analysis, and more.",
     proNoticeCta: "Explore Pro",
     todayStudyTime: "Today's study time",
+    timerStart: "Start",
+    timerStop: "Stop",
     completedTodos: "Completed todos",
     streak: "Day streak",
     streakValue: "{count}d",
@@ -807,6 +830,9 @@ const en: Messages = {
     schoolPrompt: "Set your school to compare rankings with schoolmates.",
     schoolPlaceholder: "School name",
     schoolSubmit: "Save school",
+    periodAll: "All time",
+    periodToday: "Today",
+    periodWeek: "This week",
   },
   subjects: {
     title: "Subjects",
@@ -957,6 +983,15 @@ const en: Messages = {
     removeConfirmDesc:
       "Your chat history stays, but they'll no longer appear in your friends list.",
     unknownUser: "Unknown user",
+    activityTitle: "Friend activity",
+    activityEmpty: "No recent friend activity.",
+    activityStudiedWithSubject: "Studied {subject} for {duration}",
+    activityStudiedNoSubject: "Studied for {duration}",
+    activityGoalCompleted: "Completed the goal '{title}'",
+    activitySharingTitle: "Share activity with friends",
+    activitySharingDesc:
+      "Turn off to hide your study sessions and goal completions from friends' activity feed.",
+    activitySharingSaveFailed: "Couldn't save the setting.",
   },
   notifications: {
     title: "Notifications",
@@ -1193,6 +1228,8 @@ const ja: Messages = {
     support: "お問い合わせ",
     settings: "設定",
     home: "ホーム",
+    mainMenu: "メインメニュー",
+    themeToggle: "テーマ切り替え",
   },
   account: {
     profile: "プロフィール",
@@ -1200,10 +1237,12 @@ const ja: Messages = {
   },
   accountDeletion: {
     title: "アカウントを削除",
-    summary: "アカウントに紐づく学習履歴、AIチャット、アップロード資料を削除します。決済・法令上保存が必要なデータは別途扱われる場合があります。",
+    summary:
+      "アカウントに紐づく学習履歴、AIチャット、アップロード資料を削除します。決済・法令上保存が必要なデータは別途扱われる場合があります。",
     open: "アカウントを削除",
     confirmTitle: "アカウントを削除しますか？",
-    confirmDescription: "この操作は元に戻せません。続行するには DELETE と入力してください。",
+    confirmDescription:
+      "この操作は元に戻せません。続行するには DELETE と入力してください。",
     confirmLabel: "確認文字列",
     cancel: "キャンセル",
     pending: "処理中...",
@@ -1314,6 +1353,8 @@ const ja: Messages = {
     proNoticeMessage: "単元別の正答率、成績の推移、学習時間の分析などを確認できます。",
     proNoticeCta: "Proを見る",
     todayStudyTime: "今日の学習時間",
+    timerStart: "開始",
+    timerStop: "終了",
     completedTodos: "完了したToDo",
     streak: "連続学習日",
     streakValue: "{count}日",
@@ -1379,6 +1420,9 @@ const ja: Messages = {
     schoolPrompt: "学校を設定すると、同じ学校の友だちとランキングを比較できます。",
     schoolPlaceholder: "学校名",
     schoolSubmit: "学校を設定",
+    periodAll: "全期間",
+    periodToday: "今日",
+    periodWeek: "今週",
   },
   subjects: {
     title: "科目",
@@ -1528,6 +1572,15 @@ const ja: Messages = {
     removeConfirmTitle: "この友だちを削除しますか？",
     removeConfirmDesc: "チャット履歴は残りますが、友だち一覧には表示されなくなります。",
     unknownUser: "不明なユーザー",
+    activityTitle: "友だちの活動",
+    activityEmpty: "最近の友だちの活動はありません。",
+    activityStudiedWithSubject: "{subject}を{duration}勉強しました",
+    activityStudiedNoSubject: "{duration}勉強しました",
+    activityGoalCompleted: "「{title}」の目標を達成しました",
+    activitySharingTitle: "友だちに活動を公開",
+    activitySharingDesc:
+      "オフにすると、友だちの活動フィードに学習記録・目標達成が表示されなくなります。",
+    activitySharingSaveFailed: "設定を保存できませんでした。",
   },
   notifications: {
     title: "通知",
@@ -1764,6 +1817,8 @@ const zh: Messages = {
     support: "帮助",
     settings: "设置",
     home: "主页",
+    mainMenu: "主菜单",
+    themeToggle: "切换主题",
   },
   account: {
     profile: "我的资料",
@@ -1771,7 +1826,8 @@ const zh: Messages = {
   },
   accountDeletion: {
     title: "删除账户",
-    summary: "与账户关联的学习记录、AI 聊天和上传资料将被删除。支付及依法需要保留的数据可能会单独处理。",
+    summary:
+      "与账户关联的学习记录、AI 聊天和上传资料将被删除。支付及依法需要保留的数据可能会单独处理。",
     open: "删除账户",
     confirmTitle: "要删除账户吗？",
     confirmDescription: "此操作无法撤销。请输入 DELETE 以继续。",
@@ -1884,6 +1940,8 @@ const zh: Messages = {
     proNoticeMessage: "可查看各单元正确率、成绩趋势、学习时间分析等。",
     proNoticeCta: "了解 Pro",
     todayStudyTime: "今日学习时间",
+    timerStart: "开始",
+    timerStop: "结束",
     completedTodos: "已完成待办",
     streak: "连续学习天数",
     streakValue: "{count}天",
@@ -1949,6 +2007,9 @@ const zh: Messages = {
     schoolPrompt: "设置学校后即可与同校好友比较排名。",
     schoolPlaceholder: "学校名称",
     schoolSubmit: "设置学校",
+    periodAll: "全部",
+    periodToday: "今天",
+    periodWeek: "本周",
   },
   subjects: {
     title: "科目",
@@ -2097,6 +2158,14 @@ const zh: Messages = {
     removeConfirmTitle: "要删除这位好友吗？",
     removeConfirmDesc: "聊天记录会保留，但对方将不再显示在你的好友列表中。",
     unknownUser: "未知用户",
+    activityTitle: "好友动态",
+    activityEmpty: "最近没有好友动态。",
+    activityStudiedWithSubject: "学习了{subject} {duration}",
+    activityStudiedNoSubject: "学习了{duration}",
+    activityGoalCompleted: "完成了目标「{title}」",
+    activitySharingTitle: "向好友公开我的动态",
+    activitySharingDesc: "关闭后，好友动态中将不再显示你的学习记录和目标完成情况。",
+    activitySharingSaveFailed: "设置保存失败。",
   },
   notifications: {
     title: "通知",
