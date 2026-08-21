@@ -1,6 +1,8 @@
 import { LinkTabs } from "@/components/layout/link-tabs";
 import { ProblemList } from "@/features/problems/components/problem-list";
 import { getProblems } from "@/features/problems/queries";
+import { parseProblemsParams } from "@/features/problems/search-params";
+import { getSubjects } from "@/features/subjects/queries";
 import { getMessages } from "@/features/i18n/messages";
 import { getServerLocale } from "@/features/i18n/server";
 import { requireCurrentUser } from "@/lib/session";
@@ -16,9 +18,17 @@ const PROBLEMS_TABS = [
   { href: "/study-bank", labelKey: "studyBank" },
 ] as const;
 
-export default async function ProblemsPage() {
+export default async function ProblemsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await requireCurrentUser();
-  const problems = await getProblems(user.id);
+  const params = parseProblemsParams(await searchParams);
+  const [result, subjects] = await Promise.all([
+    getProblems(user.id, params),
+    getSubjects(user.id),
+  ]);
   const t = getMessages(await getServerLocale(user.locale)).problems;
 
   return (
@@ -27,7 +37,7 @@ export default async function ProblemsPage() {
         <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{t.title}</h1>
         <LinkTabs items={PROBLEMS_TABS} />
       </div>
-      <ProblemList problems={problems} />
+      <ProblemList result={result} params={params} subjects={subjects} t={t} />
     </div>
   );
 }

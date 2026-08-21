@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import { BattleLeaderboard } from "@/features/battle/components/battle-leaderboard";
+import { CancelBattleButton } from "@/features/battle/components/cancel-battle-button";
+import { LeaveBattleButton } from "@/features/battle/components/leave-battle-button";
 import { RespondBattleInviteButtons } from "@/features/battle/components/respond-battle-invite-buttons";
 import { battleDurationLabel, battleMetricLabel } from "@/features/battle/constants";
 import { getBattle } from "@/features/battle/queries";
@@ -38,6 +40,17 @@ export default async function BattleDetailPage({
 
       {myParticipant?.status === "invited" && (
         <RespondBattleInviteButtons battleId={battle.id} />
+      )}
+
+      {isActive && battle.creatorId === user.id && (
+        <div>
+          <CancelBattleButton battleId={battle.id} />
+        </div>
+      )}
+      {isActive && battle.creatorId !== user.id && myParticipant?.status === "accepted" && (
+        <div>
+          <LeaveBattleButton battleId={battle.id} />
+        </div>
       )}
 
       <BattleLeaderboard

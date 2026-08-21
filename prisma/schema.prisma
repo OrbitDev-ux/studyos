@@ -102,6 +102,8 @@ model User {
   receivedFriendRequests  Friendship[]              @relation("FriendAddressee")
   conversationMemberships ConversationParticipant[]
   messages                Message[]
+  blockedUsers            BlockedUser[]             @relation("Blocker")
+  blockedByUsers          BlockedUser[]             @relation("Blocked")
 
   createdBattles       Battle[]            @relation("BattleCreator")
   battleParticipations BattleParticipant[]
@@ -908,6 +910,25 @@ model Friendship {
   @@index([addresseeId])
 }
 
+/// One-directional block: `blockerId` no longer wants to be contacted by
+/// `blockedId` (new friend requests rejected; existing Friendship rows are
+/// removed by the blockUser action itself, not by a DB trigger). Checked in
+/// BOTH directions at the friend-request boundary — a blocked user can't
+/// re-request, and a user who blocked someone can't accidentally re-request
+/// them either.
+model BlockedUser {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+}
+
 /// A DM thread. MVP scope is 1:1 only, enforced in application code (exactly
 /// two ConversationParticipant rows) rather than in the schema, so group
 /// chats can be added later without a migration.
@@ -970,7 +991,7 @@ model BattleParticipant {
   id        String   @id @default(cuid())
   battleId  String
   userId    String
-  status    String   @default("invited") // "invited" | "accepted" | "declined"
+  status    String   @default("invited") // "invited" | "accepted" | "declined" | "left"
   createdAt DateTime @default(now())
 
   battle Battle @relation(fields: [battleId], references: [id], onDelete: Cascade)

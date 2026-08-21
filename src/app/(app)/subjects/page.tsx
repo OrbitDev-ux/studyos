@@ -29,8 +29,14 @@ export default async function SubjectsPage() {
         <p className="text-muted-foreground text-sm">{t.empty}</p>
       ) : (
         <ul className="flex flex-col gap-2">
-          {subjects.map((subject) => (
-            <SubjectRow key={subject.id} subject={subject} editLabel={t.editLabel} />
+          {subjects.map((subject, index) => (
+            <SubjectRow
+              key={subject.id}
+              subject={subject}
+              editLabel={t.editLabel}
+              isFirst={index === 0}
+              isLast={index === subjects.length - 1}
+            />
           ))}
         </ul>
       )}

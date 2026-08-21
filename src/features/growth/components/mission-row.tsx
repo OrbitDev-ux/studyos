@@ -1,11 +1,13 @@
 "use client";
 
-import { Check, X } from "lucide-react";
+import { Check, Pencil, X } from "lucide-react";
 import { useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import type { Subject } from "@/generated/prisma/client";
 import { cancelMission, completeMission } from "@/features/growth/mission-actions";
+import { MissionFormDialog } from "@/features/growth/components/mission-form-dialog";
 import { hasAutomaticProgress, type MissionType } from "@/features/growth/mission-types";
 import type { Messages } from "@/features/i18n/messages";
 
@@ -17,9 +19,19 @@ type Mission = {
   status: string;
   currentValue: number;
   targetValue: number;
+  subjectId: string | null;
+  dueAt: Date | null;
 };
 
-export function MissionRow({ mission, t }: { mission: Mission; t: Messages["growth"] }) {
+export function MissionRow({
+  mission,
+  subjects,
+  t,
+}: {
+  mission: Mission;
+  subjects: Subject[];
+  t: Messages["growth"];
+}) {
   const [isPending, startTransition] = useTransition();
   const percent =
     mission.targetValue > 0
@@ -68,6 +80,30 @@ export function MissionRow({ mission, t }: { mission: Mission; t: Messages["grow
           >
             <Check className="size-3.5" />
           </Button>
+        )}
+        {mission.status === "PENDING" && (
+          <MissionFormDialog
+            subjects={subjects}
+            mission={{
+              id: mission.id,
+              title: mission.title,
+              description: mission.description,
+              type: mission.type as MissionType,
+              targetValue: mission.targetValue,
+              subjectId: mission.subjectId,
+              dueAt: mission.dueAt,
+            }}
+            trigger={
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                aria-label={t.missionEditLabel}
+              >
+                <Pencil className="size-3.5" />
+              </Button>
+            }
+          />
         )}
         {isActive && (
           <Button

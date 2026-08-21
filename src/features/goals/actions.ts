@@ -29,6 +29,33 @@ export async function createGoal(values: GoalFormValues) {
   revalidatePath("/dashboard");
 }
 
+export async function updateGoal(goalId: string, values: GoalFormValues) {
+  const user = await requireCurrentUser();
+  const parsed = goalFormSchema.parse(values);
+
+  const subjectId = parsed.subjectId
+    ? ((await prisma.subject.findFirst({ where: { id: parsed.subjectId, userId: user.id } }))
+        ?.id ?? null)
+    : null;
+
+  await prisma.goal.updateMany({
+    where: { id: goalId, userId: user.id },
+    data: {
+      title: parsed.title,
+      targetValue: parsed.targetValue,
+      unit: parsed.unit,
+      subjectId,
+    },
+  });
+  revalidatePath("/dashboard");
+}
+
+export async function deleteGoal(goalId: string) {
+  const user = await requireCurrentUser();
+  await prisma.goal.deleteMany({ where: { id: goalId, userId: user.id } });
+  revalidatePath("/dashboard");
+}
+
 export async function incrementGoalProgress(goalId: string, delta: number) {
   const user = await requireCurrentUser();
   const goal = await prisma.goal.findFirst({

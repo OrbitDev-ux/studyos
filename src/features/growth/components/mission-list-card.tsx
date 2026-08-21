@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Subject } from "@/generated/prisma/client";
-import { CreateMissionDialog } from "@/features/growth/components/create-mission-dialog";
+import { MissionFormDialog } from "@/features/growth/components/mission-form-dialog";
 import { MissionRow } from "@/features/growth/components/mission-row";
 import type { getUserMissions } from "@/features/growth/mission-queries";
 import type { Messages } from "@/features/i18n/messages";
@@ -18,13 +18,15 @@ export function MissionListCard({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{t.missionSectionTitle}</CardTitle>
-        <CreateMissionDialog subjects={subjects} />
+        <MissionFormDialog subjects={subjects} />
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {missions.length === 0 ? (
           <p className="text-muted-foreground text-sm">{t.missionEmpty}</p>
         ) : (
-          missions.map((mission) => <MissionRow key={mission.id} mission={mission} t={t} />)
+          missions.map((mission) => (
+            <MissionRow key={mission.id} mission={mission} subjects={subjects} t={t} />
+          ))
         )}
       </CardContent>
     </Card>

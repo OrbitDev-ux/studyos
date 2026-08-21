@@ -24,6 +24,7 @@ export function BattleCard({
                 {battleMetricLabel(t, battle.metric)}
               </span>
               {battle.myStatus === "invited" && <Badge variant="outline">{t.badgeInvited}</Badge>}
+              {battle.myStatus === "left" && <Badge variant="outline">{t.badgeLeft}</Badge>}
               {!battle.isActive && <Badge variant="outline">{t.badgeEnded}</Badge>}
             </div>
             <p className="text-muted-foreground text-xs">

@@ -54,6 +54,12 @@ export const LOGGED_IN_STEPS: TourStep[] = [
     target: "today-review",
   },
   {
+    id: "growth-mission",
+    title: "🌱 공부할수록 성장해요",
+    body: "학습 시간·문제 풀이·복습마다 XP가 쌓이고 레벨이 올라가요. 미션을 직접 만들어 목표를 관리할 수도 있어요. '성장' 메뉴에서 확인해보세요.",
+    target: "growth-mission",
+  },
+  {
     id: "done",
     title: "🎉 준비 끝!",
     body: "이제 StudyOS가 여러분의 학습을 도와줄 거예요. 첫 문제를 풀며 시작해볼까요?",

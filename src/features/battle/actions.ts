@@ -132,3 +132,57 @@ export async function respondToBattleInvite(battleId: string, accept: boolean) {
   revalidatePath("/battle");
   revalidatePath(`/battle/${battleId}`);
 }
+
+/**
+ * An accepted participant drops out early. Sets their own row to "left"
+ * rather than deleting it — getBattle's leaderboard already filters to
+ * status === "accepted", so a "left" participant disappears from scoring
+ * for free, with no query changes needed elsewhere. Scoped to (battleId,
+ * userId, status: accepted) so this can never touch another participant's
+ * row, and a no-op for the creator (see cancelBattle instead — the
+ * creator leaving isn't well-defined the same way since creatorId lives on
+ * the Battle row itself, not the participant list).
+ */
+export async function leaveBattle(battleId: string) {
+  const user = await requireCurrentUser();
+  const supabase = await createClient();
+
+  const { data: battle } = await supabase
+    .from("Battle")
+    .select("creatorId")
+    .eq("id", battleId)
+    .maybeSingle();
+  if (!battle || battle.creatorId === user.id) return;
+
+  const { error } = await supabase
+    .from("BattleParticipant")
+    .update({ status: "left" })
+    .eq("battleId", battleId)
+    .eq("userId", user.id)
+    .eq("status", "accepted");
+  if (error) throw error;
+
+  revalidatePath("/battle");
+  revalidatePath(`/battle/${battleId}`);
+}
+
+/**
+ * Creator-only: ends the battle outright. Deletes the Battle row, which
+ * cascades to BattleParticipant at the DB level (onDelete: Cascade) even
+ * though this goes through the Supabase client rather than Prisma —
+ * cascade is enforced by Postgres itself, not the calling client.
+ */
+export async function cancelBattle(battleId: string) {
+  const user = await requireCurrentUser();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("Battle")
+    .delete()
+    .eq("id", battleId)
+    .eq("creatorId", user.id);
+  if (error) throw error;
+
+  revalidatePath("/battle");
+  revalidatePath(`/battle/${battleId}`);
+}

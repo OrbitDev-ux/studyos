@@ -8,14 +8,14 @@ import {
   type SolveProgress,
 } from "@/features/problems/components/solve-problem-panel";
 import { SubjectChip } from "@/features/subjects/components/subject-chip";
-import type { getProblems } from "@/features/problems/queries";
+import type { ProblemWithRelations } from "@/features/problems/queries";
 
 export function ProblemCard({
   problem,
   progress,
   nextProblemId,
 }: {
-  problem: Awaited<ReturnType<typeof getProblems>>[number];
+  problem: ProblemWithRelations;
   progress?: SolveProgress;
   nextProblemId?: string | null;
 }) {

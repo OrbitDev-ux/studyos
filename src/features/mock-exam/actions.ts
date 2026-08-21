@@ -165,6 +165,16 @@ export async function generateMockExam(
   return { examId };
 }
 
+export async function deleteMockExam(examId: string) {
+  const user = await requireCurrentUser();
+  // Cascades to ExamQuestion/ExamResult/ExamAnswer at the DB level (schema's
+  // onDelete: Cascade) — the generated Problem rows themselves are left
+  // alone, same as every other "delete the container, keep the shared
+  // problem pool" pattern in this app.
+  await prisma.mockExam.deleteMany({ where: { id: examId, userId: user.id } });
+  revalidatePath("/mock-exam");
+}
+
 export async function submitExam(examId: string, input: SubmitExamInput) {
   const user = await requireCurrentUser();
   const parsed = submitExamSchema.parse(input);

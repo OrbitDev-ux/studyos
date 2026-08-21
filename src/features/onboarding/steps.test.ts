@@ -29,6 +29,7 @@ describe("onboarding steps", () => {
     expect(targets).toContain("daily-mission");
     expect(targets).toContain("weakness");
     expect(targets).toContain("today-review");
+    expect(targets).toContain("growth-mission");
 
     const last = LOGGED_IN_STEPS.at(-1)!;
     expect(last.cta?.href).toBe("/problems");

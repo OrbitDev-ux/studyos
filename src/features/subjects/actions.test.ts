@@ -1,17 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Prisma } from "@/generated/prisma/client";
 
-const { subject } = vi.hoisted(() => ({
-  subject: { count: vi.fn(), create: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn() },
-}));
-vi.mock("@/lib/prisma", () => ({ prisma: { subject } }));
+const { subject, transaction } = vi.hoisted(() => {
+  const subject = {
+    count: vi.fn(),
+    create: vi.fn(),
+    updateMany: vi.fn(),
+    deleteMany: vi.fn(),
+    findMany: vi.fn(),
+    update: vi.fn().mockResolvedValue({}),
+  };
+  return { subject, transaction: vi.fn((ops: Promise<unknown>[]) => Promise.all(ops)) };
+});
+vi.mock("@/lib/prisma", () => ({ prisma: { subject, $transaction: transaction } }));
 
 const { requireCurrentUser } = vi.hoisted(() => ({ requireCurrentUser: vi.fn() }));
 vi.mock("@/lib/session", () => ({ requireCurrentUser }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-import { createSubject, deleteSubject, updateSubject } from "@/features/subjects/actions";
+import { createSubject, deleteSubject, moveSubject, updateSubject } from "@/features/subjects/actions";
 
 const USER = { id: "user-1" };
 
@@ -86,5 +94,65 @@ describe("updateSubject / deleteSubject — ownership", () => {
     expect(subject.deleteMany).toHaveBeenCalledWith({
       where: { id: "subj-1", userId: "user-1" },
     });
+  });
+});
+
+describe("moveSubject", () => {
+  it("swaps `order` with the previous sibling when moving up", async () => {
+    subject.findMany.mockResolvedValue([
+      { id: "a", order: 0 },
+      { id: "b", order: 1 },
+      { id: "c", order: 2 },
+    ]);
+
+    await moveSubject("b", "up");
+
+    expect(subject.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { userId: "user-1" } }),
+    );
+    expect(subject.update).toHaveBeenCalledWith({ where: { id: "b" }, data: { order: 0 } });
+    expect(subject.update).toHaveBeenCalledWith({ where: { id: "a" }, data: { order: 1 } });
+  });
+
+  it("swaps `order` with the next sibling when moving down", async () => {
+    subject.findMany.mockResolvedValue([
+      { id: "a", order: 0 },
+      { id: "b", order: 1 },
+    ]);
+
+    await moveSubject("a", "down");
+
+    expect(subject.update).toHaveBeenCalledWith({ where: { id: "a" }, data: { order: 1 } });
+    expect(subject.update).toHaveBeenCalledWith({ where: { id: "b" }, data: { order: 0 } });
+  });
+
+  it("is a no-op at the top boundary", async () => {
+    subject.findMany.mockResolvedValue([
+      { id: "a", order: 0 },
+      { id: "b", order: 1 },
+    ]);
+
+    await moveSubject("a", "up");
+
+    expect(subject.update).not.toHaveBeenCalled();
+  });
+
+  it("is a no-op at the bottom boundary", async () => {
+    subject.findMany.mockResolvedValue([
+      { id: "a", order: 0 },
+      { id: "b", order: 1 },
+    ]);
+
+    await moveSubject("b", "down");
+
+    expect(subject.update).not.toHaveBeenCalled();
+  });
+
+  it("is a no-op for a subject that doesn't belong to the caller (absent from their sibling list)", async () => {
+    subject.findMany.mockResolvedValue([{ id: "a", order: 0 }]);
+
+    await moveSubject("someone-elses-subject", "up");
+
+    expect(subject.update).not.toHaveBeenCalled();
   });
 });

@@ -14,7 +14,12 @@ vi.mock("@/features/growth/mission-progress", () => ({ completeMissionManually }
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-import { cancelMission, completeMission, createMission } from "@/features/growth/mission-actions";
+import {
+  cancelMission,
+  completeMission,
+  createMission,
+  updateMission,
+} from "@/features/growth/mission-actions";
 
 const USER = { id: "user-1", timezone: "Asia/Seoul" };
 
@@ -101,6 +106,52 @@ describe("createMission — authorization & input handling", () => {
       createMission({ title: "제목", type: "CUSTOM", targetValue: 0 } as never),
     ).rejects.toThrow();
     expect(studyMission.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateMission — authorization & type immutability", () => {
+  it("scopes the update to (id, userId, status: PENDING) so another user's mission matches zero rows", async () => {
+    subject.findFirst.mockResolvedValue(null);
+    studyMission.updateMany.mockResolvedValue({ count: 0 });
+
+    await updateMission("someone-elses-mission", {
+      title: "수정된 제목",
+      type: "CUSTOM",
+      targetValue: 5,
+    } as never);
+
+    expect(studyMission.updateMany).toHaveBeenCalledWith({
+      where: { id: "someone-elses-mission", userId: "user-1", status: "PENDING" },
+      data: {
+        title: "수정된 제목",
+        description: null,
+        subjectId: null,
+        targetValue: 5,
+        dueAt: null,
+      },
+    });
+  });
+
+  it("never writes `type` — a mission's type is immutable after creation", async () => {
+    subject.findFirst.mockResolvedValue(null);
+    studyMission.updateMany.mockResolvedValue({ count: 1 });
+
+    await updateMission("mission-1", {
+      title: "제목",
+      type: "STUDY_TIME",
+      targetValue: 5,
+    } as never);
+
+    expect(studyMission.updateMany).toHaveBeenCalledWith({
+      where: { id: "mission-1", userId: "user-1", status: "PENDING" },
+      data: {
+        title: "제목",
+        description: null,
+        subjectId: null,
+        targetValue: 5,
+        dueAt: null,
+      },
+    });
   });
 });
 

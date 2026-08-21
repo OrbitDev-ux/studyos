@@ -89,6 +89,17 @@ export function getReceivedFriendRequests(userId: string) {
   });
 }
 
+/** Same field-narrowing rationale as getReceivedFriendRequests — this result
+ * is passed to a "use client" settings component, so only safe fields are
+ * selected here rather than the whole User row. */
+export function getBlockedUsers(userId: string) {
+  return prisma.blockedUser.findMany({
+    where: { blockerId: userId },
+    include: { blocked: { select: { id: true, name: true, image: true, email: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
 export function getConversations(userId: string) {
   return prisma.conversation.findMany({
     where: { participants: { some: { userId } } },

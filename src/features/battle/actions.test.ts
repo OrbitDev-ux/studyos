@@ -29,7 +29,7 @@ vi.mock("@/features/notifications/service", () => ({
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-import { createBattle, respondToBattleInvite } from "@/features/battle/actions";
+import { cancelBattle, createBattle, leaveBattle, respondToBattleInvite } from "@/features/battle/actions";
 
 const USER = { id: "user-1", name: "학생", email: "student@example.com" };
 
@@ -164,5 +164,82 @@ describe("respondToBattleInvite", () => {
     await respondToBattleInvite("battle-1", true);
 
     expect(createNotification).not.toHaveBeenCalled();
+  });
+});
+
+describe("leaveBattle", () => {
+  it("sets the caller's own accepted participant row to 'left'", async () => {
+    const update = vi.fn(() => ({
+      eq: () => ({
+        eq: () => ({
+          eq: () => Promise.resolve({ error: null }),
+        }),
+      }),
+    }));
+    from.mockImplementation((table: string) => {
+      if (table === "Battle") {
+        return { select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: { creatorId: "someone-else" } }) }) }) };
+      }
+      if (table === "BattleParticipant") {
+        return { update };
+      }
+      throw new Error(`unexpected table: ${table}`);
+    });
+
+    await leaveBattle("battle-1");
+
+    expect(update).toHaveBeenCalledWith({ status: "left" });
+  });
+
+  it("is a no-op for the battle's creator (use cancelBattle instead)", async () => {
+    const update = vi.fn();
+    from.mockImplementation((table: string) => {
+      if (table === "Battle") {
+        return { select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: { creatorId: "user-1" } }) }) }) };
+      }
+      if (table === "BattleParticipant") {
+        return { update };
+      }
+      throw new Error(`unexpected table: ${table}`);
+    });
+
+    await leaveBattle("battle-1");
+
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("is a no-op when the battle doesn't exist", async () => {
+    const update = vi.fn();
+    from.mockImplementation((table: string) => {
+      if (table === "Battle") {
+        return { select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }) }) };
+      }
+      if (table === "BattleParticipant") {
+        return { update };
+      }
+      throw new Error(`unexpected table: ${table}`);
+    });
+
+    await leaveBattle("battle-1");
+
+    expect(update).not.toHaveBeenCalled();
+  });
+});
+
+describe("cancelBattle", () => {
+  it("scopes the delete to (id, creatorId) so a non-creator can't cancel someone else's battle", async () => {
+    const eqCreatorId = vi.fn(() => Promise.resolve({ error: null }));
+    const eqId = vi.fn(() => ({ eq: eqCreatorId }));
+    const del = vi.fn(() => ({ eq: eqId }));
+    from.mockImplementation((table: string) => {
+      if (table === "Battle") return { delete: del };
+      throw new Error(`unexpected table: ${table}`);
+    });
+
+    await cancelBattle("battle-1");
+
+    expect(del).toHaveBeenCalledTimes(1);
+    expect(eqId).toHaveBeenCalledWith("id", "battle-1");
+    expect(eqCreatorId).toHaveBeenCalledWith("creatorId", "user-1");
   });
 });

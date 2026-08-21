@@ -57,6 +57,32 @@ export async function updateSubject(
   return {};
 }
 
+// Swap-with-neighbor reorder — same pattern as study-books' moveBookItem:
+// atomic two-row swap of the `order` column, scoped by ownership via the
+// sibling lookup itself (a subjectId belonging to another user simply
+// won't appear in `siblings`, so the swap silently no-ops).
+export async function moveSubject(subjectId: string, direction: "up" | "down"): Promise<void> {
+  const user = await requireCurrentUser();
+  const siblings = await prisma.subject.findMany({
+    where: { userId: user.id },
+    orderBy: { order: "asc" },
+    select: { id: true, order: true },
+  });
+  const idx = siblings.findIndex((s) => s.id === subjectId);
+  const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+  if (idx < 0 || swapIdx < 0 || swapIdx >= siblings.length) return;
+
+  const a = siblings[idx]!;
+  const b = siblings[swapIdx]!;
+  await prisma.$transaction([
+    prisma.subject.update({ where: { id: a.id }, data: { order: b.order } }),
+    prisma.subject.update({ where: { id: b.id }, data: { order: a.order } }),
+  ]);
+  revalidatePath("/subjects");
+  revalidatePath("/dashboard");
+  revalidatePath("/todos");
+}
+
 export async function deleteSubject(subjectId: string) {
   const user = await requireCurrentUser();
   await prisma.subject.deleteMany({ where: { id: subjectId, userId: user.id } });

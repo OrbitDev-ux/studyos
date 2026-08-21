@@ -1,18 +1,24 @@
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DeleteSubjectButton } from "@/features/subjects/components/delete-subject-button";
+import { MoveSubjectButtons } from "@/features/subjects/components/move-subject-buttons";
 import { SubjectFormDialog } from "@/features/subjects/components/subject-form-dialog";
 import type { Subject } from "@/generated/prisma/client";
 
 export function SubjectRow({
   subject,
   editLabel,
+  isFirst,
+  isLast,
 }: {
   subject: Subject;
   editLabel: string;
+  isFirst: boolean;
+  isLast: boolean;
 }) {
   return (
     <li className="flex items-center gap-3 rounded-lg border px-3 py-2.5">
+      <MoveSubjectButtons subjectId={subject.id} isFirst={isFirst} isLast={isLast} />
       <span
         className="size-3 shrink-0 rounded-full"
         style={{ backgroundColor: subject.color }}

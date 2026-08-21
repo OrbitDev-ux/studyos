@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { Subject } from "@/generated/prisma/client";
-import { createMission } from "@/features/growth/mission-actions";
+import { createMission, updateMission } from "@/features/growth/mission-actions";
 import {
   createMissionFormSchema,
   type CreateMissionFormInput,
@@ -33,6 +33,7 @@ import {
 import { MISSION_TYPES, type MissionType } from "@/features/growth/mission-types";
 import { useI18n } from "@/features/i18n/provider";
 import type { Messages } from "@/features/i18n/messages";
+import { formatDateOnly } from "@/lib/date";
 
 function missionTypeLabel(t: Messages["growth"], type: MissionType): string {
   switch (type) {
@@ -49,9 +50,24 @@ function missionTypeLabel(t: Messages["growth"], type: MissionType): string {
   }
 }
 
-export function CreateMissionDialog({ subjects }: { subjects: Subject[] }) {
+type MissionFormDialogProps = {
+  subjects: Subject[];
+  trigger?: ReactNode;
+  mission?: {
+    id: string;
+    title: string;
+    description: string | null;
+    type: MissionType;
+    targetValue: number;
+    subjectId: string | null;
+    dueAt: Date | null;
+  };
+};
+
+export function MissionFormDialog({ subjects, trigger, mission }: MissionFormDialogProps) {
   const { messages } = useI18n();
   const t = messages.growth;
+  const isEdit = !!mission;
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const {
@@ -62,13 +78,24 @@ export function CreateMissionDialog({ subjects }: { subjects: Subject[] }) {
     formState: { errors, isSubmitting },
   } = useForm<CreateMissionFormInput, unknown, CreateMissionFormValues>({
     resolver: zodResolver(createMissionFormSchema),
-    defaultValues: { title: "", type: "CUSTOM", targetValue: 1, subjectId: undefined },
+    defaultValues: {
+      title: mission?.title ?? "",
+      description: mission?.description ?? undefined,
+      type: mission?.type ?? "CUSTOM",
+      targetValue: mission?.targetValue ?? 1,
+      subjectId: mission?.subjectId ?? undefined,
+      dueAt: mission?.dueAt ? formatDateOnly(mission.dueAt) : undefined,
+    },
   });
 
   async function onSubmit(values: CreateMissionFormValues) {
     setError(null);
     try {
-      await createMission(values);
+      if (isEdit) {
+        await updateMission(mission.id, values);
+      } else {
+        await createMission(values);
+      }
       reset();
       setOpen(false);
     } catch {
@@ -88,14 +115,16 @@ export function CreateMissionDialog({ subjects }: { subjects: Subject[] }) {
       }}
     >
       <DialogTrigger asChild>
-        <Button type="button" size="sm" variant="outline" className="gap-1.5">
-          <Plus className="size-4" />
-          {t.missionAdd}
-        </Button>
+        {trigger ?? (
+          <Button type="button" size="sm" variant="outline" className="gap-1.5">
+            <Plus className="size-4" />
+            {t.missionAdd}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t.missionCreateTitle}</DialogTitle>
+          <DialogTitle>{isEdit ? t.missionEditTitle : t.missionCreateTitle}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
@@ -123,7 +152,7 @@ export function CreateMissionDialog({ subjects }: { subjects: Subject[] }) {
                 control={control}
                 name="type"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select value={field.value} onValueChange={field.onChange} disabled={isEdit}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -137,6 +166,7 @@ export function CreateMissionDialog({ subjects }: { subjects: Subject[] }) {
                   </Select>
                 )}
               />
+              {isEdit && <p className="text-muted-foreground text-xs">{t.missionTypeLocked}</p>}
             </div>
             <div className="flex flex-1 flex-col gap-1.5">
               <Label htmlFor="mission-target">{t.missionFieldTarget}</Label>
@@ -186,7 +216,7 @@ export function CreateMissionDialog({ subjects }: { subjects: Subject[] }) {
 
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting}>
-              {t.missionSubmitAdd}
+              {isEdit ? t.missionSubmitSave : t.missionSubmitAdd}
             </Button>
           </DialogFooter>
         </form>

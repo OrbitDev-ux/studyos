@@ -13,7 +13,7 @@ const { mockExam, txExamResult, txExamAnswer, transaction } = vi.hoisted(() => {
   const txExamResult = { create: vi.fn(), update: vi.fn() };
   const txExamAnswer = { create: vi.fn() };
   return {
-    mockExam: { findFirst: vi.fn() },
+    mockExam: { findFirst: vi.fn(), deleteMany: vi.fn() },
     txExamResult,
     txExamAnswer,
     transaction: vi.fn(async (fn: (tx: unknown) => unknown) =>
@@ -36,7 +36,7 @@ vi.mock("@/features/review/schedule-service", () => ({ registerWrongAnswerForRev
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-import { submitExam } from "@/features/mock-exam/actions";
+import { deleteMockExam, submitExam } from "@/features/mock-exam/actions";
 
 const USER = { id: "user-1", timezone: "Asia/Seoul" };
 
@@ -211,5 +211,17 @@ describe("submitExam — ownership", () => {
     expect(mockExam.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: "exam-1", userId: "user-1" } }),
     );
+  });
+});
+
+describe("deleteMockExam", () => {
+  it("scopes the delete to (id, userId) so another user's exam matches zero rows", async () => {
+    mockExam.deleteMany.mockResolvedValue({ count: 0 });
+
+    await deleteMockExam("someone-elses-exam");
+
+    expect(mockExam.deleteMany).toHaveBeenCalledWith({
+      where: { id: "someone-elses-exam", userId: "user-1" },
+    });
   });
 });

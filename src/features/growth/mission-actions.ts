@@ -45,6 +45,34 @@ export async function createMission(values: CreateMissionFormValues) {
   revalidatePath("/dashboard");
 }
 
+export async function updateMission(missionId: string, values: CreateMissionFormValues) {
+  const user = await requireCurrentUser();
+  const parsed = createMissionFormSchema.parse(values);
+
+  const subjectId = parsed.subjectId
+    ? ((await prisma.subject.findFirst({ where: { id: parsed.subjectId, userId: user.id } }))
+        ?.id ?? null)
+    : null;
+
+  // Scoped to PENDING (zero progress yet) and `type` is never written here:
+  // once real activity has started counting toward currentValue, changing
+  // type would misinterpret already-earned progress (e.g. minutes
+  // reinterpreted as a problem count) — cancelling and recreating is the
+  // supported path for that instead.
+  await prisma.studyMission.updateMany({
+    where: { id: missionId, userId: user.id, status: "PENDING" },
+    data: {
+      title: parsed.title,
+      description: parsed.description ?? null,
+      subjectId,
+      targetValue: parsed.targetValue,
+      dueAt: parsed.dueAt ?? null,
+    },
+  });
+  revalidatePath("/growth");
+  revalidatePath("/dashboard");
+}
+
 export async function completeMission(missionId: string) {
   const user = await requireCurrentUser();
   const result = await completeMissionManually(user.id, missionId, user.timezone);

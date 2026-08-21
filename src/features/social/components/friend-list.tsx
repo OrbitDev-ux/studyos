@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileNameplate } from "@/features/profile/components/profile-nameplate";
+import { BlockUserButton } from "@/features/social/components/block-user-button";
 import { MessageFriendButton } from "@/features/social/components/message-friend-button";
 import { RemoveFriendButton } from "@/features/social/components/remove-friend-button";
 import type { getFriends } from "@/features/social/queries";
@@ -33,6 +34,7 @@ export function FriendList({
                 <div className="flex items-center gap-1">
                   <MessageFriendButton friendUserId={user.id} />
                   <RemoveFriendButton friendshipId={friendshipId} />
+                  <BlockUserButton targetUserId={user.id} />
                 </div>
               </li>
             ))}

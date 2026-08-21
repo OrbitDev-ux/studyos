@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,16 +23,33 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Subject } from "@/generated/prisma/client";
-import { createGoal } from "@/features/goals/actions";
+import { createGoal, updateGoal } from "@/features/goals/actions";
 import {
   goalFormSchema,
   type GoalFormInput,
   type GoalFormValues,
 } from "@/features/goals/schema";
+import { useI18n } from "@/features/i18n/provider";
 
-export function CreateGoalDialog({ subjects }: { subjects: Subject[] }) {
+type GoalFormDialogProps = {
+  subjects: Subject[];
+  trigger?: ReactNode;
+  goal?: {
+    id: string;
+    title: string;
+    targetValue: number;
+    unit: string;
+    subjectId: string | null;
+  };
+};
+
+export function GoalFormDialog({ subjects, trigger, goal }: GoalFormDialogProps) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isEdit = !!goal;
+  const { messages } = useI18n();
+  const t = messages.goals;
+
   const {
     register,
     handleSubmit,
@@ -41,17 +58,26 @@ export function CreateGoalDialog({ subjects }: { subjects: Subject[] }) {
     formState: { errors, isSubmitting },
   } = useForm<GoalFormInput, unknown, GoalFormValues>({
     resolver: zodResolver(goalFormSchema),
-    defaultValues: { title: "", targetValue: 10, unit: "개", subjectId: undefined },
+    defaultValues: {
+      title: goal?.title ?? "",
+      targetValue: goal?.targetValue ?? 10,
+      unit: goal?.unit ?? "개",
+      subjectId: goal?.subjectId ?? undefined,
+    },
   });
 
   async function onSubmit(values: GoalFormValues) {
     setError(null);
     try {
-      await createGoal(values);
+      if (isEdit) {
+        await updateGoal(goal.id, values);
+      } else {
+        await createGoal(values);
+      }
       reset();
       setOpen(false);
     } catch {
-      setError("목표 추가에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      setError(t.saveError);
     }
   }
 
@@ -67,21 +93,23 @@ export function CreateGoalDialog({ subjects }: { subjects: Subject[] }) {
       }}
     >
       <DialogTrigger asChild>
-        <Button type="button" size="sm" variant="outline" className="gap-1.5">
-          <Plus className="size-4" />
-          목표 추가
-        </Button>
+        {trigger ?? (
+          <Button type="button" size="sm" variant="outline" className="gap-1.5">
+            <Plus className="size-4" />
+            {t.add}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>오늘 목표 추가</DialogTitle>
+          <DialogTitle>{isEdit ? t.editTitle : t.addTitle}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="goal-title">목표</Label>
+            <Label htmlFor="goal-title">{t.fieldTitle}</Label>
             <Input
               id="goal-title"
-              placeholder="예: 영어 단어 100개"
+              placeholder={t.titlePlaceholder}
               {...register("title")}
             />
             {errors.title && (
@@ -90,7 +118,7 @@ export function CreateGoalDialog({ subjects }: { subjects: Subject[] }) {
           </div>
           <div className="flex gap-3">
             <div className="flex flex-1 flex-col gap-1.5">
-              <Label htmlFor="goal-target">목표량</Label>
+              <Label htmlFor="goal-target">{t.fieldTarget}</Label>
               <Input
                 id="goal-target"
                 type="number"
@@ -102,10 +130,10 @@ export function CreateGoalDialog({ subjects }: { subjects: Subject[] }) {
               )}
             </div>
             <div className="flex flex-1 flex-col gap-1.5">
-              <Label htmlFor="goal-unit">단위</Label>
+              <Label htmlFor="goal-unit">{t.fieldUnit}</Label>
               <Input
                 id="goal-unit"
-                placeholder="개 / 문제 / 페이지"
+                placeholder={t.unitPlaceholder}
                 {...register("unit")}
               />
               {errors.unit && (
@@ -115,14 +143,14 @@ export function CreateGoalDialog({ subjects }: { subjects: Subject[] }) {
           </div>
           {subjects.length > 0 && (
             <div className="flex flex-col gap-1.5">
-              <Label>과목 (선택)</Label>
+              <Label>{t.fieldSubject}</Label>
               <Controller
                 control={control}
                 name="subjectId"
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger>
-                      <SelectValue placeholder="과목 선택 안 함" />
+                      <SelectValue placeholder={t.subjectPlaceholder} />
                     </SelectTrigger>
                     <SelectContent>
                       {subjects.map((subject) => (
@@ -139,7 +167,7 @@ export function CreateGoalDialog({ subjects }: { subjects: Subject[] }) {
           {error && <p className="text-destructive text-xs">{error}</p>}
           <DialogFooter>
             <Button type="submit" disabled={isSubmitting}>
-              추가
+              {isEdit ? t.submitSave : t.submitAdd}
             </Button>
           </DialogFooter>
         </form>

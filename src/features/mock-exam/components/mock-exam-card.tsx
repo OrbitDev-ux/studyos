@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { DeleteMockExamButton } from "@/features/mock-exam/components/delete-mock-exam-button";
 import type { getMockExams } from "@/features/mock-exam/queries";
 
 export function MockExamCard({
@@ -36,6 +37,7 @@ export function MockExamCard({
               {latestResult ? "다시 풀기" : "응시하기"}
             </Link>
           </Button>
+          <DeleteMockExamButton examId={exam.id} />
         </div>
       </CardContent>
     </Card>

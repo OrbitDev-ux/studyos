@@ -212,7 +212,9 @@ export default async function DashboardPage() {
           <TodayGoalsCard goals={goals} subjects={subjects} t={messages.goals} />
           <TodayTodosCard todos={todos} t={messages.todos} />
         </div>
-        <GrowthMissionCard missions={activeMissions} subjects={subjects} t={messages.growth} />
+        <div data-tour="growth-mission">
+          <GrowthMissionCard missions={activeMissions} subjects={subjects} t={messages.growth} />
+        </div>
         <div className="grid gap-5 lg:grid-cols-3">
           <RecommendedProblemsCard problems={recentProblems} />
           <div data-tour="today-review">

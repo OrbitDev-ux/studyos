@@ -7,6 +7,8 @@ import { getServerLocale } from "@/features/i18n/server";
 import { NotificationPreferencesForm } from "@/features/notifications/components/notification-preferences-form";
 import { getNotificationPreferences } from "@/features/notifications/service";
 import { ActivitySharingToggle } from "@/features/social/components/activity-sharing-toggle";
+import { BlockedUsersCard } from "@/features/social/components/blocked-users-card";
+import { getBlockedUsers } from "@/features/social/queries";
 import { AccountDeletionCard } from "@/features/account/components/account-deletion-card";
 import { getCurrentConsents } from "@/features/legal/consent";
 import { prisma } from "@/lib/prisma";
@@ -16,13 +18,14 @@ export const metadata = { title: "설정" };
 
 export default async function SettingsPage() {
   const user = await requireCurrentUser();
-  const [row, notificationPreferences, consents] = await Promise.all([
+  const [row, notificationPreferences, consents, blockedUsers] = await Promise.all([
     prisma.user.findUnique({
       where: { id: user.id },
       select: { locale: true, activitySharingEnabled: true },
     }),
     getNotificationPreferences(user.id),
     getCurrentConsents(user.id),
+    getBlockedUsers(user.id),
   ]);
   const mode: "auto" | "manual" = row?.locale ? "manual" : "auto";
   const locale = await getServerLocale(row?.locale);
@@ -76,6 +79,7 @@ export default async function SettingsPage() {
           <ActivitySharingToggle initial={row?.activitySharingEnabled ?? true} />
         </CardContent>
       </Card>
+      <BlockedUsersCard blockedUsers={blockedUsers} />
       <AccountDeletionCard />
       <Card>
         <CardContent>

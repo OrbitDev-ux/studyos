@@ -1,7 +1,10 @@
+import { Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import type { Subject } from "@/generated/prisma/client";
-import { CreateGoalDialog } from "@/features/goals/components/create-goal-dialog";
+import { DeleteGoalButton } from "@/features/goals/components/delete-goal-button";
+import { GoalFormDialog } from "@/features/goals/components/goal-form-dialog";
 import { GoalProgressButton } from "@/features/goals/components/goal-progress-button";
 import type { getTodayGoals } from "@/features/goals/queries";
 import type { Messages } from "@/features/i18n/messages";
@@ -20,7 +23,7 @@ export function TodayGoalsCard({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{t.todayTitle}</CardTitle>
-        <CreateGoalDialog subjects={subjects} />
+        <GoalFormDialog subjects={subjects} />
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {goals.length === 0 ? (
@@ -43,6 +46,27 @@ export function TodayGoalsCard({
                     goalId={goal.id}
                     disabled={goal.currentValue >= goal.targetValue}
                   />
+                  <GoalFormDialog
+                    subjects={subjects}
+                    goal={{
+                      id: goal.id,
+                      title: goal.title,
+                      targetValue: goal.targetValue,
+                      unit: goal.unit,
+                      subjectId: goal.subjectId,
+                    }}
+                    trigger={
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="ghost"
+                        aria-label={t.editLabel}
+                      >
+                        <Pencil className="size-3.5" />
+                      </Button>
+                    }
+                  />
+                  <DeleteGoalButton goalId={goal.id} />
                 </div>
               </div>
             );

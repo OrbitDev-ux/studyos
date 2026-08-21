@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileNameplate } from "@/features/profile/components/profile-nameplate";
+import { BlockUserButton } from "@/features/social/components/block-user-button";
 import { respondToFriendRequest } from "@/features/social/actions";
 import type { getReceivedFriendRequests } from "@/features/social/queries";
 import { useI18n } from "@/features/i18n/provider";
@@ -54,6 +55,7 @@ export function FriendRequestList({
                 >
                   {t.decline}
                 </Button>
+                <BlockUserButton targetUserId={request.requester.id} />
               </div>
             </li>
           ))}

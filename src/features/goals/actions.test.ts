@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { goal, subject } = vi.hoisted(() => ({
-  goal: { create: vi.fn(), findFirst: vi.fn(), update: vi.fn() },
+  goal: { create: vi.fn(), findFirst: vi.fn(), update: vi.fn(), updateMany: vi.fn(), deleteMany: vi.fn() },
   subject: { findFirst: vi.fn() },
 }));
 vi.mock("@/lib/prisma", () => ({ prisma: { goal, subject } }));
@@ -14,7 +14,7 @@ vi.mock("@/features/growth/hooks", () => ({ onGoalCompleted }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-import { createGoal, incrementGoalProgress } from "@/features/goals/actions";
+import { createGoal, deleteGoal, incrementGoalProgress, updateGoal } from "@/features/goals/actions";
 
 const USER = { id: "user-1", timezone: "Asia/Seoul" };
 
@@ -42,6 +42,52 @@ describe("createGoal — subject ownership", () => {
     expect(goal.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ subjectId: null }) }),
     );
+  });
+});
+
+describe("updateGoal", () => {
+  it("scopes the update to (id, userId) so another user's goal matches zero rows", async () => {
+    subject.findFirst.mockResolvedValue(null);
+    goal.updateMany.mockResolvedValue({ count: 0 });
+
+    await updateGoal("someone-elses-goal", {
+      title: "수정된 제목",
+      targetValue: 20,
+      unit: "개",
+    });
+
+    expect(goal.updateMany).toHaveBeenCalledWith({
+      where: { id: "someone-elses-goal", userId: "user-1" },
+      data: { title: "수정된 제목", targetValue: 20, unit: "개", subjectId: null },
+    });
+  });
+
+  it("falls back to null for a subject the caller doesn't own", async () => {
+    subject.findFirst.mockResolvedValue(null);
+    goal.updateMany.mockResolvedValue({ count: 1 });
+
+    await updateGoal("goal-1", {
+      title: "제목",
+      targetValue: 10,
+      unit: "개",
+      subjectId: "someone-elses-subject",
+    });
+
+    expect(goal.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ subjectId: null }) }),
+    );
+  });
+});
+
+describe("deleteGoal", () => {
+  it("scopes the delete to (id, userId)", async () => {
+    goal.deleteMany.mockResolvedValue({ count: 1 });
+
+    await deleteGoal("goal-1");
+
+    expect(goal.deleteMany).toHaveBeenCalledWith({
+      where: { id: "goal-1", userId: "user-1" },
+    });
   });
 });
 

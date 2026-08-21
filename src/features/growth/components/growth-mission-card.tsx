@@ -3,7 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Subject } from "@/generated/prisma/client";
-import { CreateMissionDialog } from "@/features/growth/components/create-mission-dialog";
+import { MissionFormDialog } from "@/features/growth/components/mission-form-dialog";
 import { MissionRow } from "@/features/growth/components/mission-row";
 import type { getActiveMissions } from "@/features/growth/mission-queries";
 import type { Messages } from "@/features/i18n/messages";
@@ -25,13 +25,15 @@ export function GrowthMissionCard({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{t.dashboardWidgetTitle}</CardTitle>
-        <CreateMissionDialog subjects={subjects} />
+        <MissionFormDialog subjects={subjects} />
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {preview.length === 0 ? (
           <p className="text-muted-foreground text-sm">{t.dashboardWidgetEmpty}</p>
         ) : (
-          preview.map((mission) => <MissionRow key={mission.id} mission={mission} t={t} />)
+          preview.map((mission) => (
+            <MissionRow key={mission.id} mission={mission} subjects={subjects} t={t} />
+          ))
         )}
         {missions.length > 0 && (
           <Button asChild variant="ghost" size="sm" className="self-start gap-1">

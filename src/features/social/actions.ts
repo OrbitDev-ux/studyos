@@ -34,6 +34,21 @@ export async function sendFriendRequest(email: string) {
     throw new Error("해당 이메일의 사용자를 찾을 수 없습니다.");
   }
 
+  // Checked in both directions: a user who was blocked can't re-request, and
+  // a user who did the blocking can't accidentally re-request the person
+  // they blocked either.
+  const block = await prisma.blockedUser.findFirst({
+    where: {
+      OR: [
+        { blockerId: user.id, blockedId: target.id },
+        { blockerId: target.id, blockedId: user.id },
+      ],
+    },
+  });
+  if (block) {
+    throw new Error("차단 관계가 있어 친구 요청을 보낼 수 없습니다.");
+  }
+
   const existing = await prisma.friendship.findFirst({
     where: {
       OR: [
@@ -137,6 +152,48 @@ export async function removeFriend(friendshipId: string) {
     },
   });
   revalidatePath("/social");
+}
+
+/**
+ * Blocks `targetUserId` and severs any existing Friendship between the two
+ * (pending or accepted) — blocking is meant to end the relationship
+ * outright, not just prevent future requests. Idempotent: a repeat block
+ * hits the @@unique([blockerId, blockedId]) constraint, treated as a no-op
+ * rather than a thrown error.
+ */
+export async function blockUser(targetUserId: string) {
+  const user = await requireCurrentUser();
+  if (targetUserId === user.id) return;
+
+  try {
+    await prisma.blockedUser.create({
+      data: { blockerId: user.id, blockedId: targetUserId },
+    });
+  } catch (err) {
+    if (!(err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002")) {
+      throw err;
+    }
+  }
+
+  await prisma.friendship.deleteMany({
+    where: {
+      OR: [
+        { requesterId: user.id, addresseeId: targetUserId },
+        { requesterId: targetUserId, addresseeId: user.id },
+      ],
+    },
+  });
+
+  revalidatePath("/social");
+  revalidatePath("/settings");
+}
+
+export async function unblockUser(targetUserId: string) {
+  const user = await requireCurrentUser();
+  await prisma.blockedUser.deleteMany({
+    where: { blockerId: user.id, blockedId: targetUserId },
+  });
+  revalidatePath("/settings");
 }
 
 export async function startConversation(friendUserId: string): Promise<string> {
