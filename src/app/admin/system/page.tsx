@@ -1,59 +1,31 @@
-import { Database, Gauge, Server, TriangleAlert } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { TriangleAlert } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AdminPageHeader } from "@/features/admin/components/admin-page-header";
+import { StatusDashboard } from "@/features/admin/components/status-dashboard";
 import {
   DangerousActions,
   MaintenanceControl,
 } from "@/features/admin/components/system-controls";
-import { getSystemStatus, type ServiceStatus } from "@/features/admin/system-queries";
+import { getSystemStatus } from "@/features/admin/system-queries";
+import { getSystemHealth } from "@/features/admin/status";
+import { getServerLocale } from "@/features/i18n/server";
 import { requireCapability } from "@/lib/admin/context";
 
 export const metadata = { robots: { index: false, follow: false } };
 
-function StatusBadge({ status }: { status: ServiceStatus }) {
-  return status === "ok" ? (
-    <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-      정상
-    </Badge>
-  ) : (
-    <Badge variant="destructive">오류</Badge>
-  );
-}
-
 export default async function AdminSystemPage() {
   await requireCapability("manageSystem");
-  const status = await getSystemStatus();
-
-  const services = [
-    { label: "서비스", value: <StatusBadge status={status.server} />, icon: Gauge },
-    { label: "서버", value: <StatusBadge status={status.server} />, icon: Server },
-    {
-      label: "데이터베이스",
-      value: <StatusBadge status={status.database} />,
-      icon: Database,
-    },
-    { label: "캐시", value: <StatusBadge status={status.cache} />, icon: Gauge },
-  ];
+  const [status, health, locale] = await Promise.all([
+    getSystemStatus(),
+    getSystemHealth(),
+    getServerLocale(),
+  ]);
 
   return (
     <>
       <AdminPageHeader title="시스템" description="서비스 상태 및 운영 제어" />
 
-      {/* Status grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {services.map((s) => (
-          <Card key={s.label}>
-            <CardContent className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <s.icon className="text-muted-foreground size-4" />
-                <span className="text-sm font-medium">{s.label}</span>
-              </div>
-              {s.value}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <StatusDashboard initial={health} locale={locale} />
 
       <Card>
         <CardHeader className="border-b">
