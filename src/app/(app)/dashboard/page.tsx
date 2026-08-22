@@ -160,7 +160,7 @@ export default async function DashboardPage() {
     .slice(0, CONTINUE_ITEM_LIMIT);
 
   return (
-    <div className="flex flex-col gap-8 md:gap-9">
+    <div className="flex flex-col gap-6 md:gap-7">
       <LoginExperience role="user" />
 
       <MilestoneBanner />
@@ -200,69 +200,72 @@ export default async function DashboardPage() {
 
       <ContinueWorkingCard items={continueItems} t={t} />
 
-      <QuickApps messages={messages} />
+      {/* ── Main(2/3) + Sidebar(1/3): 세로 스택 대신 병렬 컬럼으로 배치해
+          첫 화면 스크롤을 줄인다. 모바일에서는 자연스럽게 1열로 쌓이고,
+          이때는 오늘의 학습/계획(실제 할 일)이 먼저, 요약성 사이드바
+          콘텐츠(빠른 실행/최근 활동/친구/통계)가 뒤에 온다. ── */}
+      <div className="grid gap-5 lg:grid-cols-3 lg:items-start">
+        <div className="flex flex-col gap-6 lg:order-1 lg:col-span-2">
+          {/* ── 오늘의 학습 ── */}
+          <section className="flex flex-col gap-3">
+            <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+              {t.sectionTodayLearning}
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div data-tour="daily-mission">
+                <DailyMissionCard board={missionBoard} />
+              </div>
+              <div data-tour="weak-problems">
+                <WeakProblemsCard board={weakProblemBoard} />
+              </div>
+            </div>
+            <StudyTimerCard
+              todaySeconds={todaySeconds}
+              activeStartedAt={activeSession ? activeSession.startedAt.toISOString() : null}
+            />
+          </section>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <RecentActivityCard initial={headerNotifications} messages={messages} />
-        <FriendsPresenceCard
-          friends={friends}
-          pendingRequestCount={pendingRequestCount}
-          messages={messages}
-        />
+          {/* ── 오늘의 계획 ── */}
+          <section className="flex flex-col gap-3">
+            <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+              {t.sectionTodayPlan}
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <TodayGoalsCard goals={goals} subjects={subjects} t={messages.goals} />
+              <TodayTodosCard todos={todos} t={messages.todos} />
+            </div>
+            <div data-tour="growth-mission">
+              <GrowthMissionCard
+                missions={activeMissions}
+                subjects={subjects}
+                t={messages.growth}
+              />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <RecommendedProblemsCard problems={recentProblems} />
+              <div data-tour="today-review">
+                <TodayReviewCard wrongAnswers={dueReviews} totalCount={dueCount} />
+              </div>
+              <TodayMockExamCard exams={recentExams} />
+            </div>
+          </section>
+        </div>
+
+        {/* ── Sidebar: 요약/미리보기만 — 상세는 각 전용 페이지에서 ── */}
+        <div className="flex flex-col gap-5 lg:order-2">
+          <QuickApps messages={messages} />
+          <RecentActivityCard initial={headerNotifications} messages={messages} />
+          <FriendsPresenceCard
+            friends={friends}
+            pendingRequestCount={pendingRequestCount}
+            messages={messages}
+          />
+          <WeeklyTrendMiniCard stats={weeklyStats} t={messages.stats} locale={locale} />
+          <div data-tour="weakness">
+            <WeaknessCard units={topWeaknesses} />
+          </div>
+        </div>
       </div>
-
-      {/* ── 오늘의 학습 (1차) ── */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-          {t.sectionTodayLearning}
-        </h2>
-        <div className="grid gap-5 lg:grid-cols-2">
-          <div data-tour="daily-mission">
-            <DailyMissionCard board={missionBoard} />
-          </div>
-          <div data-tour="weak-problems">
-            <WeakProblemsCard board={weakProblemBoard} />
-          </div>
-        </div>
-        <StudyTimerCard
-          todaySeconds={todaySeconds}
-          activeStartedAt={activeSession ? activeSession.startedAt.toISOString() : null}
-        />
-        <WeeklyTrendMiniCard stats={weeklyStats} t={messages.stats} locale={locale} />
-      </section>
-
-      {/* ── 오늘의 계획 (2차) ── */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-          {t.sectionTodayPlan}
-        </h2>
-        <div className="grid gap-5 lg:grid-cols-2">
-          <TodayGoalsCard goals={goals} subjects={subjects} t={messages.goals} />
-          <TodayTodosCard todos={todos} t={messages.todos} />
-        </div>
-        <div data-tour="growth-mission">
-          <GrowthMissionCard missions={activeMissions} subjects={subjects} t={messages.growth} />
-        </div>
-        <div className="grid gap-5 lg:grid-cols-3">
-          <RecommendedProblemsCard problems={recentProblems} />
-          <div data-tour="today-review">
-            <TodayReviewCard wrongAnswers={dueReviews} totalCount={dueCount} />
-          </div>
-          <TodayMockExamCard exams={recentExams} />
-        </div>
-      </section>
-
-      {/* ── 학습 분석 (2차) — AI 서술형 분석(약점 분석/주간 리포트)은 /stats로 이동
-          (Product Audit: 같은 "얼마나 잘하고 있나" 질문에 답하는 카드 3개가 대시보드에
-          중복되어 있었음). 여기는 즉시 계산되는 사실 기반 데이터만 남긴다. ── */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-          {t.sectionAnalysis}
-        </h2>
-        <div data-tour="weakness">
-          <WeaknessCard units={topWeaknesses} />
-        </div>
-      </section>
 
       {/* Ads only for trial-active users. 학습 흐름을 끊지 않도록 대시보드 최하단으로 분리. */}
       <AdSlot placement="dashboard" show={showAds} />
