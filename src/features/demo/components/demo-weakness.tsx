@@ -14,6 +14,9 @@ import {
   type DemoWeakProblem,
 } from "@/features/demo/data";
 import { DemoProblemSolver } from "@/features/demo/components/demo-problem-solver";
+import { getMessages } from "@/features/i18n/messages";
+
+const t = getMessages("ko-KR").dashboard;
 
 const CATEGORY_LABEL: Record<DemoWeakProblem["category"], string> = {
   REVIEW_DUE: "🔄 복습",
@@ -74,7 +77,7 @@ export function DemoWeakness() {
           ))}
         </div>
         <div>
-          <WeaknessCard units={DEMO_WEAKNESS_UNITS} />
+          <WeaknessCard units={DEMO_WEAKNESS_UNITS} t={t} />
         </div>
       </div>
     </div>

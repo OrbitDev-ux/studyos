@@ -17,6 +17,9 @@ import {
 } from "@/features/demo/data";
 import { DEMO_TOUR_EVENT } from "@/features/demo/components/demo-tour-launcher";
 import { useDemo } from "@/features/demo/state";
+import { getMessages } from "@/features/i18n/messages";
+
+const t = getMessages("ko-KR").dashboard;
 
 export function DemoDashboard() {
   const { exp, level, levelProgressPercent, totalSolved, missionBoard } = useDemo();
@@ -73,7 +76,7 @@ export function DemoDashboard() {
       {/* Mission + AI recommendation */}
       <div className="grid gap-4 lg:grid-cols-2">
         <div data-tour="daily-mission">
-          <DailyMissionCard board={missionBoard} />
+          <DailyMissionCard board={missionBoard} t={t} />
         </div>
         <div data-tour="ai-reco">
           <Card>
@@ -107,7 +110,7 @@ export function DemoDashboard() {
       {/* Weakness + Review + Recent */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div data-tour="weakness">
-          <WeaknessCard units={DEMO_WEAKNESS_UNITS} />
+          <WeaknessCard units={DEMO_WEAKNESS_UNITS} t={t} />
         </div>
 
         <div data-tour="today-review">

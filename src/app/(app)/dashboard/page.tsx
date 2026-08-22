@@ -1,14 +1,13 @@
 import { ClipboardList, Flame, GraduationCap, ListChecks, MessageCircle, NotebookPen } from "lucide-react";
 import { LoginExperience } from "@/features/login-experience/login-experience";
 import { ContinueWorkingCard, type ContinueItem } from "@/features/dashboard/components/continue-working-card";
-import { QuickApps } from "@/features/dashboard/components/quick-apps";
 import { RecentActivityCard } from "@/features/dashboard/components/recent-activity-card";
 import { FriendsPresenceCard } from "@/features/dashboard/components/friends-presence-card";
 import { TodayGoalsCard } from "@/features/goals/components/today-goals-card";
 import { getTodayGoals } from "@/features/goals/queries";
 import { TodayMockExamCard } from "@/features/mock-exam/components/today-mock-exam-card";
 import { getRecentMockExams } from "@/features/mock-exam/queries";
-import { RecommendedProblemsCard } from "@/features/problems/components/recommended-problems-card";
+import { RecentProblemsCard } from "@/features/problems/components/recent-problems-card";
 import { getRecentProblems } from "@/features/problems/queries";
 import { TodayReviewCard } from "@/features/review/components/today-review-card";
 import { getDueReviews, getDueReviewCount } from "@/features/review/queries";
@@ -213,10 +212,10 @@ export default async function DashboardPage() {
             </h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <div data-tour="daily-mission">
-                <DailyMissionCard board={missionBoard} />
+                <DailyMissionCard board={missionBoard} t={t} />
               </div>
               <div data-tour="weak-problems">
-                <WeakProblemsCard board={weakProblemBoard} />
+                <WeakProblemsCard board={weakProblemBoard} t={t} />
               </div>
             </div>
             <StudyTimerCard
@@ -242,18 +241,17 @@ export default async function DashboardPage() {
               />
             </div>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <RecommendedProblemsCard problems={recentProblems} />
+              <RecentProblemsCard problems={recentProblems} t={t} />
               <div data-tour="today-review">
-                <TodayReviewCard wrongAnswers={dueReviews} totalCount={dueCount} />
+                <TodayReviewCard wrongAnswers={dueReviews} totalCount={dueCount} t={t} />
               </div>
-              <TodayMockExamCard exams={recentExams} />
+              <TodayMockExamCard exams={recentExams} t={t} />
             </div>
           </section>
         </div>
 
         {/* ── Sidebar: 요약/미리보기만 — 상세는 각 전용 페이지에서 ── */}
         <div className="flex flex-col gap-5 lg:order-2">
-          <QuickApps messages={messages} />
           <RecentActivityCard initial={headerNotifications} messages={messages} />
           <FriendsPresenceCard
             friends={friends}
@@ -262,7 +260,7 @@ export default async function DashboardPage() {
           />
           <WeeklyTrendMiniCard stats={weeklyStats} t={messages.stats} locale={locale} />
           <div data-tour="weakness">
-            <WeaknessCard units={topWeaknesses} />
+            <WeaknessCard units={topWeaknesses} t={t} />
           </div>
         </div>
       </div>

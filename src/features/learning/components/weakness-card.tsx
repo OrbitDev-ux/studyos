@@ -1,6 +1,7 @@
 import { Activity } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { MasteryBand, WeaknessUnit } from "@/features/learning/weakness";
+import type { Messages } from "@/features/i18n/messages";
 import { cn } from "@/lib/utils";
 
 const BAND_STYLE: Record<MasteryBand, { bar: string; text: string; dot: string }> = {
@@ -14,19 +15,17 @@ const BAND_STYLE: Record<MasteryBand, { bar: string; text: string; dot: string }
  * are computed server-side (getTopWeaknesses) — never fabricated. New users
  * with no attempts see a first-step empty state instead of fake data.
  */
-export function WeaknessCard({ units }: { units: WeaknessUnit[] }) {
+export function WeaknessCard({ units, t }: { units: WeaknessUnit[]; t: Messages["dashboard"] }) {
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <Activity className="size-4" /> 취약 개념 분석
+          <Activity className="size-4" /> {t.weaknessTitle}
         </CardTitle>
       </CardHeader>
       <CardContent>
         {units.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            아직 학습 데이터가 없습니다. 문제를 풀면 취약 개념을 분석해드려요!
-          </p>
+          <p className="text-muted-foreground text-sm">{t.weaknessEmpty}</p>
         ) : (
           <ul className="flex flex-col gap-3">
             {units.map((unit) => {
@@ -53,8 +52,11 @@ export function WeaknessCard({ units }: { units: WeaknessUnit[] }) {
                     />
                   </div>
                   <p className="text-muted-foreground text-xs">
-                    {unit.attempts}회 시도 · 정답률 {unit.overallAccuracy}%
-                    {unit.recentWrongStreak >= 2 && ` · 최근 ${unit.recentWrongStreak}회 연속 오답`}
+                    {t.weaknessAttempts
+                      .replace("{count}", String(unit.attempts))
+                      .replace("{accuracy}", String(unit.overallAccuracy))}
+                    {unit.recentWrongStreak >= 2 &&
+                      ` · ${t.weaknessWrongStreak.replace("{count}", String(unit.recentWrongStreak))}`}
                   </p>
                 </li>
               );

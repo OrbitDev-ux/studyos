@@ -3,6 +3,9 @@
 import { Target } from "lucide-react";
 import { DailyMissionCard } from "@/features/learning/components/daily-mission-card";
 import { useDemo } from "@/features/demo/state";
+import { getMessages } from "@/features/i18n/messages";
+
+const t = getMessages("ko-KR").dashboard;
 
 export function DemoMissions() {
   const { missionBoard } = useDemo();
@@ -15,7 +18,7 @@ export function DemoMissions() {
         StudyOS가 오늘 추천하는 학습이에요. 문제를 풀면 진행도가 실시간으로 올라가요. (Demo)
       </p>
       <div className="max-w-xl">
-        <DailyMissionCard board={missionBoard} />
+        <DailyMissionCard board={missionBoard} t={t} />
       </div>
     </div>
   );
