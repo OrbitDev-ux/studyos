@@ -1,3 +1,4 @@
+import { IMPORT_SOURCE } from "@/features/problems/import/types";
 import { prisma } from "@/lib/prisma";
 
 export async function getFriends(userId: string) {
@@ -124,6 +125,71 @@ const CONVERSATION_USER_SELECT = {
  * clickable profile entry point, so email/presence aren't needed. */
 const REPLY_SENDER_SELECT = { id: true, name: true, image: true } as const;
 
+/**
+ * Safe preview fields for a shared Problem — no choices/isCorrect/
+ * answerText/explanation, so a share can never hand the recipient the
+ * answer before they've solved it themselves (same redaction rule as
+ * problems/queries.ts's PublicChoice). `userId`/`source` are selected only
+ * to compute `canSolve` below — never returned to the client as-is.
+ */
+const SHARED_PROBLEM_SELECT = {
+  id: true,
+  prompt: true,
+  type: true,
+  difficulty: true,
+  userId: true,
+  source: true,
+  subject: { select: { name: true, color: true } },
+} as const;
+
+export type SharedProblemPreview = {
+  id: string;
+  prompt: string;
+  type: string;
+  difficulty: string;
+  subject: { name: string; color: string } | null;
+  /** Whether the VIEWING user (not the sharer) can actually open and solve
+   * this problem — true for their own problems and shared 문제은행 problems,
+   * false for someone else's private problem. A share always shows the
+   * preview either way; this only gates whether "풀어보기" links anywhere,
+   * so a recipient is never sent to a problem list that doesn't have it. */
+  canSolve: boolean;
+};
+
+/** Batch-resolves each PROBLEM-type share's preview in one query (not one
+ * per message) — `sharedId` has no FK, so Prisma can't `include` it. */
+async function loadSharedProblemPreviews(
+  viewerId: string,
+  messages: { sharedType: string | null; sharedId: string | null }[],
+): Promise<Map<string, SharedProblemPreview>> {
+  const ids = [
+    ...new Set(
+      messages
+        .filter((m) => m.sharedType === "PROBLEM" && m.sharedId)
+        .map((m) => m.sharedId!),
+    ),
+  ];
+  if (ids.length === 0) return new Map();
+
+  const problems = await prisma.problem.findMany({
+    where: { id: { in: ids } },
+    select: SHARED_PROBLEM_SELECT,
+  });
+  return new Map(
+    problems.map((p) => [
+      p.id,
+      {
+        id: p.id,
+        prompt: p.prompt,
+        type: p.type,
+        difficulty: p.difficulty,
+        subject: p.subject,
+        canSolve: p.userId === viewerId || p.source === IMPORT_SOURCE,
+      },
+    ]),
+  );
+}
+
 export async function getConversations(userId: string) {
   const conversations = await prisma.conversation.findMany({
     where: { participants: { some: { userId } } },
@@ -138,6 +204,7 @@ export async function getConversations(userId: string) {
           senderId: true,
           createdAt: true,
           deletedAt: true,
+          sharedType: true,
         },
       },
     },
@@ -187,6 +254,8 @@ export async function getConversation(conversationId: string, userId: string) {
   });
   if (!conversation) return null;
 
+  const sharedProblems = await loadSharedProblemPreviews(userId, conversation.messages);
+
   // Redact soft-deleted content defense-in-depth (deleteMessage already
   // clears it in the DB at delete time — this keeps the redaction rule
   // enforced in exactly one place regardless of how a row got here).
@@ -199,6 +268,10 @@ export async function getConversation(conversationId: string, userId: string) {
         message.replyTo && message.replyTo.deletedAt
           ? { ...message.replyTo, content: "" }
           : message.replyTo,
+      sharedProblem:
+        message.sharedType === "PROBLEM" && message.sharedId
+          ? (sharedProblems.get(message.sharedId) ?? null)
+          : null,
     })),
   };
 }

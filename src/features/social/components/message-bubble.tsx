@@ -1,6 +1,16 @@
 "use client";
 
-import { Check, Copy, MoreHorizontal, Pencil, Reply, SmilePlus, Trash2 } from "lucide-react";
+import Link from "next/link";
+import {
+  BookOpen,
+  Check,
+  Copy,
+  MoreHorizontal,
+  Pencil,
+  Reply,
+  SmilePlus,
+  Trash2,
+} from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import {
   AlertDialog,
@@ -24,6 +34,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 import { deleteMessage, editMessage, reactToMessage } from "@/features/social/message-actions";
 import { QUICK_REACTIONS } from "@/features/social/reactions";
+import type { SharedProblemPreview } from "@/features/social/queries";
+import { SubjectChip } from "@/features/subjects/components/subject-chip";
 import { useI18n } from "@/features/i18n/provider";
 import { formatTimeOnly } from "@/lib/date";
 import { cn } from "@/lib/utils";
@@ -49,6 +61,7 @@ export type ConversationMessage = {
     sender: { id: string; name: string | null; image: string | null };
   } | null;
   reactions: { id: string; emoji: string; userId: string }[];
+  sharedProblem: SharedProblemPreview | null;
 };
 
 export function MessageBubble({
@@ -180,24 +193,29 @@ export function MessageBubble({
             </div>
           </div>
         ) : (
-          <p
-            className={cn(
-              "max-w-[75%] rounded-lg px-3 py-2 text-sm break-words whitespace-pre-wrap",
-              isMine ? "bg-primary text-primary-foreground" : "bg-muted",
-            )}
-          >
-            {message.content}
-            {message.editedAt && (
-              <span
+          <div className={cn("flex max-w-[75%] flex-col gap-1.5", isMine && "items-end")}>
+            {message.sharedProblem && <SharedProblemCard problem={message.sharedProblem} />}
+            {message.content && (
+              <p
                 className={cn(
-                  "ml-1.5 text-[10px] opacity-70",
-                  isMine ? "text-primary-foreground" : "text-muted-foreground",
+                  "rounded-lg px-3 py-2 text-sm break-words whitespace-pre-wrap",
+                  isMine ? "bg-primary text-primary-foreground" : "bg-muted",
                 )}
               >
-                {t.editedTag}
-              </span>
+                {message.content}
+                {message.editedAt && (
+                  <span
+                    className={cn(
+                      "ml-1.5 text-[10px] opacity-70",
+                      isMine ? "text-primary-foreground" : "text-muted-foreground",
+                    )}
+                  >
+                    {t.editedTag}
+                  </span>
+                )}
+              </p>
             )}
-          </p>
+          </div>
         )}
 
         {!isDeleted && !isEditing && (
@@ -314,5 +332,25 @@ function DeleteMessageMenuItem({ messageId }: { messageId: string }) {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  );
+}
+
+function SharedProblemCard({ problem }: { problem: SharedProblemPreview }) {
+  const { messages } = useI18n();
+  const t = messages.social;
+
+  return (
+    <div className="bg-card w-64 rounded-lg border p-3">
+      <div className="flex items-center gap-1.5">
+        <BookOpen className="text-muted-foreground size-3.5 shrink-0" />
+        {problem.subject && <SubjectChip name={problem.subject.name} color={problem.subject.color} />}
+      </div>
+      <p className="mt-1.5 line-clamp-3 text-sm">{problem.prompt}</p>
+      {problem.canSolve && (
+        <Button asChild size="sm" variant="outline" className="mt-2 w-full">
+          <Link href="/problems">{t.solveSharedProblem}</Link>
+        </Button>
+      )}
+    </div>
   );
 }

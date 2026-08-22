@@ -38,7 +38,8 @@ export function ConversationList({
               const preview = lastMessage
                 ? lastMessage.deletedAt
                   ? t.deletedTag
-                  : lastMessage.content
+                  : lastMessage.content ||
+                    (lastMessage.sharedType === "PROBLEM" ? t.sharedProblemPreview : "")
                 : t.openConversation;
               const unread = conversation.unreadCount > 0;
 

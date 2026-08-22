@@ -18,18 +18,18 @@ import {
  * (id/name/image/email), so a future edit can't silently widen it back to a
  * full-row `include` without this test failing.
  */
-const { friendship, blockedUser, conversation, conversationParticipant, message } = vi.hoisted(
-  () => ({
+const { friendship, blockedUser, conversation, conversationParticipant, message, problem } =
+  vi.hoisted(() => ({
     friendship: { findMany: vi.fn() },
     blockedUser: { findMany: vi.fn() },
     conversation: { findMany: vi.fn(), findFirst: vi.fn() },
     conversationParticipant: { findUnique: vi.fn() },
     message: { count: vi.fn(), findMany: vi.fn() },
-  }),
-);
+    problem: { findMany: vi.fn() },
+  }));
 
 vi.mock("@/lib/prisma", () => ({
-  prisma: { friendship, blockedUser, conversation, conversationParticipant, message },
+  prisma: { friendship, blockedUser, conversation, conversationParticipant, message, problem },
 }));
 
 describe("getReceivedFriendRequests", () => {
@@ -129,6 +129,32 @@ describe("getConversations / getConversation — participant.user field narrowin
     const result = await getConversation("conv-1", "user-1");
 
     expect(result!.messages[0]!.content).toBe("");
+  });
+
+  it("marks a shared problem as solvable only when the viewer owns it or it's from the shared bank", async () => {
+    conversation.findFirst.mockResolvedValue({
+      id: "conv-1",
+      participants: [],
+      messages: [
+        { id: "m1", content: "", deletedAt: null, replyTo: null, sharedType: "PROBLEM", sharedId: "p-mine" },
+        { id: "m2", content: "", deletedAt: null, replyTo: null, sharedType: "PROBLEM", sharedId: "p-bank" },
+        { id: "m3", content: "", deletedAt: null, replyTo: null, sharedType: "PROBLEM", sharedId: "p-someone-elses" },
+      ],
+    });
+    problem.findMany.mockResolvedValue([
+      { id: "p-mine", prompt: "1", type: "MULTIPLE_CHOICE", difficulty: "EASY", userId: "user-1", source: null, subject: null },
+      { id: "p-bank", prompt: "2", type: "MULTIPLE_CHOICE", difficulty: "EASY", userId: "someone-else", source: "import", subject: null },
+      { id: "p-someone-elses", prompt: "3", type: "MULTIPLE_CHOICE", difficulty: "EASY", userId: "someone-else", source: null, subject: null },
+    ]);
+
+    const result = await getConversation("conv-1", "user-1");
+
+    expect(result!.messages[0]!.sharedProblem?.canSolve).toBe(true); // own problem
+    expect(result!.messages[1]!.sharedProblem?.canSolve).toBe(true); // shared bank
+    expect(result!.messages[2]!.sharedProblem?.canSolve).toBe(false); // someone else's private problem
+    // Raw ownership/source must never leak onto the client-facing shape.
+    expect(result!.messages[0]!.sharedProblem).not.toHaveProperty("userId");
+    expect(result!.messages[0]!.sharedProblem).not.toHaveProperty("source");
   });
 });
 

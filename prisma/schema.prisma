@@ -979,6 +979,16 @@ model Message {
   /// reply chains pointing at it don't break.
   deletedAt      DateTime?
   replyToId      String?
+  /// Optional shared-content attachment (e.g. sharing a Problem into the
+  /// thread). `sharedId` deliberately has NO foreign key — it's a
+  /// polymorphic reference whose target table depends on `sharedType`, the
+  /// same "resolved at the app layer, not the DB" choice as
+  /// Notification.actorId/metadata — so a new shareable type (a
+  /// StudyMaterial, a StudyBook) is a pure addition later, no migration and
+  /// no schema coupling to one specific table. `content` may be empty when a
+  /// share has no caption; a message needs one of content/sharedType.
+  sharedType     String?
+  sharedId       String?
 
   conversation Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender       User              @relation(fields: [senderId], references: [id], onDelete: Cascade)

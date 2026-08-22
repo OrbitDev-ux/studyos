@@ -76,6 +76,7 @@ export default async function ConversationPage({
         sender: m.replyTo.sender,
       },
       reactions: m.reactions,
+      sharedProblem: m.sharedProblem,
     })),
   };
 

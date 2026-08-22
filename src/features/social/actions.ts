@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { addFriendFormSchema } from "@/features/social/schema";
 import { Prisma } from "@/generated/prisma/client";
+import { createConversationMessage } from "@/features/social/message-service";
 import { createNotification, markAsReadByTarget } from "@/features/notifications/service";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
@@ -231,85 +232,13 @@ export async function startConversation(friendUserId: string): Promise<string> {
   return conversation.id;
 }
 
-const MAX_MESSAGE_LENGTH = 1000;
-
-const NOTIFICATION_PREVIEW_LENGTH = 120;
-
-// Rate limit — same query-based, no-new-table approach as the login rate
-// limit (lib/auth.ts): count this sender's own recent messages rather than
-// standing up a shared rate-limiter/dependency for a friends-only DM surface.
-const MESSAGE_RATE_WINDOW_MS = 10_000;
-const MESSAGE_RATE_LIMIT = 15;
-
 export async function sendMessage(
   conversationId: string,
   content: string,
   replyToId?: string,
 ) {
   const user = await requireCurrentUser();
-  const trimmed = content.trim().slice(0, MAX_MESSAGE_LENGTH);
-  if (!trimmed) return;
-
-  const participant = await prisma.conversationParticipant.findUnique({
-    where: { conversationId_userId: { conversationId, userId: user.id } },
-    include: { conversation: { include: { participants: true } } },
-  });
-  if (!participant) throw new Error("대화에 참여하고 있지 않습니다.");
-
-  const recentCount = await prisma.message.count({
-    where: {
-      senderId: user.id,
-      createdAt: { gte: new Date(Date.now() - MESSAGE_RATE_WINDOW_MS) },
-    },
-  });
-  if (recentCount >= MESSAGE_RATE_LIMIT) {
-    throw new Error("메시지를 너무 빠르게 보내고 있어요. 잠시 후 다시 시도해주세요.");
-  }
-
-  // A reply target must be a real message in THIS conversation — otherwise a
-  // client could pass an arbitrary messageId from a conversation it isn't
-  // even part of and have its snippet rendered here (an IDOR-shaped content
-  // leak, not just a broken link).
-  const validReplyToId = replyToId
-    ? ((
-        await prisma.message.findFirst({
-          where: { id: replyToId, conversationId },
-          select: { id: true },
-        })
-      )?.id ?? null)
-    : null;
-
-  await prisma.$transaction([
-    prisma.message.create({
-      data: { conversationId, senderId: user.id, content: trimmed, replyToId: validReplyToId },
-    }),
-    prisma.conversation.update({
-      where: { id: conversationId },
-      data: { updatedAt: new Date() },
-    }),
-  ]);
-
-  const actorName = user.name ?? user.email ?? "";
-  const preview =
-    trimmed.length > NOTIFICATION_PREVIEW_LENGTH
-      ? `${trimmed.slice(0, NOTIFICATION_PREVIEW_LENGTH)}…`
-      : trimmed;
-  const others = participant.conversation.participants.filter(
-    (p) => p.userId !== user.id,
-  );
-  await Promise.all(
-    others.map((other) =>
-      createNotification({
-        userId: other.userId,
-        type: "dm_message",
-        title: `${actorName}님의 새 메시지`,
-        body: preview,
-        actorId: user.id,
-        targetUrl: `/social/${conversationId}`,
-        metadata: { actorName, conversationId },
-      }),
-    ),
-  );
+  await createConversationMessage(user, conversationId, { content, replyToId });
 
   revalidatePath(`/social/${conversationId}`);
   revalidatePath("/social");

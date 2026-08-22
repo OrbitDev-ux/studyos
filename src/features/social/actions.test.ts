@@ -218,6 +218,8 @@ describe("sendMessage", () => {
         senderId: USER.id,
         content: "hello",
         replyToId: null,
+        sharedType: null,
+        sharedId: null,
       },
     });
   });

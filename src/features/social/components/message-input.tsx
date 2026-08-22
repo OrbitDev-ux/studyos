@@ -1,11 +1,13 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { AlertCircle, Send, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { sendMessage } from "@/features/social/actions";
 import { setTyping } from "@/features/social/message-actions";
+import { ShareProblemDialog } from "@/features/social/components/share-problem-dialog";
 import { useI18n } from "@/features/i18n/provider";
 
 const TYPING_THROTTLE_MS = 3000;
@@ -23,6 +25,7 @@ export function MessageInput({
   onCancelReply: () => void;
   onSent: () => void;
 }) {
+  const router = useRouter();
   const { messages } = useI18n();
   const t = messages.social;
   const [content, setContent] = useState("");
@@ -71,6 +74,7 @@ export function MessageInput({
         </div>
       )}
       <div className="flex items-end gap-2">
+        <ShareProblemDialog conversationId={conversationId} onShared={() => router.refresh()} />
         <Textarea
           ref={textareaRef}
           value={content}
