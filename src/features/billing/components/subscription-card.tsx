@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { PLAN_META } from "@/features/billing/plans";
+import { SubscriptionCancelControls } from "@/features/billing/components/subscription-cancel-controls";
 import type { MeteredUsage, PlanSummary } from "@/features/billing/usage";
 
 function UsageRow({ label, usage }: { label: string; usage: MeteredUsage }) {
@@ -33,6 +34,14 @@ export function SubscriptionCard({ summary }: { summary: PlanSummary }) {
   const meta = PLAN_META[summary.plan];
   const isTrial = summary.plan === "TRIAL";
   const expired = summary.state === "TRIAL_EXPIRED";
+  const hasActiveSubscription = !isTrial && summary.currentPeriodEnd !== null;
+  const periodEndLabel = summary.currentPeriodEnd
+    ? new Date(summary.currentPeriodEnd).toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : null;
 
   return (
     <Card>
@@ -64,17 +73,28 @@ export function SubscriptionCard({ summary }: { summary: PlanSummary }) {
           <UsageRow label="모의고사 생성" usage={summary.features.mockExamGeneration} />
         </div>
 
-        {summary.plan !== "PREMIUM" ? (
-          <Button asChild size="sm" className="self-start">
-            <Link href="/pricing">
-              {isTrial ? "플랜 비교하기" : "플랜 관리"}
-            </Link>
-          </Button>
-        ) : (
-          <Button asChild size="sm" variant="outline" className="self-start">
-            <Link href="/pricing">플랜 관리</Link>
-          </Button>
+        {hasActiveSubscription && periodEndLabel && (
+          <p className="text-muted-foreground text-xs">
+            {summary.cancelAtPeriodEnd
+              ? `${periodEndLabel}에 구독이 종료돼요.`
+              : `다음 결제일: ${periodEndLabel}`}
+          </p>
         )}
+
+        <div className="flex items-center gap-2">
+          {summary.plan !== "PREMIUM" ? (
+            <Button asChild size="sm" className="self-start">
+              <Link href="/pricing">{isTrial ? "플랜 비교하기" : "플랜 관리"}</Link>
+            </Button>
+          ) : (
+            <Button asChild size="sm" variant="outline" className="self-start">
+              <Link href="/pricing">플랜 관리</Link>
+            </Button>
+          )}
+          {hasActiveSubscription && (
+            <SubscriptionCancelControls cancelAtPeriodEnd={summary.cancelAtPeriodEnd} />
+          )}
+        </div>
       </CardContent>
     </Card>
   );

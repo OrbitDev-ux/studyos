@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import type { Plan, SubscriptionStatus } from "@/generated/prisma/client";
+import { addOneMonthClamped } from "@/features/billing/period";
 
 type PaymentEvent = {
   userId: string;
@@ -13,6 +14,11 @@ type PaymentEvent = {
   status: string;
   plan?: Plan;
   paidAt?: Date;
+  /** Stable subscription-level identifier (e.g. a recurring billing key) —
+   * distinct from externalTransactionId, which is per-charge and changes on
+   * every renewal. Falls back to externalTransactionId for one-off callers,
+   * matching the original (pre-recurring) behavior. */
+  subscriptionExternalId?: string;
 };
 
 /** Creates a pending record only. It does not call a PG or grant Plus access. */
@@ -63,16 +69,37 @@ export async function applyPaymentEvent(input: PaymentEvent) {
     });
 
     if (input.status === "SUCCEEDED" && input.plan) {
-      await tx.subscription.upsert({
-        where: { externalId: input.externalTransactionId },
+      const paidAt = input.paidAt ?? updated.paidAt ?? new Date();
+      const periodEnd = addOneMonthClamped(paidAt);
+      const subExternalId = input.subscriptionExternalId ?? input.externalTransactionId;
+
+      const subscription = await tx.subscription.upsert({
+        where: { externalId: subExternalId },
         create: {
           userId: input.userId,
           plan: input.plan,
           status: "ACTIVE" satisfies SubscriptionStatus,
           paymentProvider: input.provider,
-          externalId: input.externalTransactionId,
+          externalId: subExternalId,
+          currentPeriodStart: paidAt,
+          currentPeriodEnd: periodEnd,
+          nextRenewalAt: periodEnd,
         },
-        update: { status: "ACTIVE", plan: input.plan },
+        update: {
+          status: "ACTIVE",
+          plan: input.plan,
+          currentPeriodStart: paidAt,
+          currentPeriodEnd: periodEnd,
+          nextRenewalAt: periodEnd,
+          cancelAtPeriodEnd: false,
+        },
+      });
+
+      // Link this charge's Payment row to its Subscription — the renewal cron
+      // and refund flow both look payments up via subscriptionId.
+      await tx.payment.update({
+        where: { id: payment.id },
+        data: { subscriptionId: subscription.id },
       });
 
       // Entitlements are resolved entirely from User.plan/subscriptionStatus
@@ -102,6 +129,18 @@ export async function applyRefundEvent(input: {
   processedAt?: Date;
 }) {
   return prisma.$transaction(async (tx) => {
+    // Toss (and PGs generally) can redeliver the same webhook notification —
+    // without this guard, a redelivered CANCEL_STATUS_CHANGED would create a
+    // second Refund row and re-run the entitlement revert. externalRefundId
+    // is the PG's own unique id for this specific cancellation, so an exact
+    // match means we've already recorded it.
+    if (input.externalRefundId) {
+      const already = await tx.refund.findUnique({
+        where: { externalRefundId: input.externalRefundId },
+      });
+      if (already) return already;
+    }
+
     const refund = await tx.refund.create({
       data: {
         paymentId: input.paymentId,

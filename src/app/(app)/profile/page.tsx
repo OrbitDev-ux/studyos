@@ -11,7 +11,12 @@ import { getMessages } from "@/features/i18n/messages";
 import { getServerLocale } from "@/features/i18n/server";
 import { requireCurrentUser } from "@/lib/session";
 
-export default async function ProfilePage() {
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ billing?: string }>;
+}) {
+  const { billing } = await searchParams;
   const user = await requireCurrentUser();
   const [profile, planSummary, achievements] = await Promise.all([
     getMyProfile(user.id),
@@ -34,6 +39,17 @@ export default async function ProfilePage() {
           <ProfileHeader profile={profile} />
         </CardContent>
       </Card>
+
+      {billing === "success" && (
+        <div className="border-success/30 bg-success/10 text-success rounded-lg border p-3 text-sm font-medium">
+          결제가 완료되어 플랜이 업그레이드됐어요.
+        </div>
+      )}
+      {billing === "fail" && (
+        <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-lg border p-3 text-sm font-medium">
+          결제에 실패했어요. 카드 정보를 확인하고 다시 시도해주세요.
+        </div>
+      )}
 
       <SubscriptionCard summary={planSummary} />
 

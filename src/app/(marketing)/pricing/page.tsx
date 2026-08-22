@@ -4,6 +4,7 @@ import { Check, Minus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { UpgradeCheckoutButton } from "@/features/billing/components/upgrade-checkout-button";
 import { PLANS, PLAN_META, TRIAL_DAYS, type Plan } from "@/features/billing/plans";
 import {
   canUseFeature,
@@ -89,8 +90,7 @@ export default function PricingPage() {
       <div className="flex flex-col items-center gap-2 text-center">
         <h1 className="text-3xl font-semibold tracking-tight">요금제</h1>
         <p className="text-muted-foreground max-w-md text-sm">
-          가입하면 {TRIAL_DAYS}일간 모든 기능을 무료로 체험할 수 있어요. 유료 결제는
-          출시 준비 중입니다.
+          가입하면 {TRIAL_DAYS}일간 모든 기능을 무료로 체험할 수 있어요.
         </p>
       </div>
 
@@ -153,12 +153,11 @@ export default function PricingPage() {
                 <div className="mt-auto flex flex-col gap-2">
                   {isPaid ? (
                     <>
-                      {/* 결제 미구현: 동작하지 않는 "시작하기" 대신 정직하게 출시 예정으로 표기 */}
-                      <Button className="w-full" variant="outline" disabled>
-                        출시 예정
-                      </Button>
+                      <UpgradeCheckoutButton plan={plan as "PRO" | "PREMIUM"} className="w-full">
+                        {meta.name}(으)로 업그레이드
+                      </UpgradeCheckoutButton>
                       <p className="text-muted-foreground text-center text-xs">
-                        지금은 {TRIAL_DAYS}일 무료 체험으로 전체 기능을 써볼 수 있어요.
+                        카드 등록 후 즉시 청구되며, 매월 자동으로 갱신돼요.
                       </p>
                     </>
                   ) : (

@@ -28,6 +28,10 @@ export type PlanSummary = {
   status: SubscriptionStatus;
   trialEndsAt: string | null;
   trialDaysRemaining: number | null;
+  /** From the active Subscription row, if any — null for TRIAL users who
+   * never had a paid subscription. */
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
   features: {
     aiProblemGeneration: MeteredUsage;
     mockExamGeneration: MeteredUsage;
@@ -68,10 +72,15 @@ export async function getPlanSummary(userId: string): Promise<PlanSummary> {
   const mockStart = usageWindowStart(state, "mock-exam", winCtx, now);
   const bookStart = usageWindowStart(state, "study-book", winCtx, now);
 
-  const [problemUsed, mockUsed, bookUsed] = await Promise.all([
+  const [problemUsed, mockUsed, bookUsed, activeSubscription] = await Promise.all([
     problemStart ? countGenerationUsage(userId, "problem", problemStart) : Promise.resolve(0),
     mockStart ? countGenerationUsage(userId, "mock-exam", mockStart) : Promise.resolve(0),
     bookStart ? countGenerationUsage(userId, "study-book", bookStart) : Promise.resolve(0),
+    prisma.subscription.findFirst({
+      where: { userId, status: "ACTIVE" },
+      orderBy: { createdAt: "desc" },
+      select: { currentPeriodEnd: true, cancelAtPeriodEnd: true },
+    }),
   ]);
 
   return {
@@ -80,6 +89,8 @@ export async function getPlanSummary(userId: string): Promise<PlanSummary> {
     status: effectiveStatus(input, now),
     trialEndsAt: resolveTrialEndsAt(input)?.toISOString() ?? null,
     trialDaysRemaining: trialDaysRemaining(input, now),
+    currentPeriodEnd: activeSubscription?.currentPeriodEnd?.toISOString() ?? null,
+    cancelAtPeriodEnd: activeSubscription?.cancelAtPeriodEnd ?? false,
     features: {
       aiProblemGeneration: {
         limit: getFeatureLimit(state, "AI_PROBLEM_GENERATION"),
