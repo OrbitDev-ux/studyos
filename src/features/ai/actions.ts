@@ -16,14 +16,16 @@ import { requireCurrentUser } from "@/lib/session";
 
 const WEEKLY_REPORT_WINDOW_DAYS = 7;
 
-/** AI analysis/recommendation is gated by plan (blocked once a trial expires).
- * Returns a user-safe error string when blocked, else null. */
+/** Weakness/weekly-report AI analysis is a PRO+ feature (see the stats page,
+ * which hides these cards the same way behind ADVANCED_ANALYTICS — this is
+ * the server-authoritative backstop for that same boundary, not a separate
+ * policy). Returns a user-safe error string when blocked, else null. */
 function aiRecommendationGateError(
   user: Parameters<typeof accessStateFor>[0],
 ): string | null {
-  return canUseFeature(accessStateFor(user), "AI_RECOMMENDATION")
+  return canUseFeature(accessStateFor(user), "ADVANCED_ANALYTICS")
     ? null
-    : "AI 분석은 플랜에서 사용할 수 있어요. 플랜을 선택해주세요.";
+    : "AI 분석은 Pro 플랜부터 사용할 수 있어요.";
 }
 
 export async function generateWeaknessAnalysis(): Promise<

@@ -107,7 +107,7 @@ export default function LandingPage() {
           요금제
         </h2>
         <p className="text-muted-foreground mx-auto mb-6 max-w-xl text-center text-sm text-balance">
-          가입하면 {TRIAL_DAYS}일간 모든 기능을 무료로 체험할 수 있어요.
+          가입하면 {TRIAL_DAYS}일간 결제 없이 StudyOS를 체험할 수 있어요.
         </p>
         <div className="grid gap-4 sm:grid-cols-3">
           {PLANS.map((plan) => {

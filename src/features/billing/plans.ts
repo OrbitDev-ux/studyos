@@ -52,7 +52,7 @@ export const PLAN_META: Record<Plan, PlanMeta> = {
     name: "Premium",
     priceKrw: 9900,
     priceLabel: "₩9,900 / 월",
-    tagline: "제한 없이 모든 기능을 쓰는 플랜",
+    tagline: "생성·분석을 제한 없이 쓰는 플랜",
     order: 2,
   },
 };

@@ -82,14 +82,6 @@ export default async function StatsPage() {
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-9 md:gap-10">
       <div className="flex flex-col gap-6">
         <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{t.title}</h1>
-
-        {!canAdvancedAnalytics && (
-          <UpgradeNotice
-            title={t.proNoticeTitle}
-            message={t.proNoticeMessage}
-            cta={t.proNoticeCta}
-          />
-        )}
       </div>
 
       {!hasStudyHistory ? (
@@ -145,7 +137,15 @@ export default async function StatsPage() {
             <h2 className="text-muted-foreground text-sm font-semibold">
               {t.sectionMonth}
             </h2>
-            <MonthlyStatsCard stats={monthly} t={t} locale={locale} />
+            {canAdvancedAnalytics ? (
+              <MonthlyStatsCard stats={monthly} t={t} locale={locale} />
+            ) : (
+              <UpgradeNotice
+                title={t.proNoticeTitle}
+                message={t.proNoticeMessage}
+                cta={t.proNoticeCta}
+              />
+            )}
           </section>
 
           <section className="flex flex-col gap-3">
@@ -166,10 +166,18 @@ export default async function StatsPage() {
         <h2 className="text-muted-foreground text-sm font-semibold">
           {t.sectionAiAnalysis}
         </h2>
-        <div className="grid gap-5 lg:grid-cols-2">
-          <WeaknessSummaryCard initialContent={weaknessAnalysis?.content ?? null} />
-          <WeeklyReportCard initialContent={weeklyReport?.content ?? null} />
-        </div>
+        {canAdvancedAnalytics ? (
+          <div className="grid gap-5 lg:grid-cols-2">
+            <WeaknessSummaryCard initialContent={weaknessAnalysis?.content ?? null} />
+            <WeeklyReportCard initialContent={weeklyReport?.content ?? null} />
+          </div>
+        ) : (
+          <UpgradeNotice
+            title={t.proNoticeTitle}
+            message={t.proNoticeMessage}
+            cta={t.proNoticeCta}
+          />
+        )}
       </section>
     </div>
   );

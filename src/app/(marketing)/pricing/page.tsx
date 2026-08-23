@@ -10,7 +10,6 @@ import { PLANS, PLAN_META, TRIAL_DAYS, type Plan } from "@/features/billing/plan
 import {
   canUseFeature,
   getFeatureLimit,
-  getThemeAccess,
   getUsageWindow,
   shouldShowAds,
   type Limit,
@@ -34,26 +33,24 @@ function mockLabel(plan: Plan): string {
   return `${limit}회 / ${unit}`;
 }
 
-function themeLabel(access: "none" | "some" | "all"): string {
-  return access === "all" ? "전체" : access === "some" ? "일부" : "기본";
-}
-
 /**
  * 요금제 가치 서사 — 숫자 한도 비교표 위에 "누구에게 필요한지"와 "무엇을
  * 풀어주는지"를 감정적으로 프레이밍한다. 한도 표(rowsFor)는 근거로 남긴다.
+ * 두 서사 모두 실제로 동작하는 기능만 약속한다 — 아직 구현되지 않은 것을
+ * 팔지 않는다.
  */
 const PLAN_PITCH: Record<Plan, { persona: string; unlocks: string[] }> = {
   TRIAL: {
     persona: "StudyOS를 처음 써본다면",
-    unlocks: ["7일간 모든 기능을 제한 없이", "결제 없이 바로 시작"],
+    unlocks: ["7일간 핵심 기능을 결제 없이 체험", "결제 없이 바로 시작"],
   },
   PRO: {
     persona: "매일 오답노트를 관리하는 학생이라면",
-    unlocks: ["AI 문제를 넉넉하게 생성하고", "취약 단원을 자동으로 찾아 집중 공략"],
+    unlocks: ["AI 문제를 넉넉하게 생성하고", "오답 DNA로 왜 틀렸는지 정확히 분석"],
   },
   PREMIUM: {
     persona: "모의고사를 자주 보는 수험생이라면",
-    unlocks: ["생성·분석을 제한 없이", "고급 AI 추천으로 실전까지 대비"],
+    unlocks: ["생성·분석을 무제한으로", "월간 리포트로 실전까지 대비"],
   },
 };
 
@@ -64,12 +61,9 @@ function rowsFor(plan: Plan): Row[] {
     { label: "AI 문제 생성", value: dailyLabel(getFeatureLimit(plan, "AI_PROBLEM_GENERATION"), "일") },
     { label: "모의고사 생성", value: mockLabel(plan) },
     { label: "기본 학습 통계", value: canUseFeature(plan, "BASIC_ANALYTICS") },
-    { label: "상세/고급 통계", value: canUseFeature(plan, "ADVANCED_ANALYTICS") },
+    { label: "월간 통계 · AI 리포트", value: canUseFeature(plan, "ADVANCED_ANALYTICS") },
     { label: "오답 DNA", value: canUseFeature(plan, "WRONG_ANSWER_DNA") },
     { label: "간격 반복 복습", value: canUseFeature(plan, "SPACED_REPETITION") },
-    { label: "AI 학습 추천", value: canUseFeature(plan, "AI_RECOMMENDATION") },
-    { label: "고급 AI 추천", value: canUseFeature(plan, "ADVANCED_AI_RECOMMENDATION") },
-    { label: "추가 테마", value: themeLabel(getThemeAccess(plan)) },
     { label: "광고", value: shouldShowAds(plan) ? "표시" : "없음" },
   ];
 }
@@ -97,7 +91,7 @@ export default function PricingPage() {
       <div className="flex flex-col items-center gap-2 text-center">
         <h1 className="text-3xl font-semibold tracking-tight">요금제</h1>
         <p className="text-muted-foreground max-w-md text-sm">
-          가입하면 {TRIAL_DAYS}일간 모든 기능을 무료로 체험할 수 있어요.
+          가입하면 {TRIAL_DAYS}일간 결제 없이 StudyOS를 체험할 수 있어요.
         </p>
       </div>
 
