@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UpgradeCheckoutButton } from "@/features/billing/components/upgrade-checkout-button";
+import { isTossConfigured } from "@/features/billing/toss-client";
 import { PLANS, PLAN_META, TRIAL_DAYS, type Plan } from "@/features/billing/plans";
 import {
   canUseFeature,
@@ -85,6 +86,12 @@ function RowValue({ value }: { value: string | boolean }) {
 }
 
 export default function PricingPage() {
+  // Server-decided, not a client-side fallback: exactly one of the two CTAs
+  // below renders. Never show a live-looking "업그레이드" button that
+  // actually can't charge anything — see NEXT_PUBLIC_TOSS_CLIENT_KEY /
+  // TOSS_SECRET_KEY in .env.example.
+  const paymentsConfigured = isTossConfigured() && Boolean(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY);
+
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-4 py-16 sm:px-6">
       <div className="flex flex-col items-center gap-2 text-center">
@@ -152,14 +159,27 @@ export default function PricingPage() {
                 </ul>
                 <div className="mt-auto flex flex-col gap-2">
                   {isPaid ? (
-                    <>
-                      <UpgradeCheckoutButton plan={plan as "PRO" | "PREMIUM"} className="w-full">
-                        {meta.name}(으)로 업그레이드
-                      </UpgradeCheckoutButton>
-                      <p className="text-muted-foreground text-center text-xs">
-                        카드 등록 후 즉시 청구되며, 매월 자동으로 갱신돼요.
-                      </p>
-                    </>
+                    paymentsConfigured ? (
+                      <>
+                        <UpgradeCheckoutButton plan={plan as "PRO" | "PREMIUM"} className="w-full">
+                          {meta.name}(으)로 업그레이드
+                        </UpgradeCheckoutButton>
+                        <p className="text-muted-foreground text-center text-xs">
+                          카드 등록 후 즉시 청구되며, 매월 자동으로 갱신돼요.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        {/* 결제 미구성 상태: 동작하지 않는 버튼을 동작하는 것처럼 보이게
+                            두지 않는다 — 비활성 버튼 + 정직한 안내만 표시. */}
+                        <Button className="w-full" variant="outline" disabled>
+                          출시 예정
+                        </Button>
+                        <p className="text-muted-foreground text-center text-xs">
+                          지금은 {TRIAL_DAYS}일 무료 체험으로 전체 기능을 써볼 수 있어요.
+                        </p>
+                      </>
+                    )
                   ) : (
                     <>
                       <Button asChild className="w-full">
