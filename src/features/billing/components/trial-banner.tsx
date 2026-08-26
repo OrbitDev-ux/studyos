@@ -19,7 +19,7 @@ export function TrialBanner({ summary }: { summary: PlanSummary }) {
 
   if (expired) {
     return (
-      <Card className="border-primary/30">
+      <Card variant="glass" className="border-primary/30">
         <CardContent className="flex flex-col gap-3">
           <p className="text-sm font-semibold">Trial이 종료되었습니다.</p>
           <p className="text-muted-foreground text-sm">
@@ -43,7 +43,7 @@ export function TrialBanner({ summary }: { summary: PlanSummary }) {
   const mock = summary.features.mockExamGeneration;
 
   return (
-    <Card className="border-primary/20">
+    <Card variant="glass" className="border-primary/20">
       <CardContent className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-col gap-1">
           <p className="flex items-center gap-1.5 text-sm font-semibold">

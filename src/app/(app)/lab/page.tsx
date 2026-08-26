@@ -1,4 +1,5 @@
 import { FlaskConical } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 import { LabBoard, type LabCardData } from "@/features/lab/components/lab-board";
 import { LAB_FEATURES } from "@/features/lab/registry";
 import { getFeedbackCounts, getLabFeatureStates, getUserVotes } from "@/features/lab/state";
@@ -38,12 +39,7 @@ export default async function LabPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-      <div>
-        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-          <FlaskConical className="size-5" /> 🧪 {t.title}
-        </h1>
-        <p className="text-muted-foreground mt-1 text-sm">{t.subtitle}</p>
-      </div>
+      <PageHeader icon={FlaskConical} title={t.title} subtitle={t.subtitle} />
 
       <LabBoard cards={cards} books={books.map((b) => ({ id: b.id, title: b.title }))} />
     </div>

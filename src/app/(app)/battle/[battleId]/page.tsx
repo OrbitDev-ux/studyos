@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/layout/page-header";
 import { BattleLeaderboard } from "@/features/battle/components/battle-leaderboard";
 import { CancelBattleButton } from "@/features/battle/components/cancel-battle-button";
 import { LeaveBattleButton } from "@/features/battle/components/leave-battle-button";
@@ -28,15 +29,15 @@ export default async function BattleDetailPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {t.detailTitle.replace("{metric}", battleMetricLabel(t, battle.metric))}
-        </h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          {battleDurationLabel(t, String(battle.durationDays))} ·{" "}
-          {isActive ? t.statusActive : t.statusEnded}
-        </p>
-      </div>
+      <PageHeader
+        title={t.detailTitle.replace("{metric}", battleMetricLabel(t, battle.metric))}
+        subtitle={
+          <>
+            {battleDurationLabel(t, String(battle.durationDays))} ·{" "}
+            {isActive ? t.statusActive : t.statusEnded}
+          </>
+        }
+      />
 
       {myParticipant?.status === "invited" && (
         <RespondBattleInviteButtons battleId={battle.id} />

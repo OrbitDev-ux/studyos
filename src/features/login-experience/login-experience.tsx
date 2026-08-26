@@ -9,11 +9,14 @@ const DISPLAY_MS = 2500;
 const EXIT_MS = 350;
 
 // Only shown for these rarities; drives the glow colour and the small tier label.
+// Kept restrained (low opacity, no raw neon palette colors) — this plays once
+// per login, not a persistent game-UI element, so it should read as a quiet
+// brand moment rather than a loot-box flash.
 const RARITY_GLOW: Record<Rarity, string> = {
-  common: "bg-primary/20",
-  rare: "bg-sky-500/30",
-  epic: "bg-violet-500/40",
-  legendary: "bg-amber-400/40",
+  common: "bg-primary/14",
+  rare: "bg-info/18",
+  epic: "bg-violet-500/16",
+  legendary: "bg-warning/20",
 };
 const RARITY_LABEL: Partial<Record<Rarity, string>> = {
   rare: "RARE",
@@ -89,18 +92,18 @@ export function LoginExperience({ role }: { role: Role }) {
           : "animate-in fade-in-0 duration-500",
       )}
     >
-      {/* Glow */}
+      {/* Glow — soft and small, a hint of color behind the card, not a spotlight. */}
       <div
         aria-hidden
         className={cn(
-          "pointer-events-none absolute size-72 rounded-full blur-3xl",
+          "pointer-events-none absolute size-56 rounded-full blur-2xl",
           RARITY_GLOW[message.rarity],
         )}
       />
 
       <div
         className={cn(
-          "bg-card ring-foreground/10 relative flex flex-col items-center gap-3 rounded-2xl px-10 text-center shadow-2xl ring-1",
+          "glass-panel ring-foreground/10 relative flex flex-col items-center gap-3 rounded-2xl px-10 text-center shadow-lg ring-1",
           isHero ? "py-12" : "py-9",
           leaving
             ? "animate-out fade-out-0 zoom-out-95 duration-300"

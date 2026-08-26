@@ -44,7 +44,7 @@ export function SubscriptionCard({ summary }: { summary: PlanSummary }) {
     : null;
 
   return (
-    <Card>
+    <Card variant="glass">
       <CardHeader>
         <CardTitle className="text-base">구독</CardTitle>
       </CardHeader>

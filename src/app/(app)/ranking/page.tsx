@@ -1,4 +1,5 @@
 import { LinkTabs } from "@/components/layout/link-tabs";
+import { PageHeader } from "@/components/layout/page-header";
 import { RankingTabs } from "@/features/ranking/components/ranking-tabs";
 import {
   getFriendRanking,
@@ -32,7 +33,7 @@ export default async function RankingPage() {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 md:gap-8">
       <div className="flex flex-col gap-3">
-        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{t.title}</h1>
+        <PageHeader title={t.title} />
         <LinkTabs items={RANKING_TABS} />
       </div>
       <RankingTabs

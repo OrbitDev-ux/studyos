@@ -1,4 +1,5 @@
 import { Clock, Flame, Layers, ListChecks } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 import { StatCard } from "@/features/dashboard/components/stat-card";
 import { WeaknessSummaryCard } from "@/features/ai/components/weakness-summary-card";
 import { WeeklyReportCard } from "@/features/ai/components/weekly-report-card";
@@ -80,9 +81,7 @@ export default async function StatsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-9 md:gap-10">
-      <div className="flex flex-col gap-6">
-        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{t.title}</h1>
-      </div>
+      <PageHeader title={t.title} />
 
       {!hasStudyHistory ? (
         <StatsEmptyState t={t} />

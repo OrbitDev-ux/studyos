@@ -156,6 +156,19 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Very subtle ambient wash behind the app shell — a bare hint of depth,
+       never competing with content. Fixed so it doesn't scroll with the page
+       (a scrolling gradient reads as "background trying to be noticed").
+       Primary-tinted at very low alpha; dark mode gets an even quieter pass
+       since a glow reads as gamey against a dark canvas (see design-overhaul
+       report — "avoid AI-demo glow"). */
+    background-image: radial-gradient(
+      ellipse 1200px 600px at 50% -10%,
+      color-mix(in oklch, var(--primary) 6%, transparent),
+      transparent 60%
+    );
+    background-repeat: no-repeat;
+    background-attachment: fixed;
   }
   html {
     @apply font-sans;
@@ -167,6 +180,26 @@
   }
   p {
     text-wrap: pretty;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Elevated-surface glass. Depth hierarchy, not decoration: the page/card
+   layer stays fully opaque (bg-background / bg-card), and only surfaces that
+   float ABOVE content — dialog, alert dialog, dropdown/select menus, sheet —
+   get a translucent + blurred treatment so the layer underneath stays
+   faintly legible through it. One recipe, reused everywhere, so "floating
+   above the page" always reads the same way across the product.
+   Progressive enhancement: browsers without backdrop-filter get the fully
+   opaque --popover color instead of a see-through panel with no blur (which
+   would just look like a transparency bug).
+   ───────────────────────────────────────────────────────────────────────── */
+@utility glass-panel {
+  background-color: var(--popover);
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    background-color: color-mix(in oklch, var(--popover) 86%, transparent);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
 }
 

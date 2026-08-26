@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronRight, FlaskConical } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/page-header";
 import { LanguageSelect } from "@/features/i18n/components/language-select";
 import { getMessages } from "@/features/i18n/messages";
 import { getServerLocale } from "@/features/i18n/server";
@@ -33,9 +34,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 md:gap-8">
-      <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
-        {t.nav.settings}
-      </h1>
+      <PageHeader title={t.nav.settings} />
       <Card>
         <CardContent className="flex flex-col gap-3">
           <div>

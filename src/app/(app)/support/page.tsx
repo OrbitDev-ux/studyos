@@ -2,6 +2,7 @@ import Link from "next/link";
 import { LifeBuoy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/page-header";
 import { NewTicketDialog } from "@/features/support/components/new-ticket-dialog";
 import {
   SUPPORT_STATUS_VARIANT,
@@ -23,15 +24,12 @@ export default async function SupportPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-            <LifeBuoy className="size-5" /> {t.title}
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm">{t.subtitle}</p>
-        </div>
-        <NewTicketDialog />
-      </div>
+      <PageHeader
+        icon={LifeBuoy}
+        title={t.title}
+        subtitle={t.subtitle}
+        actions={<NewTicketDialog />}
+      />
 
       {tickets.length === 0 ? (
         <Card>

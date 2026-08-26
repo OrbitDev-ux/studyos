@@ -1,6 +1,7 @@
-import { Sparkles } from "lucide-react";
+import { Library, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LinkTabs } from "@/components/layout/link-tabs";
+import { PageHeader } from "@/components/layout/page-header";
 import { PaginationNav } from "@/features/admin/components/pagination-nav";
 import { ProblemGeneratorForm } from "@/features/problems/components/problem-generator-form";
 import { StudyBankCard } from "@/features/study-bank/components/study-bank-card";
@@ -47,20 +48,20 @@ export default async function StudyBankPage({
     <div className="flex flex-col gap-6">
       <LinkTabs items={STUDY_BANK_TABS} />
 
-      {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">📚 {t.title}</h1>
-          <p className="text-muted-foreground mt-1 text-sm">{t.subtitle}</p>
-        </div>
-        <ProblemGeneratorForm
-          trigger={
-            <Button type="button" className="gap-1.5">
-              <Sparkles className="size-4" /> {t.generate}
-            </Button>
-          }
-        />
-      </div>
+      <PageHeader
+        icon={Library}
+        title={t.title}
+        subtitle={t.subtitle}
+        actions={
+          <ProblemGeneratorForm
+            trigger={
+              <Button type="button" className="gap-1.5">
+                <Sparkles className="size-4" /> {t.generate}
+              </Button>
+            }
+          />
+        }
+      />
 
       <StudyBankSearch params={params} />
 

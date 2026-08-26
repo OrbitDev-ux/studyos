@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/layout/page-header";
 import { AddFriendForm } from "@/features/social/components/add-friend-form";
 import { ActivityFeed } from "@/features/social/components/activity-feed";
 import { ConversationList } from "@/features/social/components/conversation-list";
@@ -28,10 +29,7 @@ export default async function SocialPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
-        <AddFriendForm />
-      </div>
+      <PageHeader title={t.title} actions={<AddFriendForm />} />
 
       {requests.length > 0 && <FriendRequestList requests={requests} />}
 

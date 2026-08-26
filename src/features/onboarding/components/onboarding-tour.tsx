@@ -170,7 +170,7 @@ export function OnboardingTour({
           content scrolls internally instead of the action buttons getting cut
           off the bottom of a short viewport. */}
       <div
-        className="bg-background text-foreground flex flex-col gap-3 overflow-y-auto rounded-xl border p-5 shadow-2xl"
+        className="glass-panel text-foreground flex flex-col gap-3 overflow-y-auto rounded-xl border p-5 shadow-lg"
         style={cardStyle}
       >
         <div className="flex flex-col gap-1">

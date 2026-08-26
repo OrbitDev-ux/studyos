@@ -1,5 +1,6 @@
 import { GraduationCap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/page-header";
 import { NewTutorDialog } from "@/features/tutor/components/new-tutor-dialog";
 import { TutorConversationList } from "@/features/tutor/components/tutor-conversation-list";
 import {
@@ -41,15 +42,12 @@ export default async function TutorPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 md:gap-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight sm:text-2xl">
-            🧑‍🏫 {t.title}
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm">{t.subtitle}</p>
-        </div>
-        <NewTutorDialog />
-      </div>
+      <PageHeader
+        icon={GraduationCap}
+        title={t.title}
+        subtitle={t.subtitle}
+        actions={<NewTutorDialog />}
+      />
 
       {dueConcepts.length > 0 && (
         <ReviewWithTutorCard

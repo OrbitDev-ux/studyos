@@ -67,7 +67,7 @@ export function AdminHeader({
           />
         </form>
         {maintenance && (
-          <Badge className="animate-pulse bg-amber-500/15 text-amber-600 dark:text-amber-400">
+          <Badge variant="warning" className="animate-pulse">
             🚧 Maintenance Mode
           </Badge>
         )}

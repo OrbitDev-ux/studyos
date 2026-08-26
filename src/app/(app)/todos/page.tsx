@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/layout/page-header";
 import { TodoList } from "@/features/todos/components/todo-list";
 import { getAllTodos } from "@/features/todos/queries";
 import { getSubjects } from "@/features/subjects/queries";
@@ -20,10 +21,7 @@ export default async function TodosPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
-        <StudyPlannerDialog copy={getPlannerCopy(locale)} />
-      </div>
+      <PageHeader title={t.title} actions={<StudyPlannerDialog copy={getPlannerCopy(locale)} />} />
       <TodoList
         todos={todos}
         subjects={subjects}

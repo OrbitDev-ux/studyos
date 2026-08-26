@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { PageHeader } from "@/components/layout/page-header";
 import { ExamResultCard } from "@/features/mock-exam/components/exam-result-card";
 import { getExamResult } from "@/features/mock-exam/queries";
 import { AdSlot } from "@/features/ads/components/ad-slot";
@@ -21,7 +22,7 @@ export default async function ExamResultPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">모의고사 결과</h1>
+      <PageHeader title="모의고사 결과" />
       <ExamResultCard result={result} />
       {/* Ad after the result content, never over the score/analysis. */}
       <AdSlot placement="mock-exam-result" show={showAds} />

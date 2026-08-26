@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/layout/page-header";
 import { GrowthSummaryCard } from "@/features/growth/components/growth-summary-card";
 import { MissionListCard } from "@/features/growth/components/mission-list-card";
 import { XpEventList } from "@/features/growth/components/xp-event-list";
@@ -25,10 +26,7 @@ export default async function GrowthPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-9 md:gap-10">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{t.pageTitle}</h1>
-        <p className="text-muted-foreground text-sm">{t.pageSubtitle}</p>
-      </div>
+      <PageHeader title={t.pageTitle} subtitle={t.pageSubtitle} />
 
       <GrowthSummaryCard summary={summary} locale={locale} t={t} />
 

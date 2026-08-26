@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/page-header";
 import { TicketReadMarker } from "@/features/support/components/ticket-read-marker";
 import { TicketReplyForm } from "@/features/support/components/ticket-reply-form";
 import {
@@ -41,18 +42,20 @@ export default async function SupportTicketPage({
         <ArrowLeft className="size-4" /> {t.back}
       </Link>
 
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-xl font-semibold tracking-tight">{ticket.title}</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
+      <PageHeader
+        title={ticket.title}
+        subtitle={
+          <>
             {supportTypeLabel(t, ticket.type)} ·{" "}
             {new Date(ticket.createdAt).toLocaleString(locale)}
-          </p>
-        </div>
-        <Badge variant={SUPPORT_STATUS_VARIANT[ticket.status]}>
-          {supportStatusLabel(t, ticket.status)}
-        </Badge>
-      </div>
+          </>
+        }
+        actions={
+          <Badge variant={SUPPORT_STATUS_VARIANT[ticket.status]}>
+            {supportStatusLabel(t, ticket.status)}
+          </Badge>
+        }
+      />
 
       <div className="flex flex-col gap-3">
         {ticket.messages.map((m) => {

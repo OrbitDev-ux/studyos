@@ -1,4 +1,5 @@
 import { LinkTabs } from "@/components/layout/link-tabs";
+import { PageHeader } from "@/components/layout/page-header";
 import { ProblemList } from "@/features/problems/components/problem-list";
 import { getProblems } from "@/features/problems/queries";
 import { parseProblemsParams } from "@/features/problems/search-params";
@@ -34,7 +35,7 @@ export default async function ProblemsPage({
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 md:gap-8">
       <div className="flex flex-col gap-3">
-        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{t.title}</h1>
+        <PageHeader title={t.title} />
         <LinkTabs items={PROBLEMS_TABS} />
       </div>
       <ProblemList result={result} params={params} subjects={subjects} t={t} />

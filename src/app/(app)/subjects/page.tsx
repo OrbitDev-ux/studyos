@@ -1,5 +1,6 @@
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/page-header";
 import { SubjectFormDialog } from "@/features/subjects/components/subject-form-dialog";
 import { SubjectRow } from "@/features/subjects/components/subject-row";
 import { getSubjects } from "@/features/subjects/queries";
@@ -14,17 +15,19 @@ export default async function SubjectsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
-        <SubjectFormDialog
-          trigger={
-            <Button type="button" size="sm" className="gap-1.5">
-              <Plus className="size-4" />
-              {t.add}
-            </Button>
-          }
-        />
-      </div>
+      <PageHeader
+        title={t.title}
+        actions={
+          <SubjectFormDialog
+            trigger={
+              <Button type="button" size="sm" className="gap-1.5">
+                <Plus className="size-4" />
+                {t.add}
+              </Button>
+            }
+          />
+        }
+      />
       {subjects.length === 0 ? (
         <p className="text-muted-foreground text-sm">{t.empty}</p>
       ) : (

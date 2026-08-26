@@ -1,6 +1,7 @@
 import { BookMarked, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/page-header";
 import { PlanStatusChip } from "@/features/billing/components/plan-status-chip";
 import { UpgradeNotice } from "@/features/billing/components/upgrade-notice";
 import { getPlanSummary } from "@/features/billing/usage";
@@ -53,12 +54,11 @@ export default async function StudyBooksPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-            <BookMarked className="size-5" /> {t.title}
-          </h1>
-          <CreateStudyBookDialog trigger={createTrigger} />
-        </div>
+        <PageHeader
+          icon={BookMarked}
+          title={t.title}
+          actions={<CreateStudyBookDialog trigger={createTrigger} />}
+        />
         <PlanStatusChip
           summary={planSummary}
           usage={bookUsage}

@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/page-header";
 import { ExamSetupForm } from "@/features/mock-exam/components/exam-setup-form";
 import { MockExamCard } from "@/features/mock-exam/components/mock-exam-card";
 import { getMockExams } from "@/features/mock-exam/queries";
@@ -23,17 +24,19 @@ export default async function MockExamPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
-        <ExamSetupForm
-          subjects={subjects}
-          trigger={
-            <Button type="button" size="sm" disabled={subjects.length === 0}>
-              {t.generate}
-            </Button>
-          }
-        />
-      </div>
+      <PageHeader
+        title={t.title}
+        actions={
+          <ExamSetupForm
+            subjects={subjects}
+            trigger={
+              <Button type="button" size="sm" disabled={subjects.length === 0}>
+                {t.generate}
+              </Button>
+            }
+          />
+        }
+      />
       {subjects.length === 0 && (
         <p className="text-muted-foreground text-sm">{t.needSubject}</p>
       )}

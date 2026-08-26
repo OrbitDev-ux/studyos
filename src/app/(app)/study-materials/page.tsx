@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/layout/page-header";
 import { CreateFolderDialog } from "@/features/study-materials/components/create-folder-dialog";
 import { MaterialsBreadcrumb } from "@/features/study-materials/components/breadcrumb";
 import { MaterialsEmptyState } from "@/features/study-materials/components/materials-empty-state";
@@ -57,17 +58,19 @@ export default async function StudyMaterialsPage({
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 md:gap-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{t.title}</h1>
-        <div className="flex w-full gap-2 sm:w-auto">
-          <CreateFolderDialog currentFolderId={currentFolderId} />
-          <UploadMaterialDialog
-            subjects={subjects}
-            folders={allFolders}
-            currentFolderId={currentFolderId}
-          />
-        </div>
-      </div>
+      <PageHeader
+        title={t.title}
+        actions={
+          <>
+            <CreateFolderDialog currentFolderId={currentFolderId} />
+            <UploadMaterialDialog
+              subjects={subjects}
+              folders={allFolders}
+              currentFolderId={currentFolderId}
+            />
+          </>
+        }
+      />
 
       <div className="w-full max-w-xl">
         <MaterialsSearchBar params={params} />
