@@ -27,6 +27,15 @@ export async function getBillingAuthConfig(
     return { ok: false, error: "잘못된 플랜입니다." };
   }
 
+  // Checked against the real billing plan (not the admin test override —
+  // that never reflects actual paid entitlement, see subscription.ts). Blocks
+  // a pointless re-checkout for the plan the user is already really on; real
+  // upgrades/downgrades between PRO and PREMIUM are still allowed through and
+  // handled by applyPaymentEvent, which supersedes the old subscription.
+  if (user.plan === plan) {
+    return { ok: false, error: "이미 이용 중인 플랜이에요." };
+  }
+
   const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY;
   if (!clientKey || !isTossConfigured()) {
     return { ok: false, error: "결제 기능은 아직 활성화되지 않았습니다." };

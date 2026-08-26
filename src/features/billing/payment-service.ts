@@ -1,8 +1,10 @@
 import "server-only";
 
+import { Prisma } from "@/generated/prisma/client";
+import type { Payment, Plan, SubscriptionStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import type { Plan, SubscriptionStatus } from "@/generated/prisma/client";
 import { addOneMonthClamped } from "@/features/billing/period";
+import { deleteBillingKey } from "@/features/billing/toss-client";
 
 type PaymentEvent = {
   userId: string;
@@ -43,35 +45,107 @@ export async function createPendingPayment(input: {
   });
 }
 
-/** Idempotent internal webhook application point for a future verified PG
- * webhook. This function must only be called after signature verification. */
+function isUniqueConstraintError(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
+}
+
+/**
+ * Idempotent application point for a verified payment result (the checkout
+ * callback's first charge, or the renewal cron's recurring charge — both
+ * pass a fresh idempotencyKey per real-world charge attempt, see their own
+ * files for how it's derived).
+ *
+ * This has to tell apart two situations that look similar but must be
+ * handled differently:
+ *  - a BRAND NEW idempotencyKey (the first time this exact charge has ever
+ *    been seen) — a SUCCEEDED event with a plan must grant entitlement
+ *    immediately. There is no earlier PENDING row whose transition would
+ *    otherwise trigger it.
+ *  - a REDELIVERED event for an idempotencyKey already on file (e.g. a
+ *    duplicated webhook, or a future PENDING -> SUCCEEDED flow seeded by
+ *    createPendingPayment) — only reacts when the stored status is actually
+ *    changing; a pure repeat is a no-op.
+ *
+ * A single `upsert` plus "does the row's status match the input?" can't
+ * distinguish these: on a fresh key, `create` writes the row already at its
+ * final status, so that comparison is trivially true and the function
+ * returned before ever granting entitlement — every real payment charged
+ * the user and never upgraded them. See payment-service.test.ts.
+ */
 export async function applyPaymentEvent(input: PaymentEvent) {
-  return prisma.$transaction(async (tx) => {
-    const payment = await tx.payment.upsert({
+  const { payment, staleBillingKeys } = await prisma.$transaction(async (tx) => {
+    const existing = await tx.payment.findUnique({
       where: { idempotencyKey: input.idempotencyKey },
-      create: {
-        userId: input.userId,
-        amount: input.amount,
-        currency: input.currency ?? "KRW",
-        paymentProvider: input.provider,
-        externalTransactionId: input.externalTransactionId,
-        idempotencyKey: input.idempotencyKey,
-        status: input.status,
-        paidAt: input.paidAt ?? (input.status === "SUCCEEDED" ? new Date() : null),
-      },
-      update: {},
     });
 
-    if (payment.status === input.status) return payment;
-    const updated = await tx.payment.update({
-      where: { id: payment.id },
-      data: { status: input.status, paidAt: input.paidAt ?? payment.paidAt },
-    });
+    let payment: Payment;
+    let isNewEvent: boolean;
+
+    if (existing) {
+      payment = existing;
+      isNewEvent = false;
+    } else {
+      try {
+        payment = await tx.payment.create({
+          data: {
+            userId: input.userId,
+            amount: input.amount,
+            currency: input.currency ?? "KRW",
+            paymentProvider: input.provider,
+            externalTransactionId: input.externalTransactionId,
+            idempotencyKey: input.idempotencyKey,
+            status: input.status,
+            paidAt: input.paidAt ?? (input.status === "SUCCEEDED" ? new Date() : null),
+          },
+        });
+        isNewEvent = true;
+      } catch (err) {
+        // Lost a race against a concurrent call for the same idempotencyKey
+        // (e.g. a duplicated webhook delivery landing alongside the callback
+        // route) — someone else just created it, so treat this call as a
+        // redelivery of an already-recorded event instead of erroring.
+        if (!isUniqueConstraintError(err)) throw err;
+        payment = await tx.payment.findUniqueOrThrow({
+          where: { idempotencyKey: input.idempotencyKey },
+        });
+        isNewEvent = false;
+      }
+    }
+
+    if (!isNewEvent) {
+      // Already-processed redelivery of the same result — no-op.
+      if (payment.status === input.status) return { payment, staleBillingKeys: [] as string[] };
+      payment = await tx.payment.update({
+        where: { id: payment.id },
+        data: { status: input.status, paidAt: input.paidAt ?? payment.paidAt },
+      });
+    }
+
+    let staleBillingKeys: string[] = [];
 
     if (input.status === "SUCCEEDED" && input.plan) {
-      const paidAt = input.paidAt ?? updated.paidAt ?? new Date();
+      const paidAt = input.paidAt ?? payment.paidAt ?? new Date();
       const periodEnd = addOneMonthClamped(paidAt);
       const subExternalId = input.subscriptionExternalId ?? input.externalTransactionId;
+
+      // Guarantee at most one ACTIVE subscription per user: cancel every
+      // other active subscription BEFORE activating this one — order matters,
+      // since the DB-level partial unique index on Subscription(userId)
+      // WHERE status='ACTIVE' (see migration
+      // 20260826120000_subscription_single_active) checks each statement
+      // immediately rather than deferring to commit. Without this, a plan
+      // upgrade (PRO -> PREMIUM) would leave the old subscription ACTIVE
+      // alongside the new one, and both would be charged on every renewal.
+      const staleActive = await tx.subscription.findMany({
+        where: { userId: input.userId, status: "ACTIVE", NOT: { externalId: subExternalId } },
+        select: { id: true, externalId: true },
+      });
+      if (staleActive.length > 0) {
+        await tx.subscription.updateMany({
+          where: { id: { in: staleActive.map((s) => s.id) } },
+          data: { status: "CANCELED", cancelAtPeriodEnd: false },
+        });
+      }
 
       const subscription = await tx.subscription.upsert({
         where: { externalId: subExternalId },
@@ -97,7 +171,7 @@ export async function applyPaymentEvent(input: PaymentEvent) {
 
       // Link this charge's Payment row to its Subscription — the renewal cron
       // and refund flow both look payments up via subscriptionId.
-      await tx.payment.update({
+      payment = await tx.payment.update({
         where: { id: payment.id },
         data: { subscriptionId: subscription.id },
       });
@@ -114,9 +188,25 @@ export async function applyPaymentEvent(input: PaymentEvent) {
           subscriptionStatus: "ACTIVE" satisfies SubscriptionStatus,
         },
       });
+
+      staleBillingKeys = staleActive
+        .map((s) => s.externalId)
+        .filter((id): id is string => Boolean(id));
     }
-    return updated;
+
+    return { payment, staleBillingKeys };
   });
+
+  // Best-effort, outside the DB transaction: tell Toss the superseded billing
+  // key(s) are no longer needed. Never blocks the entitlement grant above — a
+  // failure here just leaves an unused registration at Toss, which StudyOS
+  // will never charge again since the renewal cron only bills ACTIVE
+  // subscriptions.
+  for (const billingKey of staleBillingKeys) {
+    deleteBillingKey(billingKey).catch(() => {});
+  }
+
+  return payment;
 }
 
 export async function applyRefundEvent(input: {
@@ -163,17 +253,31 @@ export async function applyRefundEvent(input: {
         where: { id: input.paymentId },
         select: { userId: true, subscriptionId: true },
       });
-      if (payment?.userId) {
-        await tx.user.update({
-          where: { id: payment.userId },
-          data: { plan: "TRIAL", subscriptionStatus: "CANCELED" satisfies SubscriptionStatus },
-        });
-      }
+
       if (payment?.subscriptionId) {
+        // Only revoke the user's CURRENT entitlement if the refunded charge
+        // belongs to their still-active subscription — refunding an old,
+        // already-superseded subscription's payment (e.g. a past PRO period
+        // from before they upgraded to PREMIUM) must not touch whatever plan
+        // they're actually on now.
+        const currentActive = payment.userId
+          ? await tx.subscription.findFirst({
+              where: { userId: payment.userId, status: "ACTIVE" },
+              select: { id: true },
+            })
+          : null;
+
         await tx.subscription.update({
           where: { id: payment.subscriptionId },
           data: { status: "CANCELED" },
         });
+
+        if (payment.userId && currentActive?.id === payment.subscriptionId) {
+          await tx.user.update({
+            where: { id: payment.userId },
+            data: { plan: "TRIAL", subscriptionStatus: "CANCELED" satisfies SubscriptionStatus },
+          });
+        }
       }
     }
 

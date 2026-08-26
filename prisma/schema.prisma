@@ -268,6 +268,14 @@ model AuditLog {
 
 /// Payment-ready records only. No card number, CVC, or bank credential is
 /// stored; provider-specific details remain with the future PG adapter.
+///
+/// INVARIANT: at most one ACTIVE row per userId. Enforced at the application
+/// layer (applyPaymentEvent cancels any other active subscription before
+/// activating one) AND at the DB layer via a partial unique index that
+/// Prisma's schema syntax can't express — see migration
+/// 20260826120000_subscription_single_active/migration.sql. Without this, a
+/// plan upgrade (e.g. PRO -> PREMIUM) could leave two subscriptions ACTIVE
+/// for the same user, and both would be charged on every renewal.
 model Subscription {
   id                 String    @id @default(cuid())
   userId             String?

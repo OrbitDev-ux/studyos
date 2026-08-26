@@ -14,6 +14,7 @@ import {
   shouldShowAds,
   type Limit,
 } from "@/features/billing/entitlements";
+import { getCurrentUserOrNull } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -79,12 +80,20 @@ function RowValue({ value }: { value: string | boolean }) {
   return <span className="text-sm tabular-nums">{value}</span>;
 }
 
-export default function PricingPage() {
+export default async function PricingPage() {
   // Server-decided, not a client-side fallback: exactly one of the two CTAs
   // below renders. Never show a live-looking "업그레이드" button that
   // actually can't charge anything — see NEXT_PUBLIC_TOSS_CLIENT_KEY /
   // TOSS_SECRET_KEY in .env.example.
   const paymentsConfigured = isTossConfigured() && Boolean(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY);
+
+  // getCurrentUserOrNull (not requireCurrentUser) since this is a public
+  // marketing page anonymous visitors browse too — only known-logged-in
+  // users get plan-aware CTAs below. Checked against the real billing plan,
+  // never the admin test override (see subscription.ts's effectivePlan) —
+  // that never reflects actual paid entitlement.
+  const user = await getCurrentUserOrNull();
+  const currentPlan = user?.plan ?? null;
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-4 py-16 sm:px-6">
@@ -153,16 +162,7 @@ export default function PricingPage() {
                 </ul>
                 <div className="mt-auto flex flex-col gap-2">
                   {isPaid ? (
-                    paymentsConfigured ? (
-                      <>
-                        <UpgradeCheckoutButton plan={plan as "PRO" | "PREMIUM"} className="w-full">
-                          {meta.name}(으)로 업그레이드
-                        </UpgradeCheckoutButton>
-                        <p className="text-muted-foreground text-center text-xs">
-                          카드 등록 후 즉시 청구되며, 매월 자동으로 갱신돼요.
-                        </p>
-                      </>
-                    ) : (
+                    !paymentsConfigured ? (
                       <>
                         {/* 결제 미구성 상태: 동작하지 않는 버튼을 동작하는 것처럼 보이게
                             두지 않는다 — 비활성 버튼 + 정직한 안내만 표시. */}
@@ -171,6 +171,37 @@ export default function PricingPage() {
                         </Button>
                         <p className="text-muted-foreground text-center text-xs">
                           지금은 {TRIAL_DAYS}일 무료 체험으로 전체 기능을 써볼 수 있어요.
+                        </p>
+                      </>
+                    ) : currentPlan === plan ? (
+                      <>
+                        {/* 이미 이 플랜을 쓰고 있으면 재결제 버튼을 보여주지 않는다 —
+                            체크아웃 자체도 checkout-actions.ts에서 막지만, 애초에
+                            누를 이유가 없는 버튼을 보여주지 않는 게 맞다. */}
+                        <Button className="w-full" variant="outline" disabled>
+                          현재 이용 중인 플랜
+                        </Button>
+                      </>
+                    ) : currentPlan && PLAN_META[currentPlan].order > meta.order ? (
+                      <>
+                        {/* 다운그레이드는 이번 범위에서 자동화하지 않는다 — 잘못
+                            자동화해서 중복 결제/구독을 만드는 것보다, 안내만 하고
+                            안전하게 사람이 처리하도록 유도하는 편이 낫다. */}
+                        <Button asChild className="w-full" variant="outline">
+                          <Link href="/profile">구독 관리에서 변경</Link>
+                        </Button>
+                        <p className="text-muted-foreground text-center text-xs">
+                          다운그레이드는 프로필의 구독 관리에서 기존 구독을 취소한 뒤
+                          새로 시작할 수 있어요.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <UpgradeCheckoutButton plan={plan as "PRO" | "PREMIUM"} className="w-full">
+                          {meta.name}(으)로 업그레이드
+                        </UpgradeCheckoutButton>
+                        <p className="text-muted-foreground text-center text-xs">
+                          카드 등록 후 즉시 청구되며, 매월 자동으로 갱신돼요.
                         </p>
                       </>
                     )
