@@ -6,13 +6,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FileExplorer } from "@/features/dev/components/file-explorer";
 import { languageForFile } from "@/features/dev/file-icons";
-import { readWorkspaceFile, writeWorkspaceFile } from "@/features/dev/runtime-actions";
+import { readWorkspaceFile, writeWorkspaceFile } from "@/features/dev/agent-client";
 import { useI18n } from "@/features/i18n/provider";
 
 /** `/dev/files` — directory tree + create/rename/delete (§18), with a simple
  * single-file preview/edit pane (the full tabbed editor lives at `/dev/ide`,
  * §19, reusing the SAME FileExplorer component so both stay on one filesystem). */
-export function FilesView() {
+export function FilesView({ deviceId, workspaceId }: { deviceId: string; workspaceId: string }) {
   const { messages } = useI18n();
   const t = messages.dev;
   const [path, setPath] = useState<string | null>(null);
@@ -22,19 +22,19 @@ export function FilesView() {
 
   async function open(p: string) {
     setError(null);
-    const res = await readWorkspaceFile(p);
-    if (res.error || res.content === undefined) {
+    const res = await readWorkspaceFile(deviceId, workspaceId, p);
+    if (res.error || res.data?.content === undefined) {
       setError(res.error ?? "Failed to open file.");
       return;
     }
     setPath(p);
-    setContent(res.content);
+    setContent(res.data.content);
     setDirty(false);
   }
 
   async function save() {
     if (!path) return;
-    const res = await writeWorkspaceFile(path, content);
+    const res = await writeWorkspaceFile(deviceId, workspaceId, path, content);
     if (res.error) setError(res.error);
     else setDirty(false);
   }
@@ -47,7 +47,12 @@ export function FilesView() {
       {error && <p className="text-destructive text-xs">{error}</p>}
       <div className="flex min-h-0 flex-1 gap-2">
         <aside className="w-64 shrink-0 overflow-hidden rounded-lg border p-1.5">
-          <FileExplorer onOpenFile={(p) => void open(p)} activePath={path ?? undefined} />
+          <FileExplorer
+            deviceId={deviceId}
+            workspaceId={workspaceId}
+            onOpenFile={(p) => void open(p)}
+            activePath={path ?? undefined}
+          />
         </aside>
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg border">
           {path ? (

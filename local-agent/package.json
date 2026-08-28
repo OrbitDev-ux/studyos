@@ -1,0 +1,35 @@
+{
+  "name": "studyos-dev-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "StudyOS Dev — Local Agent. Runs on the USER's own computer and gives StudyOS Dev (the browser IDE) authenticated access to a real local filesystem, terminal, and git — never the other way around. See ../docs/LOCAL_AGENT.md and ../docs/SECURITY.md.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "studyos-dev": "./dist/cli.js"
+  },
+  "scripts": {
+    "dev": "tsx src/cli.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/cli.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "node-pty": "^1.0.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/ws": "^8.5.13",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.0"
+  },
+  "allowScripts": {
+    "node-pty@1.1.0": true,
+    "esbuild@0.28.2": true
+  }
+}

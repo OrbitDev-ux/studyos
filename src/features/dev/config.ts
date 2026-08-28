@@ -3,20 +3,9 @@
  * lifecycle state, shell, or theme option is a one-line change here.
  */
 
-/** DevWorkspace.status values. Free-form string in the DB (see schema.prisma
- * comment) so new states never need a migration; this is the whitelist the
- * app itself treats as valid. */
-export const WORKSPACE_STATUSES = [
-  "NOT_PROVISIONED",
-  "CREATING",
-  "READY",
-  "RUNNING",
-  "IDLE",
-  "STOPPED",
-  "ERROR",
-] as const;
-export type WorkspaceStatus = (typeof WORKSPACE_STATUSES)[number];
-
+/** Kept only because the legacy DevWorkspace row (superseded by
+ * DevAgentDevice — see schema.prisma) still needs a non-null `name` on
+ * upsert for Dev Settings storage; not shown in any v2 UI. */
 export const DEFAULT_WORKSPACE_NAME = "my-project";
 
 /** Dev Settings whitelist — the ONLY values a user may ever persist. Nothing

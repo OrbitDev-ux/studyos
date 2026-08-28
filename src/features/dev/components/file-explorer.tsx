@@ -24,7 +24,7 @@ import {
   renameWorkspaceEntry,
   writeWorkspaceFile,
   type FsEntry,
-} from "@/features/dev/runtime-actions";
+} from "@/features/dev/agent-client";
 import { FOLDER_ICON, iconForFile } from "@/features/dev/file-icons";
 import { cn } from "@/lib/utils";
 
@@ -38,9 +38,13 @@ type PendingRename = { path: string; name: string } | null;
  * server-side).
  */
 export function FileExplorer({
+  deviceId,
+  workspaceId,
   onOpenFile,
   activePath,
 }: {
+  deviceId: string;
+  workspaceId: string;
   onOpenFile: (path: string) => void;
   activePath?: string;
 }) {
@@ -52,12 +56,12 @@ export function FileExplorer({
   const [error, setError] = useState<string | null>(null);
 
   async function loadDir(path: string) {
-    const res = await listWorkspaceFiles(path);
+    const res = await listWorkspaceFiles(deviceId, workspaceId, path);
     if (res.error) {
       setError(res.error);
       return;
     }
-    setChildren((prev) => ({ ...prev, [path]: res.entries ?? [] }));
+    setChildren((prev) => ({ ...prev, [path]: res.data?.entries ?? [] }));
   }
 
   useEffect(() => {
@@ -96,8 +100,8 @@ export function FileExplorer({
       : draftName;
     const res =
       pendingCreate.type === "dir"
-        ? await createWorkspaceFolder(path)
-        : await writeWorkspaceFile(path, "");
+        ? await createWorkspaceFolder(deviceId, workspaceId, path)
+        : await writeWorkspaceFile(deviceId, workspaceId, path, "");
     if (res.error) setError(res.error);
     else refresh(pendingCreate.parentPath);
     setPendingCreate(null);
@@ -112,7 +116,7 @@ export function FileExplorer({
       ? pendingRename.path.slice(0, pendingRename.path.lastIndexOf("/"))
       : "";
     const to = parent ? `${parent}/${draftName}` : draftName;
-    const res = await renameWorkspaceEntry(pendingRename.path, to);
+    const res = await renameWorkspaceEntry(deviceId, workspaceId, pendingRename.path, to);
     if (res.error) setError(res.error);
     else refresh(parent);
     setPendingRename(null);
@@ -120,7 +124,7 @@ export function FileExplorer({
 
   async function handleDelete(entry: FsEntry, parentPath: string) {
     const path = parentPath ? `${parentPath}/${entry.name}` : entry.name;
-    const res = await deleteWorkspaceEntry(path);
+    const res = await deleteWorkspaceEntry(deviceId, workspaceId, path);
     if (res.error) setError(res.error);
     else refresh(parentPath);
   }

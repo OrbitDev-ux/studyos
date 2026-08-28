@@ -2,7 +2,6 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { getAllSettings } from "@/lib/admin/settings";
 import { activeProviderName } from "@/features/ai/providers";
-import { isRuntimeConfigured, runtimeClient } from "@/features/dev/runtime-client";
 
 /**
  * StudyOS Status Dashboard — health-check domain (admin-only, read-only,
@@ -17,9 +16,12 @@ import { isRuntimeConfigured, runtimeClient } from "@/features/dev/runtime-clien
  *    this dashboard auto-refreshes every 30s per open tab, and a live ping
  *    multiplies with every refresh × every admin who has it open, unlike a
  *    single generation request budgeted by features/ai/generation-guard.
- *  - Dev Runtime check reuses isRuntimeConfigured()/runtimeClient
- *    (features/dev/runtime-client) — the exact same "is a backend even
- *    configured" gate every dev-runtime Server Action already checks.
+ *
+ * No "dev-runtime" check here anymore (v1 had one, back when StudyOS Dev was
+ * a remote-container backend this server called out to). StudyOS Dev v2 runs
+ * as a Local Agent on each USER's own machine (features/dev/agent-*) — there
+ * is no longer a single shared backend for this dashboard to probe; per-
+ * device connectivity is shown in /dev itself, not here.
  */
 
 export type HealthStatus = "OPERATIONAL" | "DEGRADED" | "DOWN" | "UNKNOWN";
@@ -163,25 +165,11 @@ export async function checkAi(): Promise<CheckOutcome> {
   return { status: "OPERATIONAL", reason: "ok" };
 }
 
-export async function checkDevRuntime(): Promise<CheckOutcome> {
-  if (!isRuntimeConfigured()) {
-    return { status: "DOWN", reason: "not_configured" };
-  }
-  // A real backend IS configured for this deployment — actually reach it
-  // (runtimeClient.get already has its own no-base-url/network-error
-  // handling; the outer runCheck() timeout still bounds the wall time).
-  const result = await runtimeClient.get<unknown>("/health");
-  return result.ok
-    ? { status: "OPERATIONAL", reason: "ok" }
-    : { status: "DOWN", reason: "unreachable" };
-}
-
 const SERVICE_CHECKS = [
   { id: "web", category: "core" as const, critical: true, check: checkWeb },
   { id: "database", category: "core" as const, critical: true, check: checkDatabase },
   { id: "auth", category: "core" as const, critical: true, check: checkAuth },
   { id: "ai", category: "ai" as const, critical: false, check: checkAi },
-  { id: "dev-runtime", category: "infrastructure" as const, critical: false, check: checkDevRuntime },
 ];
 
 /**

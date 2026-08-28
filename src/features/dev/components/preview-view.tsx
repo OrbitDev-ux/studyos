@@ -5,13 +5,15 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getPreviewConnection } from "@/features/dev/runtime-actions";
 import { useI18n } from "@/features/i18n/provider";
 
-/** `/dev/preview` — iframes the container's dev server through the Dev
- * Runtime Backend's authenticated reverse proxy (§25/§26). The iframe never
- * points at a host port directly; `previewUrl` carries a short-lived,
- * workspace-scoped capability token the runtime verifies before proxying. */
+/**
+ * `/dev/preview` — §17: no reverse proxy is needed here at all. The browser
+ * and the Local Agent run on the SAME machine as the dev server the user
+ * starts from `/dev/run`, so the preview is just an iframe pointed straight
+ * at `http://localhost:<port>` (§17: "가능하면 localhost/127.0.0.1 기반으로
+ * 접근한다") — StudyOS Web is never in this path at all.
+ */
 export function PreviewView({ title }: { title: string }) {
   const { messages } = useI18n();
   const t = messages.dev;
@@ -19,14 +21,14 @@ export function PreviewView({ title }: { title: string }) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function open() {
+  function open() {
     setError(null);
-    const res = await getPreviewConnection(Number(port));
-    if (res.error || !res.previewUrl) {
-      setError(res.error ?? t.backendUnavailableDesc);
+    const n = Number(port);
+    if (!Number.isInteger(n) || n < 1 || n > 65535) {
+      setError("Invalid port.");
       return;
     }
-    setPreviewUrl(res.previewUrl);
+    setPreviewUrl(`http://localhost:${n}`);
   }
 
   return (

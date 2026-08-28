@@ -26,7 +26,6 @@ const SERVICE_NAME_KEY: Record<string, keyof Messages["status"]> = {
   database: "serviceDatabase",
   auth: "serviceAuth",
   ai: "serviceAi",
-  "dev-runtime": "serviceDevRuntime",
 };
 
 const CATEGORY_KEY: Record<ServiceCategory, keyof Messages["status"]> = {

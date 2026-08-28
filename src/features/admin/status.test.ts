@@ -17,20 +17,10 @@ vi.mock("@/lib/admin/settings", () => ({ getAllSettings }));
 const { activeProviderName } = vi.hoisted(() => ({ activeProviderName: vi.fn() }));
 vi.mock("@/features/ai/providers", () => ({ activeProviderName }));
 
-const { isRuntimeConfigured, runtimeGet } = vi.hoisted(() => ({
-  isRuntimeConfigured: vi.fn(),
-  runtimeGet: vi.fn(),
-}));
-vi.mock("@/features/dev/runtime-client", () => ({
-  isRuntimeConfigured,
-  runtimeClient: { get: runtimeGet },
-}));
-
 import {
   checkAi,
   checkAuth,
   checkDatabase,
-  checkDevRuntime,
   checkWeb,
   computeOverallStatus,
   getSystemHealth,
@@ -187,26 +177,6 @@ describe("checkAi", () => {
   });
 });
 
-describe("checkDevRuntime", () => {
-  it("is DOWN with reason 'not_configured' when no runtime URL is set", async () => {
-    isRuntimeConfigured.mockReturnValue(false);
-    expect(await checkDevRuntime()).toEqual({ status: "DOWN", reason: "not_configured" });
-    expect(runtimeGet).not.toHaveBeenCalled();
-  });
-
-  it("is OPERATIONAL when configured and reachable", async () => {
-    isRuntimeConfigured.mockReturnValue(true);
-    runtimeGet.mockResolvedValue({ ok: true, data: {} });
-    expect(await checkDevRuntime()).toEqual({ status: "OPERATIONAL", reason: "ok" });
-  });
-
-  it("is DOWN with reason 'unreachable' when configured but the request fails", async () => {
-    isRuntimeConfigured.mockReturnValue(true);
-    runtimeGet.mockResolvedValue({ ok: false, status: 502, error: "Could not reach the dev runtime backend." });
-    expect(await checkDevRuntime()).toEqual({ status: "DOWN", reason: "unreachable" });
-  });
-});
-
 describe("getSystemHealth", () => {
   it("aggregates independently — one failing check doesn't affect the others", async () => {
     queryRaw.mockRejectedValue(new Error("db down"));
@@ -214,7 +184,6 @@ describe("getSystemHealth", () => {
     activeProviderName.mockReturnValue("groq");
     process.env.GROQ_API_KEY = "gsk_fake";
     process.env.AUTH_SECRET = "a-real-secret";
-    isRuntimeConfigured.mockReturnValue(false);
 
     const snapshot = await getSystemHealth();
 
@@ -235,7 +204,6 @@ describe("getSystemHealth", () => {
     activeProviderName.mockReturnValue("groq");
     process.env.GROQ_API_KEY = "gsk_fake";
     process.env.AUTH_SECRET = "a-real-secret";
-    isRuntimeConfigured.mockReturnValue(false);
 
     const snapshot = await getSystemHealth();
     const serialized = JSON.stringify(snapshot);

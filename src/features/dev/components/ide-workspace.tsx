@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { FileExplorer } from "@/features/dev/components/file-explorer";
 import { TerminalView } from "@/features/dev/components/terminal-view";
 import { languageForFile } from "@/features/dev/file-icons";
-import { readWorkspaceFile, writeWorkspaceFile } from "@/features/dev/runtime-actions";
+import { readWorkspaceFile, writeWorkspaceFile } from "@/features/dev/agent-client";
 import { useI18n } from "@/features/i18n/provider";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +18,15 @@ type Tab = { path: string; content: string; dirty: boolean };
  * Terminal (§19/§22/§24), all against the SAME workspace as `/dev/files` and
  * `/dev/terminal` (reuses FileExplorer/TerminalView — no parallel filesystem).
  */
-export function IdeWorkspace({ settings }: { settings: { editorTheme: "dark" | "light"; wordWrap: boolean; minimap: boolean } }) {
+export function IdeWorkspace({
+  deviceId,
+  workspaceId,
+  settings,
+}: {
+  deviceId: string;
+  workspaceId: string;
+  settings: { editorTheme: "dark" | "light"; wordWrap: boolean; minimap: boolean };
+}) {
   const { messages } = useI18n();
   const t = messages.dev;
   const [tabs, setTabs] = useState<Tab[]>([]);
@@ -33,15 +41,15 @@ export function IdeWorkspace({ settings }: { settings: { editorTheme: "dark" | "
         setActivePath(path);
         return;
       }
-      const res = await readWorkspaceFile(path);
-      if (res.error || res.content === undefined) {
+      const res = await readWorkspaceFile(deviceId, workspaceId, path);
+      if (res.error || res.data?.content === undefined) {
         setError(res.error ?? "Failed to open file.");
         return;
       }
-      setTabs((prev) => [...prev, { path, content: res.content!, dirty: false }]);
+      setTabs((prev) => [...prev, { path, content: res.data!.content, dirty: false }]);
       setActivePath(path);
     },
-    [tabs],
+    [tabs, deviceId, workspaceId],
   );
 
   const closeTab = useCallback(
@@ -58,13 +66,13 @@ export function IdeWorkspace({ settings }: { settings: { editorTheme: "dark" | "
   const save = useCallback(async () => {
     const tab = tabs.find((t2) => t2.path === activePath);
     if (!tab || !tab.dirty) return;
-    const res = await writeWorkspaceFile(tab.path, tab.content);
+    const res = await writeWorkspaceFile(deviceId, workspaceId, tab.path, tab.content);
     if (res.error) {
       setError(res.error);
       return;
     }
     setTabs((prev) => prev.map((t2) => (t2.path === tab.path ? { ...t2, dirty: false } : t2)));
-  }, [activePath, tabs]);
+  }, [activePath, tabs, deviceId, workspaceId]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -90,7 +98,12 @@ export function IdeWorkspace({ settings }: { settings: { editorTheme: "dark" | "
       {error && <p className="text-destructive text-xs">{error}</p>}
       <div className="flex min-h-0 flex-1 gap-2">
         <aside className="w-56 shrink-0 overflow-hidden rounded-lg border p-1.5">
-          <FileExplorer onOpenFile={(path) => void openFile(path)} activePath={activePath ?? undefined} />
+          <FileExplorer
+            deviceId={deviceId}
+            workspaceId={workspaceId}
+            onOpenFile={(path) => void openFile(path)}
+            activePath={activePath ?? undefined}
+          />
         </aside>
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border">
@@ -153,7 +166,7 @@ export function IdeWorkspace({ settings }: { settings: { editorTheme: "dark" | "
           </div>
           {showTerminal && (
             <div className="h-64 shrink-0 overflow-hidden rounded-lg border">
-              <TerminalView title={t.terminalTitle} />
+              <TerminalView title={t.terminalTitle} deviceId={deviceId} workspaceId={workspaceId} />
             </div>
           )}
         </div>

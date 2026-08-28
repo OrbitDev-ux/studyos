@@ -4,7 +4,7 @@ import "@xterm/xterm/css/xterm.css";
 import { Terminal as TerminalIcon, RotateCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { getTerminalConnection } from "@/features/dev/runtime-actions";
+import { getTerminalConnection } from "@/features/dev/agent-client";
 import { useI18n } from "@/features/i18n/provider";
 
 type ConnState = "connecting" | "connected" | "disconnected" | "error";
@@ -16,7 +16,7 @@ type ConnState = "connecting" | "connected" | "disconnected" | "error";
  * command parsing happens here or on StudyOS Web — every keystroke goes to
  * real bash inside the user's container.
  */
-export function TerminalView({ title }: { title: string }) {
+export function TerminalView({ title, deviceId, workspaceId }: { title: string; deviceId: string; workspaceId: string }) {
   const { messages } = useI18n();
   const t = messages.dev;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -49,16 +49,16 @@ export function TerminalView({ title }: { title: string }) {
       term.open(containerRef.current);
       fitAddon.fit();
 
-      const conn = await getTerminalConnection();
+      const conn = await getTerminalConnection(deviceId, workspaceId);
       if (cancelled) return;
-      if (conn.error || !conn.wsUrl) {
+      if (!("wsUrl" in conn)) {
         setError(conn.error ?? t.backendUnavailableDesc);
         setState("error");
         term.dispose();
         return;
       }
 
-      const ws = new WebSocket(`${conn.wsUrl}?token=${encodeURIComponent(conn.token)}`);
+      const ws = new WebSocket(`${conn.wsUrl}?session=${encodeURIComponent(conn.token)}`);
       wsRef.current = ws;
 
       ws.onopen = () => {
@@ -109,7 +109,7 @@ export function TerminalView({ title }: { title: string }) {
       disposeRef.current = null;
       wsRef.current = null;
     };
-  }, [reconnectKey, t.backendUnavailableDesc]);
+  }, [reconnectKey, deviceId, workspaceId, t.backendUnavailableDesc]);
 
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col gap-3">

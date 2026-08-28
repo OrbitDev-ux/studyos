@@ -14,12 +14,12 @@ import {
   gitAddWorkspaceFiles,
   type GitCommit,
   type GitStatus,
-} from "@/features/dev/runtime-actions";
+} from "@/features/dev/agent-client";
 import { useI18n } from "@/features/i18n/provider";
 
 /** `/dev/git` — real `git status`/`diff`/`log`/`add`/`commit` inside the
- * container's `/workspace` (§26). */
-export function GitView() {
+ * user's own local workspace (§18/§19), via the Local Agent. */
+export function GitView({ deviceId, workspaceId }: { deviceId: string; workspaceId: string }) {
   const { messages } = useI18n();
   const t = messages.dev;
   const [status, setStatus] = useState<GitStatus | null>(null);
@@ -31,33 +31,37 @@ export function GitView() {
   const [pending, setPending] = useState(false);
 
   async function refresh() {
-    const [s, l] = await Promise.all([getWorkspaceGitStatus(), getWorkspaceGitLog()]);
+    const [s, l] = await Promise.all([
+      getWorkspaceGitStatus(deviceId, workspaceId),
+      getWorkspaceGitLog(deviceId, workspaceId),
+    ]);
     if (s.error) setError(s.error);
-    if (s.status) setStatus(s.status);
-    if (l.commits) setCommits(l.commits);
+    if (s.data) setStatus(s.data);
+    if (l.data) setCommits(l.data.commits);
   }
 
   useEffect(() => {
     void refresh();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deviceId, workspaceId]);
 
   async function viewDiff(path: string) {
     setDiffPath(path);
-    const res = await getWorkspaceGitDiff(path);
-    setDiff(res.diff ?? "");
+    const res = await getWorkspaceGitDiff(deviceId, workspaceId, path);
+    setDiff(res.data?.diff ?? "");
   }
 
   async function commitAll() {
     if (!status?.files?.length || !message.trim()) return;
     setPending(true);
     setError(null);
-    const addRes = await gitAddWorkspaceFiles(status.files.map((f) => f.path));
+    const addRes = await gitAddWorkspaceFiles(deviceId, workspaceId, status.files.map((f) => f.path));
     if (addRes.error) {
       setError(addRes.error);
       setPending(false);
       return;
     }
-    const commitRes = await commitWorkspaceChanges(message);
+    const commitRes = await commitWorkspaceChanges(deviceId, workspaceId, message);
     setPending(false);
     if (commitRes.error) {
       setError(commitRes.error);

@@ -121,6 +121,7 @@ model User {
   labFeedback         LabFeedback[]
   tutorConversations  TutorConversation[]
   devWorkspace        DevWorkspace?
+  devAgentDevices     DevAgentDevice[]
   notifications       Notification[]
 
   growth        UserGrowth?
@@ -1375,6 +1376,119 @@ model DevWorkspace {
 
   @@unique([userId])
   @@index([userId])
+}
+
+// ─── StudyOS Dev — Local Agent (v2) ────────────────────────────────────────
+// Replaces DevWorkspace's remote-container architecture (above — kept only so
+// no data/migration is destroyed; no longer read or written by any code path).
+// StudyOS Web never executes a user's shell or touches their filesystem
+// itself: it only (a) brokers a one-time pairing handshake so a Local Agent
+// process the USER runs on their OWN machine can register itself, and (b)
+// mints short-lived, single-use session tokens that prove "this browser tab,
+// for this permission scope, was authorized by the signed-in owner of this
+// device" — the Local Agent independently verifies each one over HTTPS
+// (agent/verify-session) before ever touching a file, PTY, or git command.
+// Real filesystem paths never reach this database; the agent alone knows
+// them (see docs/LOCAL_AGENT.md, docs/SECURITY.md).
+
+/// One paired computer. `secretHash` is the only trace of the device's
+/// long-lived credential StudyOS ever stores — the raw secret is generated
+/// once at pairing approval, handed to the agent exactly one time (via the
+/// pairing poll response, see DevAgentPairingRequest), and from then on lives
+/// only in that machine's OS credential store (Keychain on macOS). StudyOS
+/// cannot recover it, so a DB leak of this table cannot be used to impersonate
+/// a paired device — only to invalidate it (revokedAt).
+model DevAgentDevice {
+  id         String    @id @default(cuid())
+  userId     String
+  /// Hostname the agent self-reported at pairing time; user-renamable.
+  name       String
+  /// "darwin" | "linux" | "win32" — display only, never trusted for behavior.
+  platform   String?
+  secretHash String    @unique
+  /// Loopback port the agent is currently listening on, self-reported on every
+  /// heartbeat, so a browser running on the SAME machine knows where to
+  /// connect (§3/§17 — StudyOS Web itself never proxies this traffic).
+  localPort  Int?
+  lastSeenAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  user    User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grants  DevAgentPermissionGrant[]
+  sessions DevAgentSession[]
+
+  @@index([userId])
+}
+
+/// A single pairing handshake (§5). `userCodeHash` is the SHA-256 of the
+/// short code the agent's CLI prints — the raw code is NEVER stored, mirroring
+/// PasswordResetToken's tokenHash convention. `deviceSecretPlain` is a
+/// deliberately transient exception to that rule: it exists only between the
+/// moment a signed-in user clicks Allow and the moment the still-polling agent
+/// retrieves it (read-once — cleared in the same transaction that reads it),
+/// so the raw device credential can reach the agent process without ever
+/// being sent to, or displayed in, the browser (§6). See SECURITY.md.
+model DevAgentPairingRequest {
+  id                String    @id @default(cuid())
+  userCodeHash      String    @unique
+  deviceName        String?
+  platform          String?
+  /// PENDING | APPROVED | DENIED | EXPIRED
+  status            String    @default("PENDING")
+  userId            String?
+  deviceId          String?
+  deviceSecretPlain String?
+  /// Requesting IP — rate-limiting only, same convention as
+  /// PasswordResetToken.requestIp; never shown to any client.
+  requestIp         String?
+  /// Failed-code-guess counter for this row — brute-force guard.
+  attempts          Int       @default(0)
+  expiresAt         DateTime
+  createdAt         DateTime @default(now())
+
+  @@index([expiresAt])
+  @@index([requestIp, createdAt])
+}
+
+/// Explicit, revocable grant of one sensitive capability to a paired device
+/// (§21). Absence of a row (or a revoked one) means denied — read-only scopes
+/// (dev.workspace.read, dev.git.read) never need a row; they're allowed by
+/// default the moment a device is paired and are enforced in application code,
+/// not here.
+model DevAgentPermissionGrant {
+  id         String    @id @default(cuid())
+  deviceId   String
+  /// dev.workspace.write | dev.terminal.execute | dev.git.write | dev.preview.start
+  permission String
+  grantedAt  DateTime  @default(now())
+  revokedAt  DateTime?
+
+  device DevAgentDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceId, permission])
+}
+
+/// A short-lived, single-use capability the browser hands to the Local Agent
+/// to open one file/terminal/git connection (§17 of the reference doc — kept
+/// separate from DevAgentPairingRequest's long-lived device secret). Minted by
+/// a server action AFTER `requireCurrentUser()` + a device-ownership +
+/// permission-grant check; the agent redeems it exactly once via
+/// agent/verify-session, authenticating itself with its own device secret so
+/// StudyOS Web knows which device is asking.
+model DevAgentSession {
+  id         String    @id @default(cuid())
+  deviceId   String
+  userId     String
+  /// The single permission this token proves — e.g. "dev.terminal.execute".
+  scope      String
+  consumedAt DateTime?
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  device DevAgentDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, expiresAt])
 }
 
 // ─── Growth + Mission System (v1) ──────────────────────────────────────────

@@ -11,20 +11,6 @@ import {
   type DevSettings,
 } from "@/features/dev/config";
 
-/** Safe charset for a workspace/project name — no path separators or shell
- * metacharacters, so it can never be misused as a filesystem/shell token. */
-export const workspaceNameSchema = z
-  .string()
-  .trim()
-  .min(1, "이름을 입력해주세요")
-  .max(50, "이름이 너무 길어요")
-  .regex(/^[a-zA-Z0-9][a-zA-Z0-9 ._-]*$/, "영문/숫자로 시작하고 특수문자는 . _ - 만 사용해주세요");
-
-export const createWorkspaceSchema = z.object({
-  name: workspaceNameSchema.optional(),
-});
-export type CreateWorkspaceValues = z.infer<typeof createWorkspaceSchema>;
-
 /**
  * Dev Settings whitelist (§31). `.strict()` rejects any key outside this
  * shape — a client can never smuggle arbitrary container configuration

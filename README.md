@@ -96,3 +96,18 @@ AI 기능은 `features/ai/`, 친구·랭킹은 `features/social/`, 결제는 `fe
 `User`(Auth.js) · `Subject` · `Todo` · `Goal`(수량형 일일 목표) · `StudySession`(공부 시간
 기록, 통계·Streak의 단일 소스). 별도의 `Statistics` 테이블 없이 필요한 통계는 항상 쿼리
 시점에 집계합니다 — 자세한 배경은 `prisma/schema.prisma` 커밋 이력 참고.
+
+## StudyOS Dev (로컬 개발 환경)
+
+`/dev`는 브라우저 IDE(파일 탐색기·에디터·터미널·git·Run/Preview)를 제공하지만, 실제 파일
+읽기/쓰기·셸 실행·git 명령은 **사용자 자신의 컴퓨터**에서 동작하는 별도 프로세스인
+Local Agent(`local-agent/`, CLI `studyos-dev`)가 수행합니다. StudyOS 서버(Vercel)는 절대
+사용자의 셸을 직접 실행하지 않습니다 — 자세한 설계는
+[`docs/STUDYOS_DEV.md`](docs/STUDYOS_DEV.md) · [`docs/LOCAL_AGENT.md`](docs/LOCAL_AGENT.md) ·
+[`docs/SECURITY.md`](docs/SECURITY.md) 참고.
+
+```bash
+cd local-agent && npm install && npm run build
+node dist/cli.js login      # 페어링 코드 발급 → /dev/pair 에서 승인
+node dist/cli.js connect     # 로컬 에이전트 시작 (127.0.0.1 only)
+```

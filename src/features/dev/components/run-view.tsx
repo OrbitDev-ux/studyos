@@ -9,11 +9,10 @@ import { Input } from "@/components/ui/input";
 import {
   getWorkspaceProcessLogs,
   listWorkspaceProcesses,
-  restartWorkspaceProcess,
   startWorkspaceProcess,
   stopWorkspaceProcess,
   type ProcessRecord,
-} from "@/features/dev/runtime-actions";
+} from "@/features/dev/agent-client";
 import { useI18n } from "@/features/i18n/provider";
 
 const QUICK_COMMANDS = [
@@ -24,9 +23,11 @@ const QUICK_COMMANDS = [
 ];
 const POLL_MS = 4000; // §30 — refresh, but not aggressively
 
-/** `/dev/run` — Process Manager (§20/§21): starts real commands inside the
- * container and tracks PID/status/logs, all via the Dev Runtime Backend. */
-export function RunView() {
+/** `/dev/run` — Process Manager (§17 Dev Server/Preview): starts real
+ * commands in the user's own local workspace via the Local Agent and tracks
+ * status/logs. Never auto-runs anything — every process starts from an
+ * explicit click here (§17: "자동 실행을 강제하지 않는다"). */
+export function RunView({ deviceId, workspaceId }: { deviceId: string; workspaceId: string }) {
   const { messages } = useI18n();
   const t = messages.dev;
   const [command, setCommand] = useState("");
@@ -37,22 +38,23 @@ export function RunView() {
   const [pending, setPending] = useState(false);
 
   async function refresh() {
-    const res = await listWorkspaceProcesses();
-    if (res.processes) setProcesses(res.processes);
+    const res = await listWorkspaceProcesses(deviceId, workspaceId);
+    if (res.data) setProcesses(res.data.processes);
   }
 
   useEffect(() => {
     void refresh();
     const id = setInterval(() => void refresh(), POLL_MS);
     return () => clearInterval(id);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deviceId, workspaceId]);
 
   useEffect(() => {
     if (!expandedId) return;
     let cancelled = false;
     async function loadLogs() {
-      const res = await getWorkspaceProcessLogs(expandedId!);
-      if (!cancelled && res.logs !== undefined) setLogs(res.logs);
+      const res = await getWorkspaceProcessLogs(deviceId, workspaceId, expandedId!);
+      if (!cancelled && res.data?.logs !== undefined) setLogs(res.data.logs);
     }
     void loadLogs();
     const id = setInterval(loadLogs, POLL_MS);
@@ -60,12 +62,12 @@ export function RunView() {
       cancelled = true;
       clearInterval(id);
     };
-  }, [expandedId]);
+  }, [expandedId, deviceId, workspaceId]);
 
   async function run(cmd: string) {
     setError(null);
     setPending(true);
-    const res = await startWorkspaceProcess(cmd);
+    const res = await startWorkspaceProcess(deviceId, workspaceId, cmd);
     setPending(false);
     if (res.error) setError(res.error);
     else void refresh();
@@ -134,7 +136,7 @@ export function RunView() {
                         size="icon-sm"
                         variant="ghost"
                         aria-label={t.runStop}
-                        onClick={() => stopWorkspaceProcess(proc.id).then(refresh)}
+                        onClick={() => stopWorkspaceProcess(deviceId, workspaceId, proc.id).then(refresh)}
                       >
                         <Square className="size-3.5" />
                       </Button>
@@ -144,7 +146,7 @@ export function RunView() {
                         size="icon-sm"
                         variant="ghost"
                         aria-label={t.runRestart}
-                        onClick={() => restartWorkspaceProcess(proc.id).then(refresh)}
+                        onClick={() => run(proc.command)}
                       >
                         <RotateCw className="size-3.5" />
                       </Button>

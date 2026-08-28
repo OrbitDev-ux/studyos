@@ -1,4 +1,15 @@
-# Study OS Dev — Runtime Backend
+# Study OS Dev — Runtime Backend (SUPERSEDED)
+
+> **Not used by the app anymore.** `/dev/*` now runs on the **Local Agent**
+> architecture (`../local-agent/`, `../docs/LOCAL_AGENT.md`,
+> `../docs/SECURITY.md`) — a small process the USER runs on their own
+> computer, instead of a shared remote Docker container backend. This
+> directory is kept on disk only because it was never deployed/connected
+> (v1 shipped `UnavailableContainerManager`, honestly reporting
+> `BACKEND_UNAVAILABLE`), so there's no live infrastructure or data to
+> migrate off of. Nothing in `src/features/dev/*` imports from here anymore.
+> Safe to delete once you've confirmed you don't need the reference
+> implementation (PTY-over-`docker exec`, capability tokens, reverse proxy).
 
 Manages per-user Docker Linux containers, PTY terminal sessions, filesystem,
 processes, git, and preview proxying for StudyOS's `/dev/*` pages.
