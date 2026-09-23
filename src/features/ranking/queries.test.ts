@@ -8,21 +8,13 @@ import { getFriendRankingForRange } from "@/features/ranking/queries";
  * bound is actually applied, and "week" starts earlier than "today" — the
  * exact boundary math itself is covered by lib/date.test.ts.
  */
-const { friendship, studySession } = vi.hoisted(() => ({
+const { friendship, studySession, user } = vi.hoisted(() => ({
   friendship: { findMany: vi.fn() },
   studySession: { groupBy: vi.fn() },
+  user: { findMany: vi.fn() },
 }));
 
-vi.mock("@/lib/prisma", () => ({ prisma: { friendship, studySession } }));
-vi.mock("@/lib/supabase/server", () => ({
-  createClient: vi.fn().mockResolvedValue({
-    from: () => ({
-      select: () => ({
-        in: () => Promise.resolve({ data: [], error: null }),
-      }),
-    }),
-  }),
-}));
+vi.mock("@/lib/prisma", () => ({ prisma: { friendship, studySession, user } }));
 
 const VIEWER = "viewer-1";
 const FRIEND = "friend-1";

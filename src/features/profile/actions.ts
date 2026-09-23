@@ -3,13 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
 import { createNotification } from "@/features/notifications/service";
+import { stampActiveSessionCheckpoint } from "@/features/study-sessions/eligibility";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/session";
 import { updateProfileSchema } from "@/features/profile/schema";
-import {
-  getPublicProfile,
-  type PublicProfile,
-} from "@/features/profile/queries";
+import { getPublicProfile, type PublicProfile } from "@/features/profile/queries";
 
 /**
  * Update the CURRENT user's own profile. Authorization is implicit and
@@ -46,8 +44,11 @@ export async function updateProfile(input: {
 
 /**
  * Presence heartbeat. Called periodically by the client while a tab is visible;
- * updates `lastSeenAt` so the user reads as ONLINE. Deliberately does not
- * revalidate anything — it must be cheap and side-effect-free on the UI.
+ * updates `lastSeenAt` so the user reads as ONLINE, and stamps the reward-
+ * eligibility checkpoint on any open StudySession (the only place that
+ * checkpoint is ever written — eligibility.ts is never driven by client input).
+ * Deliberately does not revalidate anything — it must be cheap and
+ * side-effect-free on the UI.
  */
 export async function touchPresence() {
   const user = await requireCurrentUser();
@@ -55,6 +56,7 @@ export async function touchPresence() {
     where: { id: user.id },
     data: { lastSeenAt: new Date() },
   });
+  await stampActiveSessionCheckpoint(user.id);
 }
 
 /** Fetch a target user's public profile for the profile card (client-invoked

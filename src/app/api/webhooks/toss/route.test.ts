@@ -112,6 +112,7 @@ describe("POST /api/webhooks/toss", () => {
       provider: "toss",
       externalRefundId: "cancel-tx-1",
       processedAt: new Date("2026-08-26T00:00:00Z"),
+      revokeEntitlement: true,
     });
     expect(res.status).toBe(200);
   });
@@ -135,7 +136,11 @@ describe("POST /api/webhooks/toss", () => {
     const res = await POST(webhookRequest({ data: { paymentKey: "pay-2" } }));
 
     expect(applyRefundEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ paymentId: "db-pay-2", amount: 2000 }),
+      expect.objectContaining({
+        paymentId: "db-pay-2",
+        amount: 2000,
+        revokeEntitlement: false,
+      }),
     );
     expect(res.status).toBe(200);
   });

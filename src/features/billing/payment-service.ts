@@ -5,6 +5,7 @@ import type { Payment, Plan, SubscriptionStatus } from "@/generated/prisma/clien
 import { prisma } from "@/lib/prisma";
 import { addOneMonthClamped } from "@/features/billing/period";
 import { deleteBillingKey } from "@/features/billing/toss-client";
+import { capture } from "@/features/analytics/capture";
 
 type PaymentEvent = {
   userId: string;
@@ -73,7 +74,14 @@ function isUniqueConstraintError(err: unknown): boolean {
  * the user and never upgraded them. See payment-service.test.ts.
  */
 export async function applyPaymentEvent(input: PaymentEvent) {
-  const { payment, staleBillingKeys } = await prisma.$transaction(async (tx) => {
+  // A lost insert race (P2002) aborts the interactive Prisma transaction, so
+  // the loser's fallback re-read inside it would throw P2039. Retry the whole
+  // transaction once instead: the retry sees the winner's committed row and
+  // lands in the idempotent no-op path below.
+  let result: { payment: Payment; staleBillingKeys: string[] };
+  for (let attempt = 0; ; attempt++) {
+    try {
+      result = await prisma.$transaction(async (tx) => {
     const existing = await tx.payment.findUnique({
       where: { idempotencyKey: input.idempotencyKey },
     });
@@ -85,31 +93,19 @@ export async function applyPaymentEvent(input: PaymentEvent) {
       payment = existing;
       isNewEvent = false;
     } else {
-      try {
-        payment = await tx.payment.create({
-          data: {
-            userId: input.userId,
-            amount: input.amount,
-            currency: input.currency ?? "KRW",
-            paymentProvider: input.provider,
-            externalTransactionId: input.externalTransactionId,
-            idempotencyKey: input.idempotencyKey,
-            status: input.status,
-            paidAt: input.paidAt ?? (input.status === "SUCCEEDED" ? new Date() : null),
-          },
-        });
-        isNewEvent = true;
-      } catch (err) {
-        // Lost a race against a concurrent call for the same idempotencyKey
-        // (e.g. a duplicated webhook delivery landing alongside the callback
-        // route) — someone else just created it, so treat this call as a
-        // redelivery of an already-recorded event instead of erroring.
-        if (!isUniqueConstraintError(err)) throw err;
-        payment = await tx.payment.findUniqueOrThrow({
-          where: { idempotencyKey: input.idempotencyKey },
-        });
-        isNewEvent = false;
-      }
+      payment = await tx.payment.create({
+        data: {
+          userId: input.userId,
+          amount: input.amount,
+          currency: input.currency ?? "KRW",
+          paymentProvider: input.provider,
+          externalTransactionId: input.externalTransactionId,
+          idempotencyKey: input.idempotencyKey,
+          status: input.status,
+          paidAt: input.paidAt ?? (input.status === "SUCCEEDED" ? new Date() : null),
+        },
+      });
+      isNewEvent = true;
     }
 
     if (!isNewEvent) {
@@ -138,7 +134,7 @@ export async function applyPaymentEvent(input: PaymentEvent) {
       // alongside the new one, and both would be charged on every renewal.
       const staleActive = await tx.subscription.findMany({
         where: { userId: input.userId, status: "ACTIVE", NOT: { externalId: subExternalId } },
-        select: { id: true, externalId: true },
+        select: { id: true, externalId: true, paymentProvider: true },
       });
       if (staleActive.length > 0) {
         await tx.subscription.updateMany({
@@ -189,24 +185,47 @@ export async function applyPaymentEvent(input: PaymentEvent) {
         },
       });
 
+      // Revenue event, fired at the exact moment entitlement is granted. This
+      // covers all charge paths (Toss checkout, Toss renewal cron, Polar
+      // order.paid) since every one funnels through this grant branch. New
+      // purchases vs renewals are NOT distinguished here by design — see
+      // events.ts for the classification rule.
+      capture({
+        name: "charge_succeeded",
+        props: {
+          plan: input.plan,
+          amount: input.amount,
+          currency: input.currency ?? "KRW",
+          provider: input.provider,
+        },
+      });
+
+      // Only Toss-owned billing keys get deleted — a Polar externalId (the
+      // Polar subscription id) must never be DELETE'd against the Toss API.
       staleBillingKeys = staleActive
+        .filter((s) => s.paymentProvider === "toss")
         .map((s) => s.externalId)
         .filter((id): id is string => Boolean(id));
     }
 
     return { payment, staleBillingKeys };
-  });
+      });
 
-  // Best-effort, outside the DB transaction: tell Toss the superseded billing
-  // key(s) are no longer needed. Never blocks the entitlement grant above — a
-  // failure here just leaves an unused registration at Toss, which StudyOS
-  // will never charge again since the renewal cron only bills ACTIVE
-  // subscriptions.
-  for (const billingKey of staleBillingKeys) {
-    deleteBillingKey(billingKey).catch(() => {});
+      // Best-effort, outside the DB transaction: tell Toss the superseded
+      // billing key(s) are no longer needed. Never blocks the entitlement
+      // grant above — a failure here just leaves an unused registration at
+      // Toss, which StudyOS will never charge again since the renewal cron
+      // only bills ACTIVE subscriptions.
+      for (const billingKey of result.staleBillingKeys) {
+        deleteBillingKey(billingKey).catch(() => {});
+      }
+
+      return result.payment;
+    } catch (err) {
+      if (attempt === 0 && isUniqueConstraintError(err)) continue;
+      throw err;
+    }
   }
-
-  return payment;
 }
 
 export async function applyRefundEvent(input: {
@@ -217,6 +236,14 @@ export async function applyRefundEvent(input: {
   provider?: string;
   externalRefundId?: string;
   processedAt?: Date;
+  /**
+   * Whether a completed refund must ALSO revoke entitlement. Default true —
+   * a FULL refund of the current subscription's charge should pull the user
+   * back to TRIAL. Pass false for partial refunds: the customer still paid
+   * for the current period, so the refund is recorded but access stays
+   * (see polar-events.ts's order.refunded handling).
+   */
+  revokeEntitlement?: boolean;
 }) {
   return prisma.$transaction(async (tx) => {
     // Toss (and PGs generally) can redeliver the same webhook notification —
@@ -248,7 +275,7 @@ export async function applyRefundEvent(input: {
     // refunded payment leaves the user's paid access in place indefinitely.
     // Simplification: reverts straight to TRIAL rather than any prior paid
     // tier — this app has no plan-upgrade-history model yet to fall back to.
-    if (input.status === "SUCCEEDED") {
+    if (input.status === "SUCCEEDED" && input.revokeEntitlement !== false) {
       const payment = await tx.payment.findUnique({
         where: { id: input.paymentId },
         select: { userId: true, subscriptionId: true },

@@ -1,4 +1,5 @@
 import {
+  Banknote,
   Bell,
   Bot,
   CreditCard,
@@ -51,6 +52,12 @@ export const adminNavItems: AdminNavItem[] = [
     href: "/admin/security",
     icon: ShieldCheck,
     capability: "manageSecurity",
+  },
+  {
+    title: "수익 지표",
+    href: "/admin/revenue",
+    icon: Banknote,
+    capability: "manageSystem",
   },
   { title: "시스템", href: "/admin/system", icon: Server, capability: "manageSystem" },
   // No capability → visible to all admins; the page is read-only (view versions).

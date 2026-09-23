@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UpgradeCheckoutButton } from "@/features/billing/components/upgrade-checkout-button";
-import { isTossConfigured } from "@/features/billing/toss-client";
+import { isCheckoutUsable } from "@/features/billing/providers";
 import { PLANS, PLAN_META, TRIAL_DAYS, type Plan } from "@/features/billing/plans";
 import {
   canUseFeature,
@@ -15,11 +15,27 @@ import {
   type Limit,
 } from "@/features/billing/entitlements";
 import { getCurrentUserOrNull } from "@/lib/session";
+import { PricingViewTracker } from "@/features/analytics/components/pricing-view-tracker";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "요금제 — StudyOS",
-  description: "StudyOS Trial · Pro · Premium 플랜을 비교해보세요.",
+  description: "StudyOS Trial · Pro 플랜을 비교해보세요. Pro는 월 $9.99입니다.",
+  alternates: { canonical: "/pricing" },
+  openGraph: {
+    title: "요금제 — StudyOS",
+    description:
+      "7일 무료 체험 후 Pro(월 $9.99)로 업그레이드하세요. Premium은 준비 중입니다.",
+    url: "/pricing",
+    locale: "ko_KR",
+    siteName: "StudyOS",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "요금제 — StudyOS",
+    description: "7일 무료 체험 후 Pro(월 $9.99)로 업그레이드하세요.",
+  },
 };
 
 function dailyLabel(limit: Limit, unit: string): string {
@@ -59,7 +75,10 @@ type Row = { label: string; value: string | boolean };
 
 function rowsFor(plan: Plan): Row[] {
   return [
-    { label: "AI 문제 생성", value: dailyLabel(getFeatureLimit(plan, "AI_PROBLEM_GENERATION"), "일") },
+    {
+      label: "AI 문제 생성",
+      value: dailyLabel(getFeatureLimit(plan, "AI_PROBLEM_GENERATION"), "일"),
+    },
     { label: "모의고사 생성", value: mockLabel(plan) },
     { label: "기본 학습 통계", value: canUseFeature(plan, "BASIC_ANALYTICS") },
     { label: "월간 통계 · AI 리포트", value: canUseFeature(plan, "ADVANCED_ANALYTICS") },
@@ -83,9 +102,9 @@ function RowValue({ value }: { value: string | boolean }) {
 export default async function PricingPage() {
   // Server-decided, not a client-side fallback: exactly one of the two CTAs
   // below renders. Never show a live-looking "업그레이드" button that
-  // actually can't charge anything — see NEXT_PUBLIC_TOSS_CLIENT_KEY /
-  // TOSS_SECRET_KEY in .env.example.
-  const paymentsConfigured = isTossConfigured() && Boolean(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY);
+  // actually can't charge anything — see POLAR_TOKEN/POLAR_*_PRICE_ID and
+  // NEXT_PUBLIC_TOSS_CLIENT_KEY/TOSS_SECRET_KEY in .env.example.
+  const paymentsConfigured = isCheckoutUsable();
 
   // getCurrentUserOrNull (not requireCurrentUser) since this is a public
   // marketing page anonymous visitors browse too — only known-logged-in
@@ -97,6 +116,7 @@ export default async function PricingPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-4 py-16 sm:px-6">
+      <PricingViewTracker />
       <div className="flex flex-col items-center gap-2 text-center">
         <h1 className="text-3xl font-semibold tracking-tight">요금제</h1>
         <p className="text-muted-foreground max-w-md text-sm">
@@ -118,12 +138,16 @@ export default async function PricingPage() {
               )}
             >
               {highlight && (
-                <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2">추천</Badge>
+                <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2">
+                  추천
+                </Badge>
               )}
               <CardHeader>
                 <CardTitle className="flex items-baseline justify-between gap-2">
                   <span className="text-lg">{meta.name}</span>
-                  <span className="text-sm font-normal">{meta.priceLabel}</span>
+                  <span className="text-sm font-normal">
+                    {meta.notForSale ? "출시 예정" : meta.priceLabel}
+                  </span>
                 </CardTitle>
                 <p className="text-muted-foreground text-xs">{meta.tagline}</p>
               </CardHeader>
@@ -162,7 +186,17 @@ export default async function PricingPage() {
                 </ul>
                 <div className="mt-auto flex flex-col gap-2">
                   {isPaid ? (
-                    !paymentsConfigured ? (
+                    meta.notForSale ? (
+                      <>
+                        {/* Not-for-sale plan (PREMIUM): never a purchase CTA. */}
+                        <Button className="w-full" variant="outline" disabled>
+                          출시 예정
+                        </Button>
+                        <p className="text-muted-foreground text-center text-xs">
+                          프리미엄 기능을 기다리고 있다면 프로 플랜으로 시작하세요.
+                        </p>
+                      </>
+                    ) : !paymentsConfigured ? (
                       <>
                         {/* 결제 미구성 상태: 동작하지 않는 버튼을 동작하는 것처럼 보이게
                             두지 않는다 — 비활성 버튼 + 정직한 안내만 표시. */}
@@ -191,13 +225,13 @@ export default async function PricingPage() {
                           <Link href="/profile">구독 관리에서 변경</Link>
                         </Button>
                         <p className="text-muted-foreground text-center text-xs">
-                          다운그레이드는 프로필의 구독 관리에서 기존 구독을 취소한 뒤
-                          새로 시작할 수 있어요.
+                          다운그레이드는 프로필의 구독 관리에서 기존 구독을 취소한 뒤 새로
+                          시작할 수 있어요.
                         </p>
                       </>
                     ) : (
                       <>
-                        <UpgradeCheckoutButton plan={plan as "PRO" | "PREMIUM"} className="w-full">
+                        <UpgradeCheckoutButton plan="PRO" className="w-full">
                           {meta.name}(으)로 업그레이드
                         </UpgradeCheckoutButton>
                         <p className="text-muted-foreground text-center text-xs">

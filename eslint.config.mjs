@@ -23,6 +23,9 @@ const eslintConfig = [
       // dev-runtime is an independently deployed Node service (own package.json/
       // tsconfig/lint), not part of the Next.js app — see dev-runtime/README.md.
       "dev-runtime/**",
+      // local-agent is a separate Node CLI package (own package.json/tsconfig/
+      // lint, runs on the user's machine) — see local-agent/README.md.
+      "local-agent/**",
     ],
   },
 ];

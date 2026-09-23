@@ -41,14 +41,17 @@ export function StructuredData() {
       isPartOf: { "@id": `${SITE_URL}/#website` },
       provider: { "@id": `${SITE_URL}/#organization` },
       featureList: FEATURES.map((feature) => feature.title),
-      offers: PLANS.map((plan) => {
+      offers: PLANS.filter((plan) => !PLAN_META[plan].notForSale).map((plan) => {
         const meta = PLAN_META[plan];
+        // Schema.org `price` is in the currency's main unit (KRW is the minor
+        // unit itself); USD minor units are scaled up from cents.
+        const price = meta.currency === "USD" ? meta.priceMinor / 100 : meta.priceMinor;
         return {
           "@type": "Offer",
           name: meta.name,
-          price: meta.priceKrw,
-          priceCurrency: "KRW",
-          category: meta.priceKrw === 0 ? "free" : "subscription",
+          price,
+          priceCurrency: meta.currency,
+          category: meta.priceMinor === 0 ? "free" : "subscription",
         };
       }),
     },

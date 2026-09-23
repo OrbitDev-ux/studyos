@@ -65,7 +65,7 @@ describe("getFriendActivityFeed", () => {
       {
         id: "s1",
         userId: FRIEND_A,
-        durationSec: 1800,
+        rewardEligibleDurationSec: 1800,
         startedAt: new Date("2026-08-19T10:00:00Z"),
         subject: { name: "수학" },
         user: { name: "A", image: null },

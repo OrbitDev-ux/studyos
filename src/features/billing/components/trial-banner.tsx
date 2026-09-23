@@ -29,9 +29,6 @@ export function TrialBanner({ summary }: { summary: PlanSummary }) {
             <Button asChild size="sm">
               <Link href="/pricing">Pro 시작하기</Link>
             </Button>
-            <Button asChild size="sm" variant="outline">
-              <Link href="/pricing">Premium 시작하기</Link>
-            </Button>
           </div>
         </CardContent>
       </Card>

@@ -443,7 +443,21 @@ model StudySession {
   subjectId   String?
   startedAt   DateTime
   endedAt     DateTime?
+  /// Raw wall-clock duration the session stayed open. Personal record: the
+  /// dashboard/stats/analytics/AI-context surfaces keep using it so real
+  /// self-tracking is never penalized. This alone must NOT drive rewarded or
+  /// competitive surfaces (XP, streak, ranking, battle, missions, friend feed).
   durationSec Int       @default(0)
+  /// Server-verified portion of the session that may drive rewarded and
+  /// competitive surfaces. Credited ONLY while the existing app-wide presence
+  /// heartbeat (touchPresence / User.lastSeenAt) proves foreground activity
+  /// within a bounded window — never set from client input
+  /// (see features/study-sessions/eligibility.ts).
+  rewardEligibleDurationSec Int       @default(0)
+  /// Server-stamped presence checkpoint on the active session (written only by
+  /// the heartbeat/stop paths). The gap since the previous checkpoint is what
+  /// decides how much wall-clock time is actually credited.
+  lastVerifiedAt DateTime?
   /// What kind of study block this was: FOCUS | PROBLEM | MOCK_EXAM | REVIEW |
   /// AI_TUTOR. Free-form string (not an enum) so new modes can be added
   /// without a migration; existing rows default to FOCUS.

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { ThemeProvider } from "@/components/providers/theme-provider";
@@ -51,6 +51,19 @@ export const metadata: Metadata = {
     title,
     description,
   },
+};
+
+// Stationary viewport (responsive frameworks don't need the meta viewport
+// tag; Next emits the tag from here) + theme-color so the browser chrome
+// matches the app's dark/light surface instead of flashing white. Deliberately
+// static so marketing/legal routes stay statically generated.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

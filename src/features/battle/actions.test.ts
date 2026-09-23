@@ -1,18 +1,40 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * createBattle()'s two safety properties had no coverage: (1) you can only
- * invite accepted friends — never an arbitrary userId, and (2) if the
- * participant insert fails after the Battle row is already created, the
- * Battle row is rolled back rather than left as an orphaned, participant-less
- * row. Uses a small per-table fake to stand in for the chained Supabase
- * query builder (`.from(table).select()/.insert()/.eq()/.or()/...`).
+ * createBattle()'s two safety properties: (1) you can only invite accepted
+ * friends — never an arbitrary userId, and (2) the Battle row + participants
+ * land in ONE transaction, so a participant insert failure rolls the whole
+ * thing back instead of leaving an orphaned, participant-less Battle row.
+ * These assert the wiring against prisma mocks.
  */
 const { requireCurrentUser } = vi.hoisted(() => ({ requireCurrentUser: vi.fn() }));
 vi.mock("@/lib/session", () => ({ requireCurrentUser }));
 
-const { from } = vi.hoisted(() => ({ from: vi.fn() }));
-vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => ({ from })) }));
+const {
+  friendship,
+  battle,
+  battleParticipant,
+  transaction,
+  tx,
+} = vi.hoisted(() => {
+  const tx = {
+    battle: { create: vi.fn().mockResolvedValue({}) },
+    battleParticipant: { createMany: vi.fn().mockResolvedValue({ count: 1 }) },
+  };
+  return {
+    friendship: { findMany: vi.fn() },
+    battle: { findUnique: vi.fn(), deleteMany: vi.fn() },
+    battleParticipant: {
+      findFirst: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+      createMany: vi.fn(),
+    },
+    transaction: vi.fn((fn: (t: typeof tx) => Promise<unknown>) => fn(tx)),
+    tx,
+  };
+});
+vi.mock("@/lib/prisma", () => ({ prisma: { friendship, battle, battleParticipant, $transaction: transaction } }));
 
 const { createNotification, createNotifications, markAsReadByTarget } = vi.hoisted(
   () => ({
@@ -32,6 +54,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 import { cancelBattle, createBattle, leaveBattle, respondToBattleInvite } from "@/features/battle/actions";
 
 const USER = { id: "user-1", name: "학생", email: "student@example.com" };
+const MUTUAL_FRIEND = { requesterId: "user-1", addresseeId: "friend-1" };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -39,22 +62,13 @@ beforeEach(() => {
   createNotifications.mockResolvedValue(undefined);
   createNotification.mockResolvedValue(undefined);
   markAsReadByTarget.mockResolvedValue(undefined);
+  tx.battle.create.mockResolvedValue({});
+  tx.battleParticipant.createMany.mockResolvedValue({ count: 1 });
 });
 
 describe("createBattle — friend-only invites", () => {
   it("refuses to invite a user who isn't an accepted friend", async () => {
-    from.mockImplementation((table: string) => {
-      if (table === "Friendship") {
-        return {
-          select: () => ({
-            eq: () => ({
-              or: () => Promise.resolve({ data: [], error: null }), // no friends
-            }),
-          }),
-        };
-      }
-      throw new Error(`unexpected table: ${table}`);
-    });
+    friendship.findMany.mockResolvedValue([]); // no friends
 
     await expect(
       createBattle({
@@ -63,39 +77,16 @@ describe("createBattle — friend-only invites", () => {
         friendUserIds: ["not-a-friend"],
       }),
     ).rejects.toThrow("친구가 아닌 사용자는 초대할 수 없습니다.");
+    expect(transaction).not.toHaveBeenCalled();
   });
 });
 
 describe("createBattle — rollback on partial failure", () => {
-  it("deletes the just-created Battle row if the participants insert fails", async () => {
-    const battleDelete = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({}) }));
-    from.mockImplementation((table: string) => {
-      if (table === "Friendship") {
-        return {
-          select: () => ({
-            eq: () => ({
-              or: () =>
-                Promise.resolve({
-                  data: [{ requesterId: "user-1", addresseeId: "friend-1" }],
-                  error: null,
-                }),
-            }),
-          }),
-        };
-      }
-      if (table === "Battle") {
-        return {
-          insert: vi.fn().mockResolvedValue({ error: null }),
-          delete: battleDelete,
-        };
-      }
-      if (table === "BattleParticipant") {
-        return {
-          insert: vi.fn().mockResolvedValue({ error: { message: "insert failed" } }),
-        };
-      }
-      throw new Error(`unexpected table: ${table}`);
-    });
+  it("rolls back the whole transaction (no orphaned Battle row) when a participant insert fails", async () => {
+    friendship.findMany.mockResolvedValue([MUTUAL_FRIEND]);
+    (tx.battleParticipant.createMany as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error("insert failed"),
+    );
 
     await expect(
       createBattle({
@@ -103,37 +94,16 @@ describe("createBattle — rollback on partial failure", () => {
         durationDays: "3",
         friendUserIds: ["friend-1"],
       }),
-    ).rejects.toEqual({ message: "insert failed" });
+    ).rejects.toThrow("insert failed");
 
-    expect(battleDelete).toHaveBeenCalledTimes(1);
+    expect(battle.deleteMany).not.toHaveBeenCalled(); // rollback, no manual cleanup
     expect(createNotifications).not.toHaveBeenCalled();
   });
 });
 
 describe("createBattle — happy path", () => {
   it("creates the battle and notifies invited friends", async () => {
-    from.mockImplementation((table: string) => {
-      if (table === "Friendship") {
-        return {
-          select: () => ({
-            eq: () => ({
-              or: () =>
-                Promise.resolve({
-                  data: [{ requesterId: "user-1", addresseeId: "friend-1" }],
-                  error: null,
-                }),
-            }),
-          }),
-        };
-      }
-      if (table === "Battle") {
-        return { insert: vi.fn().mockResolvedValue({ error: null }) };
-      }
-      if (table === "BattleParticipant") {
-        return { insert: vi.fn().mockResolvedValue({ error: null }) };
-      }
-      throw new Error(`unexpected table: ${table}`);
-    });
+    friendship.findMany.mockResolvedValue([MUTUAL_FRIEND]);
 
     const battleId = await createBattle({
       metric: "study_time",
@@ -142,6 +112,13 @@ describe("createBattle — happy path", () => {
     });
 
     expect(typeof battleId).toBe("string");
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(tx.battleParticipant.createMany).toHaveBeenCalledWith({
+      data: expect.arrayContaining([
+        expect.objectContaining({ userId: "user-1", status: "accepted" }),
+        expect.objectContaining({ userId: "friend-1", status: "invited" }),
+      ]),
+    });
     expect(createNotifications).toHaveBeenCalledTimes(1);
     const notified = createNotifications.mock.calls[0]![0];
     expect(notified).toHaveLength(1);
@@ -151,15 +128,7 @@ describe("createBattle — happy path", () => {
 
 describe("respondToBattleInvite", () => {
   it("no-ops when there is no matching pending invite (already responded / not invited)", async () => {
-    from.mockImplementation(() => ({
-      select: () => ({
-        eq: () => ({
-          eq: () => ({
-            eq: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }),
-          }),
-        }),
-      }),
-    }));
+    battleParticipant.findFirst.mockResolvedValue(null);
 
     await respondToBattleInvite("battle-1", true);
 
@@ -169,77 +138,42 @@ describe("respondToBattleInvite", () => {
 
 describe("leaveBattle", () => {
   it("sets the caller's own accepted participant row to 'left'", async () => {
-    const update = vi.fn(() => ({
-      eq: () => ({
-        eq: () => ({
-          eq: () => Promise.resolve({ error: null }),
-        }),
-      }),
-    }));
-    from.mockImplementation((table: string) => {
-      if (table === "Battle") {
-        return { select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: { creatorId: "someone-else" } }) }) }) };
-      }
-      if (table === "BattleParticipant") {
-        return { update };
-      }
-      throw new Error(`unexpected table: ${table}`);
-    });
+    battle.findUnique.mockResolvedValue({ creatorId: "someone-else" });
+    battleParticipant.updateMany.mockResolvedValue({ count: 1 });
 
     await leaveBattle("battle-1");
 
-    expect(update).toHaveBeenCalledWith({ status: "left" });
+    expect(battleParticipant.updateMany).toHaveBeenCalledWith({
+      where: { battleId: "battle-1", userId: "user-1", status: "accepted" },
+      data: { status: "left" },
+    });
   });
 
   it("is a no-op for the battle's creator (use cancelBattle instead)", async () => {
-    const update = vi.fn();
-    from.mockImplementation((table: string) => {
-      if (table === "Battle") {
-        return { select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: { creatorId: "user-1" } }) }) }) };
-      }
-      if (table === "BattleParticipant") {
-        return { update };
-      }
-      throw new Error(`unexpected table: ${table}`);
-    });
+    battle.findUnique.mockResolvedValue({ creatorId: "user-1" });
 
     await leaveBattle("battle-1");
 
-    expect(update).not.toHaveBeenCalled();
+    expect(battleParticipant.updateMany).not.toHaveBeenCalled();
   });
 
   it("is a no-op when the battle doesn't exist", async () => {
-    const update = vi.fn();
-    from.mockImplementation((table: string) => {
-      if (table === "Battle") {
-        return { select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: null }) }) }) };
-      }
-      if (table === "BattleParticipant") {
-        return { update };
-      }
-      throw new Error(`unexpected table: ${table}`);
-    });
+    battle.findUnique.mockResolvedValue(null);
 
     await leaveBattle("battle-1");
 
-    expect(update).not.toHaveBeenCalled();
+    expect(battleParticipant.updateMany).not.toHaveBeenCalled();
   });
 });
 
 describe("cancelBattle", () => {
   it("scopes the delete to (id, creatorId) so a non-creator can't cancel someone else's battle", async () => {
-    const eqCreatorId = vi.fn(() => Promise.resolve({ error: null }));
-    const eqId = vi.fn(() => ({ eq: eqCreatorId }));
-    const del = vi.fn(() => ({ eq: eqId }));
-    from.mockImplementation((table: string) => {
-      if (table === "Battle") return { delete: del };
-      throw new Error(`unexpected table: ${table}`);
-    });
+    battle.deleteMany.mockResolvedValue({ count: 1 });
 
     await cancelBattle("battle-1");
 
-    expect(del).toHaveBeenCalledTimes(1);
-    expect(eqId).toHaveBeenCalledWith("id", "battle-1");
-    expect(eqCreatorId).toHaveBeenCalledWith("creatorId", "user-1");
+    expect(battle.deleteMany).toHaveBeenCalledWith({
+      where: { id: "battle-1", creatorId: "user-1" },
+    });
   });
 });

@@ -40,8 +40,8 @@ import { IMPORT_SOURCE } from "@/features/problems/import/types";
 import { DEFAULT_SUBJECTS, SUBJECT_COLOR_PALETTE } from "@/features/subjects/constants";
 import { getClientIp } from "@/lib/ip";
 import { prisma } from "@/lib/prisma";
-import { createClient } from "@/lib/supabase/server";
 import { requireCurrentUser } from "@/lib/session";
+import { capture } from "@/features/analytics/capture";
 import { headers } from "next/headers";
 import type { Difficulty, QuestionType } from "@/generated/prisma/client";
 
@@ -96,8 +96,6 @@ export async function generateProblems(
   if (!resolved.ok) return { error: resolved.error };
   const { subjectName, unitName, gradeName, schoolLevelName, curriculumLabel } =
     resolved.value;
-
-  const supabase = await createClient();
 
   // Map the canonical taxonomy subject onto the user's OWN Subject row (every
   // user is seeded with 수학/영어/국어/과학), creating it if missing. Keeps
@@ -201,86 +199,79 @@ export async function generateProblems(
   if (duplicateCount > 0) problems = dedupedProblems;
 
   const problemSetId = randomUUID();
-  const { error: setError } = await supabase.from("ProblemSet").insert({
-    id: problemSetId,
-    userId: user.id,
-    subjectId: subject.id,
-    title: `${subject.name}${unitName ? ` · ${unitName}` : ""}`,
-    unit: unitName,
-    difficulty: parsed.difficulty,
-  });
-  if (setError) throw setError;
 
-  // PostgREST is one statement per request — no multi-table transaction
-  // like the old prisma.$transaction(). Insert sequentially and, if a
-  // later insert fails, best-effort clean up what already landed instead
-  // of leaving an unrolled-back partial batch. Deleting a Problem cascades
-  // to its Choices at the DB level, so only the Problem ids need tracking.
-  const insertedProblemIds: string[] = [];
-  try {
+  // One Prisma transaction — the same atomicity the old Prisma-based code had
+  // before the brief PostgREST era (which had to insert sequentially then
+  // best-effort clean up a partial batch, since PostgREST is one statement
+  // per request). ProblemSet + Problems + Choices now all commit or roll back
+  // together.
+  await prisma.$transaction(async (tx) => {
+    await tx.problemSet.create({
+      data: {
+        id: problemSetId,
+        userId: user.id,
+        subjectId: subject.id,
+        title: `${subject.name}${unitName ? ` · ${unitName}` : ""}`,
+        unit: unitName,
+        difficulty: parsed.difficulty as Difficulty,
+      },
+    });
+
     for (const problem of problems) {
       const problemId = randomUUID();
-      const { error: problemError } = await supabase.from("Problem").insert({
-        id: problemId,
-        userId: user.id,
-        problemSetId,
-        subjectId: subject.id,
-        type: parsed.type,
-        difficulty: parsed.difficulty,
-        unit: unitName,
-        grade: gradeName,
-        prompt: problem.prompt,
-        explanation: problem.explanation,
-        answerText: problem.answerText || null,
-        scoringCriteria: problem.scoringCriteria || null,
+      await tx.problem.create({
+        data: {
+          id: problemId,
+          userId: user.id,
+          problemSetId,
+          subjectId: subject.id,
+          type: parsed.type as QuestionType,
+          difficulty: parsed.difficulty as Difficulty,
+          unit: unitName,
+          grade: gradeName,
+          prompt: problem.prompt,
+          explanation: problem.explanation,
+          answerText: problem.answerText || null,
+          scoringCriteria: problem.scoringCriteria || null,
+        },
       });
-      if (problemError) throw problemError;
-      insertedProblemIds.push(problemId);
 
-      if (problem.choices) {
-        const { error: choiceError } = await supabase.from("Choice").insert(
-          problem.choices.map((choice) => ({
+      if (problem.choices?.length) {
+        await tx.choice.createMany({
+          data: problem.choices.map((choice) => ({
             id: randomUUID(),
             problemId,
             label: choice.label,
             content: choice.content,
             isCorrect: choice.isCorrect,
           })),
-        );
-        if (choiceError) throw choiceError;
+        });
       }
     }
-  } catch (err) {
-    if (insertedProblemIds.length > 0) {
-      await supabase.from("Problem").delete().in("id", insertedProblemIds);
-    }
-    await supabase.from("ProblemSet").delete().eq("id", problemSetId);
-    throw err;
-  }
+  });
 
   revalidatePath("/problems");
   // New problems must also show up in the 문제은행 list immediately.
   revalidatePath("/study-bank");
+  capture({
+    name: "problems_generated",
+    props: { count: problems.length, subject: subjectName, type: parsed.type },
+  });
   return {};
 }
 
 export async function toggleFavorite(problemId: string) {
   const user = await requireCurrentUser();
-  const supabase = await createClient();
-
-  const { data: problem } = await supabase
-    .from("Problem")
-    .select("isFavorite")
-    .eq("id", problemId)
-    .eq("userId", user.id)
-    .maybeSingle();
+  const problem = await prisma.problem.findFirst({
+    where: { id: problemId, userId: user.id },
+    select: { isFavorite: true },
+  });
   if (!problem) return;
 
-  const { error } = await supabase
-    .from("Problem")
-    .update({ isFavorite: !problem.isFavorite })
-    .eq("id", problemId);
-  if (error) throw error;
+  await prisma.problem.updateMany({
+    where: { id: problemId, userId: user.id },
+    data: { isFavorite: !problem.isFavorite },
+  });
 
   revalidatePath("/problems");
   // Keep the 문제은행 "저장" tab / star state in sync without a manual refresh.
@@ -480,14 +471,8 @@ export async function discardSimilarProblem(
 
 export async function deleteProblem(problemId: string) {
   const user = await requireCurrentUser();
-  const supabase = await createClient();
 
-  const { error } = await supabase
-    .from("Problem")
-    .delete()
-    .eq("id", problemId)
-    .eq("userId", user.id);
-  if (error) throw error;
+  await prisma.problem.deleteMany({ where: { id: problemId, userId: user.id } });
 
   revalidatePath("/problems");
   // Keep the 문제은행 list in sync after a delete (it reads live from the DB).
@@ -511,17 +496,22 @@ export async function submitProblemAnswer(
   },
 ): Promise<{ correct: boolean; explanation: string | null; correctChoiceId: string | null }> {
   const user = await requireCurrentUser();
-  const supabase = await createClient();
 
   // Solvable if it is the user's OWN problem OR a shared imported bank problem
   // (source = "import"). The attempt/wrong-answer are still recorded under the
   // SOLVING user, so shared problems flow through the normal Learning-OS path.
-  const { data: problem } = await supabase
-    .from("Problem")
-    .select("*, choices:Choice(*), subject:Subject(name)")
-    .eq("id", problemId)
-    .or(`userId.eq.${user.id},source.eq.${IMPORT_SOURCE}`)
-    .maybeSingle();
+  // `choices` is fetched in full (isCorrect included) ONLY here, server-side,
+  // where grading needs it — it never crosses the client boundary.
+  const problem = await prisma.problem.findFirst({
+    where: {
+      id: problemId,
+      OR: [{ userId: user.id }, { source: IMPORT_SOURCE }],
+    },
+    include: {
+      choices: true,
+      subject: { select: { name: true } },
+    },
+  });
   if (!problem) throw new Error("문제를 찾을 수 없습니다.");
 
   // Attribute the attempt to the SOLVING user's own subject. For an owned
@@ -530,7 +520,7 @@ export async function submitProblemAnswer(
   // the same canonical name (upsert) — otherwise weakness/stats would split the
   // attempt out under a subjectId the user doesn't own ("미지정 과목").
   let attemptSubjectId = problem.subjectId ?? null;
-  const subjectName = (problem.subject as { name?: string } | null)?.name;
+  const subjectName = problem.subject?.name;
   if (problem.userId !== user.id && subjectName) {
     const color = DEFAULT_SUBJECTS.find((s) => s.name === subjectName)?.color;
     const ownSubject = await prisma.subject.upsert({

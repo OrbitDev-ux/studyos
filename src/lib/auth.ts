@@ -6,10 +6,10 @@ import Google from "next-auth/providers/google";
 import { emailSignInSchema } from "@/features/auth/schema";
 import { verifyPassword } from "@/features/auth/password";
 import { seedDefaultSubjects } from "@/features/subjects/seed";
+import { capture } from "@/features/analytics/capture";
 import { authConfig } from "@/lib/auth.config";
 import { getClientIp } from "@/lib/ip";
 import { prisma } from "@/lib/prisma";
-import { createClient } from "@/lib/supabase/server";
 
 // Brute-force guard on password sign-in (Security audit: unlike admin login,
 // this had no rate limit at all — only bcrypt's inherent compare delay).
@@ -45,12 +45,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         });
         if (recentFailures >= MAX_FAILED_LOGINS_PER_IP) return null;
 
-        const supabase = await createClient();
-        const { data: user } = await supabase
-          .from("User")
-          .select("id, name, email, image, password")
-          .eq("email", parsed.data.email)
-          .maybeSingle();
+        // Anon-REST trust boundary closed: the credential check reads the
+        // User row via Prisma (owner role) instead of the public Supabase
+        // endpoint the anon key could be used against. Email is @unique.
+        const user = await prisma.user.findUnique({
+          where: { email: parsed.data.email },
+          select: { id: true, name: true, email: true, image: true, password: true },
+        });
 
         const valid = await verifyPassword(parsed.data.password, user?.password ?? null);
         if (!user || !valid) {
@@ -97,6 +98,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async createUser({ user }) {
       if (!user.id) return;
       await seedDefaultSubjects(user.id);
+    },
+    // Fires for every successful sign-in regardless of provider (credentials,
+    // google, guest) — the one reliable place for login funnel metrics since
+    // every client action that calls signIn() ends here.
+    async signIn({ account }) {
+      // NextAuth types the account loosely; read just the provider string and
+      // map it onto the event's method union. Credentials covers both email
+      // password sign-ins and guest accounts.
+      const provider = (account as { provider: string } | null)?.provider;
+      capture({
+        name: "login_completed",
+        props: { method: provider === "google" ? "google" : provider ? "credentials" : "unknown" },
+      });
     },
   },
 });

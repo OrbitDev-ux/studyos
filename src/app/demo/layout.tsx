@@ -5,6 +5,7 @@ import { DemoHeader } from "@/features/demo/components/demo-header";
 import { DemoSidebar } from "@/features/demo/components/demo-sidebar";
 import { DemoTourLauncher } from "@/features/demo/components/demo-tour-launcher";
 import { DemoProvider } from "@/features/demo/state";
+import { DemoStartTracker } from "@/features/analytics/components/demo-start-tracker";
 
 // Public demo section: reuses the real app shell (sidebar/header primitives) but
 // requires NO authentication and reads NO real data. Titles are agent/SEO
@@ -29,6 +30,8 @@ export default function DemoLayout({ children }: { children: React.ReactNode }) 
           {/* Onboarding tour auto-starts once per tab; no server state written. */}
           <DemoTourLauncher />
         </SidebarInset>
+        {/* Fires demo_started once per tab session (Vercel Web Analytics beacon). */}
+        <DemoStartTracker />
       </SidebarProvider>
     </DemoProvider>
   );

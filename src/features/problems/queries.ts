@@ -1,5 +1,5 @@
-import type { Problem, Subject } from "@/generated/prisma/client";
-import { createClient } from "@/lib/supabase/server";
+import type { Prisma, Problem, Subject } from "@/generated/prisma/client";
+import { prisma } from "@/lib/prisma";
 import { PROBLEMS_PAGE_SIZE, type ProblemsParams } from "@/features/problems/search-params";
 
 // The Supabase client has no generated DB types wired in, so every .from()
@@ -40,29 +40,28 @@ export async function getProblems(
   userId: string,
   params: ProblemsParams,
 ): Promise<PaginatedProblems> {
-  const supabase = await createClient();
+  const where: Prisma.ProblemWhereInput = { userId };
+  if (params.tab === "favorites") where.isFavorite = true;
+  if (params.subjectId) where.subjectId = params.subjectId;
 
-  let query = supabase
-    .from("Problem")
-    .select("*, choices:Choice(id,problemId,label,content), subject:Subject(*)", {
-      count: "exact",
-    })
-    .eq("userId", userId);
+  const skip = (params.page - 1) * PROBLEMS_PAGE_SIZE;
+  const [items, total] = await Promise.all([
+    prisma.problem.findMany({
+      where,
+      include: {
+        subject: true,
+        choices: { select: { id: true, problemId: true, label: true, content: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: PROBLEMS_PAGE_SIZE,
+    }),
+    prisma.problem.count({ where }),
+  ]);
 
-  if (params.tab === "favorites") query = query.eq("isFavorite", true);
-  if (params.subjectId) query = query.eq("subjectId", params.subjectId);
-
-  const from = (params.page - 1) * PROBLEMS_PAGE_SIZE;
-  const to = from + PROBLEMS_PAGE_SIZE - 1;
-  const { data, error, count } = await query
-    .order("createdAt", { ascending: false })
-    .range(from, to);
-  if (error) throw error;
-
-  const total = count ?? 0;
   if (total === 0) return emptyResult(params.page);
   return {
-    items: data as ProblemWithRelations[],
+    items: items as ProblemWithRelations[],
     total,
     page: params.page,
     pageSize: PROBLEMS_PAGE_SIZE,
@@ -75,13 +74,10 @@ export async function getRecentProblems(
   userId: string,
   limit: number,
 ): Promise<ProblemWithSubject[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("Problem")
-    .select("*, subject:Subject(*)")
-    .eq("userId", userId)
-    .order("createdAt", { ascending: false })
-    .limit(limit);
-  if (error) throw error;
-  return data as ProblemWithSubject[];
+  return prisma.problem.findMany({
+    where: { userId },
+    include: { subject: true },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  }) as unknown as ProblemWithSubject[];
 }

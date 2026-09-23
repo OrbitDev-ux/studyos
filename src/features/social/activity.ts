@@ -14,6 +14,9 @@ export type FriendActivityItem =
       name: string | null;
       image: string | null;
       subjectName: string | null;
+      /** Shared study duration shown to friends — the server-verified
+       * (reward-eligible) portion, since the feed is a social/competitive
+       * surface (eligibility.ts). */
       durationSec: number;
       occurredAt: Date;
     }
@@ -56,13 +59,13 @@ export async function getFriendActivityFeed(
       where: {
         userId: { in: friendIds },
         user: { activitySharingEnabled: true },
-        durationSec: { gt: 0 },
+        rewardEligibleDurationSec: { gt: 0 },
         startedAt: { gte: start },
       },
       select: {
         id: true,
         userId: true,
-        durationSec: true,
+        rewardEligibleDurationSec: true,
         startedAt: true,
         subject: { select: { name: true } },
         user: { select: { name: true, image: true } },
@@ -97,7 +100,7 @@ export async function getFriendActivityFeed(
     name: s.user.name,
     image: s.user.image,
     subjectName: s.subject?.name ?? null,
-    durationSec: s.durationSec,
+    durationSec: s.rewardEligibleDurationSec,
     occurredAt: s.startedAt,
   }));
 

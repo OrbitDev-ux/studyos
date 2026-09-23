@@ -9,6 +9,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { headers } = vi.hoisted(() => ({ headers: vi.fn() }));
 vi.mock("next/headers", () => ({ headers }));
 
+// actions.ts now imports the analytics capture sink (features/analytics/capture),
+// whose "server-only" marker isn't resolvable in the vitest environment.
+vi.mock("server-only", () => ({}));
+
 // actions.ts imports `AuthError` directly from "next-auth" — the real package
 // transitively requires "next/server" in a way this vitest environment can't
 // resolve (unrelated to signUpWithEmail itself), so it's stubbed like every

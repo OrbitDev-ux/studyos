@@ -15,6 +15,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { auth, signIn, signOut } from "@/lib/auth";
 import { getClientIp } from "@/lib/ip";
 import { prisma } from "@/lib/prisma";
+import { capture } from "@/features/analytics/capture";
 
 const INVALID_CREDENTIALS_ERROR = "이메일 또는 비밀번호가 올바르지 않습니다.";
 
@@ -87,6 +88,8 @@ export async function signInAsGuest(): Promise<{ error?: string }> {
     return { error: "게스트 계정 생성에 실패했어요. 잠시 후 다시 시도해주세요." };
   }
 
+  capture({ name: "signup_completed", props: { method: "guest" } });
+
   try {
     await signIn("credentials", { email, password, redirect: false });
     return {};
@@ -156,6 +159,8 @@ export async function signUpWithEmail(
     }
     throw err;
   }
+
+  capture({ name: "signup_completed", props: { method: "email" } });
 
   try {
     await signIn("credentials", {

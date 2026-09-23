@@ -16,7 +16,9 @@ export type StreakStats = {
  * in rather than computed here so this stays a pure, easily-testable function.
  *
  * Streak definition: a day counts if it has at least one StudySession with
- * durationSec > 0. The current streak tolerates "not yet studied today" (it
+ * rewardEligibleDurationSec > 0 (the server-verified portion — an unattended
+ * open session must not keep a streak alive; see eligibility.ts). The current
+ * streak tolerates "not yet studied today" (it
  * still counts yesterday's run) but breaks the moment a full day is skipped.
  */
 export function computeStreakStats(studyDates: string[], todayStr: string): StreakStats {

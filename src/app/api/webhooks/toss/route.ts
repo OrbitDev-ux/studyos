@@ -62,6 +62,10 @@ export async function POST(request: Request) {
       provider: "toss",
       externalRefundId: latestCancel?.transactionKey,
       processedAt: latestCancel?.canceledAt ? new Date(latestCancel.canceledAt) : new Date(),
+      // Only a FULL cancellation returns the money AND pulls entitlement (same
+      // rule as Polar's order.refunded). A PARTIAL_CANCELED just records the
+      // money returned — the customer still paid for the current period.
+      revokeEntitlement: payment.status !== "PARTIAL_CANCELED",
     });
 
     return NextResponse.json({ ok: true });

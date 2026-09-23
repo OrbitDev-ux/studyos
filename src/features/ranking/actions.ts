@@ -3,7 +3,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { revalidatePath } from "next/cache";
 import { schoolFormSchema } from "@/features/ranking/schema";
-import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/session";
 
 type Result = { error?: string };
@@ -18,12 +18,10 @@ export async function updateSchool(school: string): Promise<Result> {
   }
 
   try {
-    const supabase = await createClient();
-    const { error } = await supabase
-      .from("User")
-      .update({ school: parsed.data.school })
-      .eq("id", user.id);
-    if (error) throw error;
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { school: parsed.data.school },
+    });
 
     revalidatePath("/ranking");
     return {};

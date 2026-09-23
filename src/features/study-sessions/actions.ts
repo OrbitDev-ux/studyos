@@ -2,8 +2,9 @@
 
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { onStudySessionCompleted } from "@/features/growth/hooks";
+import { finalizeEligibleDuration } from "@/features/study-sessions/eligibility";
+import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/session";
 
 const STUDY_SESSION_TYPES = ["FOCUS", "PROBLEM", "MOCK_EXAM", "REVIEW", "AI_TUTOR"] as const;
@@ -11,7 +12,6 @@ export type StudySessionType = (typeof STUDY_SESSION_TYPES)[number];
 
 export async function startStudySession(arg?: FormData | StudySessionType) {
   const user = await requireCurrentUser();
-  const supabase = await createClient();
 
   // Callable two ways: as a <form action> (arg is FormData → default FOCUS) or
   // programmatically with an explicit type. Whitelist server-side so a client
@@ -21,78 +21,73 @@ export async function startStudySession(arg?: FormData | StudySessionType) {
       ? (arg as StudySessionType)
       : "FOCUS";
 
-  // .limit(1) + order (not a bare .maybeSingle() on the raw filter): if a past
-  // race ever left more than one open session for this user, .maybeSingle()
-  // would throw on "more than one row" instead of just detecting "one is
-  // open" — this stays resilient to that instead of hard-failing the whole
-  // start action.
-  const { data: active } = await supabase
-    .from("StudySession")
-    .select("id")
-    .eq("userId", user.id)
-    .is("endedAt", null)
-    .order("startedAt", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // findFirst (not findUnique on the open-session predicate): if a past race
+  // ever left more than one open session for this user, findFirst just picks
+  // the newest instead of throwing on "more than one row" — same resilience
+  // the old Supabase limit(1)/maybeSingle() pair gave us.
+  const active = await prisma.studySession.findFirst({
+    where: { userId: user.id, endedAt: null },
+    orderBy: { startedAt: "desc" },
+    select: { id: true },
+  });
   if (active) return;
 
-  const { error } = await supabase.from("StudySession").insert({
-    id: randomUUID(),
-    userId: user.id,
-    startedAt: new Date().toISOString(),
-    type: sessionType,
+  await prisma.studySession.create({
+    data: { id: randomUUID(), userId: user.id, startedAt: new Date(), type: sessionType },
   });
-  if (error) throw error;
 
   revalidatePath("/dashboard");
 }
 
 export async function stopStudySession() {
   const user = await requireCurrentUser();
-  const supabase = await createClient();
 
   // Same resilience as startStudySession: if more than one open session ever
-  // exists for this user, close the most recently started one instead of
-  // .maybeSingle() throwing on "more than one row" and leaving the timer
-  // stuck open forever.
-  const { data: active } = await supabase
-    .from("StudySession")
-    .select("id, startedAt")
-    .eq("userId", user.id)
-    .is("endedAt", null)
-    .order("startedAt", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // exists for this user, close the most recently started one instead of a
+  // findUnique-throwing race leaving the timer stuck open forever.
+  const active = await prisma.studySession.findFirst({
+    where: { userId: user.id, endedAt: null },
+    orderBy: { startedAt: "desc" },
+    select: {
+      id: true,
+      startedAt: true,
+      lastVerifiedAt: true,
+      rewardEligibleDurationSec: true,
+    },
+  });
   if (!active) return;
 
   const endedAt = new Date();
-  const startedAt = new Date(active.startedAt);
   const durationSec = Math.max(
     0,
-    Math.round((endedAt.getTime() - startedAt.getTime()) / 1000),
+    Math.round((endedAt.getTime() - active.startedAt.getTime()) / 1000),
   );
 
-  // .eq("endedAt", null) guards against a double-submit (e.g. a doubled form
+  // Anti-cheat: durationSec (wall-clock) keeps being the personal record, but
+  // only the server-verified portion — proximity to the app-wide presence
+  // heartbeat — may drive XP/missions (passed to the Growth hook below) and the
+  // competitive surfaces (streak/ranking/battle/friend feed). A session that
+  // sat open unattended earns nothing no matter how long it ran.
+  const rewardEligibleDurationSec = finalizeEligibleDuration(active, endedAt);
+
+  // .where endedAt: null guards against a double-submit (e.g. a doubled form
   // action call) racing this same update twice — the second call's UPDATE
   // then matches zero rows instead of re-closing (and re-durationing) the
-  // same session a second time. .select().maybeSingle() lets us tell WHICH
-  // call actually performed the close (a row comes back) vs lost the race
-  // (null) — needed below so the Growth hook only ever fires once per
-  // session, from whichever call actually closed it.
-  const { data: closed, error } = await supabase
-    .from("StudySession")
-    .update({ endedAt: endedAt.toISOString(), durationSec })
-    .eq("id", active.id)
-    .is("endedAt", null)
-    .select("id")
-    .maybeSingle();
-  if (error) throw error;
+  // same session a second time. updateMany's count tells us WHICH call
+  // actually performed the close (count 1) vs lost the race (count 0) —
+  // needed below so the Growth hook only ever fires once per session, from
+  // whichever call actually closed it.
+  const closed = await prisma.studySession.updateMany({
+    where: { id: active.id, endedAt: null },
+    data: { endedAt, durationSec, rewardEligibleDurationSec, lastVerifiedAt: endedAt },
+  });
 
   revalidatePath("/dashboard");
 
-  if (closed) {
-    // Growth/Mission progress — server-measured duration only, keyed by this
-    // session's own id so it can never be credited twice (features/growth/hooks.ts).
-    await onStudySessionCompleted(user.id, active.id, durationSec, user.timezone);
+  if (closed.count > 0) {
+    // Growth/Mission progress — server-measured, reward-eligible duration
+    // only, keyed by this session's own id so it can never be credited twice
+    // (features/growth/hooks.ts).
+    await onStudySessionCompleted(user.id, active.id, rewardEligibleDurationSec, user.timezone);
   }
 }

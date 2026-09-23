@@ -1,6 +1,9 @@
 // Edge-safe maintenance reader for the middleware. The middleware runs on the
-// Edge runtime and can't reach Prisma, so it reads the (public, anon-readable)
-// Maintenance row over Supabase's REST endpoint. A short module-level cache
+// Edge runtime and can't reach Prisma, so it reads the single public
+// Maintenance row (id='singleton') over Supabase's REST endpoint. This is the
+// ONLY deliberate anon-REST read left in the codebase — the anon grant is
+// RLS-gated to that one row by policy "anon_select_maintenance" (see migration
+// 20260921000000_close_anon_rest_trust_boundary). A short module-level cache
 // keeps this off the hot path, and every failure fails OPEN (site stays up) so
 // a Supabase blip never locks users — or admins — out.
 

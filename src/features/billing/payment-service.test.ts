@@ -79,7 +79,11 @@ const BASE_EVENT = {
 describe("applyPaymentEvent — new event (fresh idempotencyKey)", () => {
   it("grants entitlement immediately on a brand-new SUCCEEDED payment with a plan", async () => {
     payment.findUnique.mockResolvedValue(null); // never seen this idempotencyKey before
-    payment.create.mockResolvedValue({ id: "pay-1", status: "SUCCEEDED", paidAt: new Date() });
+    payment.create.mockResolvedValue({
+      id: "pay-1",
+      status: "SUCCEEDED",
+      paidAt: new Date(),
+    });
     payment.update.mockResolvedValue({ id: "pay-1", status: "SUCCEEDED" });
     subscription.upsert.mockResolvedValue({ id: "sub-1" });
 
@@ -97,7 +101,11 @@ describe("applyPaymentEvent — new event (fresh idempotencyKey)", () => {
     expect(subscription.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { externalId: "billing-key-1" },
-        create: expect.objectContaining({ userId: "user-1", plan: "PRO", status: "ACTIVE" }),
+        create: expect.objectContaining({
+          userId: "user-1",
+          plan: "PRO",
+          status: "ACTIVE",
+        }),
       }),
     );
     expect(user.update).toHaveBeenCalledWith({
@@ -106,11 +114,45 @@ describe("applyPaymentEvent — new event (fresh idempotencyKey)", () => {
     });
   });
 
+  it("preserves the payment's OWN currency (a Polar USD $9.99 order stays USD 999, never converted to KRW)", async () => {
+    payment.findUnique.mockResolvedValue(null);
+    payment.create.mockResolvedValue({
+      id: "pay-1",
+      status: "SUCCEEDED",
+      paidAt: new Date(),
+    });
+    payment.update.mockResolvedValue({ id: "pay-1", status: "SUCCEEDED" });
+    subscription.upsert.mockResolvedValue({ id: "sub-1" });
+
+    await applyPaymentEvent({
+      ...BASE_EVENT,
+      amount: 999,
+      currency: "USD",
+      provider: "polar",
+    });
+
+    expect(payment.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ amount: 999, currency: "USD" }),
+      }),
+    );
+    // The legacy KRW rate is never written onto a USD order.
+    expect(payment.create).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ amount: 4900 }),
+      }),
+    );
+  });
+
   it("does not grant entitlement for a brand-new FAILED payment", async () => {
     payment.findUnique.mockResolvedValue(null);
     payment.create.mockResolvedValue({ id: "pay-2", status: "FAILED", paidAt: null });
 
-    await applyPaymentEvent({ ...BASE_EVENT, idempotencyKey: "first:def", status: "FAILED" });
+    await applyPaymentEvent({
+      ...BASE_EVENT,
+      idempotencyKey: "first:def",
+      status: "FAILED",
+    });
 
     expect(subscription.upsert).not.toHaveBeenCalled();
     expect(user.update).not.toHaveBeenCalled();
@@ -118,7 +160,11 @@ describe("applyPaymentEvent — new event (fresh idempotencyKey)", () => {
 
   it("does not touch User when the payment has no plan (e.g. a non-plan charge)", async () => {
     payment.findUnique.mockResolvedValue(null);
-    payment.create.mockResolvedValue({ id: "pay-3", status: "SUCCEEDED", paidAt: new Date() });
+    payment.create.mockResolvedValue({
+      id: "pay-3",
+      status: "SUCCEEDED",
+      paidAt: new Date(),
+    });
 
     await applyPaymentEvent({
       userId: BASE_EVENT.userId,
@@ -134,16 +180,26 @@ describe("applyPaymentEvent — new event (fresh idempotencyKey)", () => {
 
   it("cancels any other active subscription for the same user before activating the new one", async () => {
     payment.findUnique.mockResolvedValue(null);
-    payment.create.mockResolvedValue({ id: "pay-4", status: "SUCCEEDED", paidAt: new Date() });
+    payment.create.mockResolvedValue({
+      id: "pay-4",
+      status: "SUCCEEDED",
+      paidAt: new Date(),
+    });
     payment.update.mockResolvedValue({ id: "pay-4", status: "SUCCEEDED" });
-    subscription.findMany.mockResolvedValue([{ id: "sub-old", externalId: "old-billing-key" }]);
+    subscription.findMany.mockResolvedValue([
+      { id: "sub-old", externalId: "old-billing-key", paymentProvider: "toss" },
+    ]);
     subscription.upsert.mockResolvedValue({ id: "sub-new" });
 
     await applyPaymentEvent(BASE_EVENT); // upgrading to a new billing key "billing-key-1"
 
     expect(subscription.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { userId: "user-1", status: "ACTIVE", NOT: { externalId: "billing-key-1" } },
+        where: {
+          userId: "user-1",
+          status: "ACTIVE",
+          NOT: { externalId: "billing-key-1" },
+        },
       }),
     );
     expect(subscription.updateMany).toHaveBeenCalledWith({
@@ -155,18 +211,48 @@ describe("applyPaymentEvent — new event (fresh idempotencyKey)", () => {
     expect(deleteBillingKey).toHaveBeenCalledWith("old-billing-key");
   });
 
+  it("never deletes a SUPERSEDED POLAR subscription's externalId against the Toss API", async () => {
+    payment.findUnique.mockResolvedValue(null);
+    payment.create.mockResolvedValue({
+      id: "pay-5",
+      status: "SUCCEEDED",
+      paidAt: new Date(),
+    });
+    payment.update.mockResolvedValue({ id: "pay-5", status: "SUCCEEDED" });
+    // A Toss sub being replaced by a Polar sub: activation happens for an id
+    // that is NOT the Toss billing key, and the stale externalId is a Polar
+    // subscription id — Polar's own scheduler, not our Toss client, owns it.
+    subscription.findMany.mockResolvedValue([
+      { id: "sub-old-toss", externalId: "old-billing-key", paymentProvider: "toss" },
+      { id: "sub-old-polar", externalId: "sub_polar_123", paymentProvider: "polar" },
+    ]);
+    subscription.upsert.mockResolvedValue({ id: "sub-new" });
+
+    await applyPaymentEvent({ ...BASE_EVENT, subscriptionExternalId: "sub_polar_123" });
+
+    // Only the Toss billing key is handed to deleteBillingKey; the Polar
+    // subscription id must not be DELETE'd against the Toss API.
+    expect(deleteBillingKey).toHaveBeenCalledTimes(1);
+    expect(deleteBillingKey).toHaveBeenCalledWith("old-billing-key");
+  });
+
   it("survives a concurrent create race for the same idempotencyKey without double-granting", async () => {
     // Two calls both see no existing row, both attempt to create — the loser
-    // hits the unique constraint on idempotencyKey and must fall back to
-    // reading what the winner already committed, not throw or re-grant.
-    payment.findUnique.mockResolvedValue(null);
-    payment.create.mockRejectedValue(duplicateIdempotencyKeyError());
-    payment.findUniqueOrThrow.mockResolvedValue({ id: "pay-1", status: "SUCCEEDED", paidAt: new Date() });
+    // hits the unique constraint on idempotencyKey. The aborting transaction
+    // can't be re-read in place, so the whole transaction retries once: by
+    // then the winner's row is committed, and the retry reads it and no-ops.
+    payment.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: "pay-1", status: "SUCCEEDED", paidAt: new Date() });
+    payment.create.mockRejectedValueOnce(duplicateIdempotencyKeyError());
 
     await applyPaymentEvent(BASE_EVENT);
 
-    expect(payment.findUniqueOrThrow).toHaveBeenCalledWith({ where: { idempotencyKey: "first:abc" } });
-    // The winner already granted entitlement for this event; the loser sees
+    expect(payment.findUnique).toHaveBeenCalledTimes(2);
+    expect(payment.findUnique).toHaveBeenLastCalledWith({
+      where: { idempotencyKey: "first:abc" },
+    });
+    // The winner already granted entitlement for this event; the retry sees
     // status already equal to the input and must not grant it a second time.
     expect(subscription.upsert).not.toHaveBeenCalled();
     expect(user.update).not.toHaveBeenCalled();
@@ -175,7 +261,11 @@ describe("applyPaymentEvent — new event (fresh idempotencyKey)", () => {
 
 describe("applyPaymentEvent — redelivered event (idempotencyKey already on file)", () => {
   it("is a pure no-op when the redelivered event's status matches what's already stored", async () => {
-    payment.findUnique.mockResolvedValue({ id: "pay-1", status: "SUCCEEDED", paidAt: new Date() });
+    payment.findUnique.mockResolvedValue({
+      id: "pay-1",
+      status: "SUCCEEDED",
+      paidAt: new Date(),
+    });
 
     await applyPaymentEvent(BASE_EVENT);
 
@@ -186,14 +276,25 @@ describe("applyPaymentEvent — redelivered event (idempotencyKey already on fil
   });
 
   it("grants entitlement on a genuine PENDING -> SUCCEEDED status transition", async () => {
-    payment.findUnique.mockResolvedValue({ id: "pay-1", status: "PENDING", paidAt: null });
-    payment.update.mockResolvedValue({ id: "pay-1", status: "SUCCEEDED", paidAt: new Date() });
+    payment.findUnique.mockResolvedValue({
+      id: "pay-1",
+      status: "PENDING",
+      paidAt: null,
+    });
+    payment.update.mockResolvedValue({
+      id: "pay-1",
+      status: "SUCCEEDED",
+      paidAt: new Date(),
+    });
     subscription.upsert.mockResolvedValue({ id: "sub-1" });
 
     await applyPaymentEvent(BASE_EVENT);
 
     expect(payment.update).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { id: "pay-1" }, data: expect.objectContaining({ status: "SUCCEEDED" }) }),
+      expect.objectContaining({
+        where: { id: "pay-1" },
+        data: expect.objectContaining({ status: "SUCCEEDED" }),
+      }),
     );
     expect(user.update).toHaveBeenCalledWith({
       where: { id: "user-1" },
@@ -238,6 +339,24 @@ describe("applyRefundEvent", () => {
 
     expect(payment.findUnique).not.toHaveBeenCalled();
     expect(user.update).not.toHaveBeenCalled();
+  });
+
+  it("records a partial refund WITHOUT reverting entitlement (revokeEntitlement: false)", async () => {
+    refund.create.mockResolvedValue({ id: "refund-4" });
+    payment.findUnique.mockResolvedValue({ userId: "user-1", subscriptionId: "sub-1" });
+
+    await applyRefundEvent({
+      paymentId: "pay-1",
+      amount: 1000,
+      status: "SUCCEEDED",
+      revokeEntitlement: false,
+    });
+
+    expect(refund.create).toHaveBeenCalled();
+    // Money was returned, but access stays for the period the customer paid for.
+    expect(payment.findUnique).not.toHaveBeenCalled();
+    expect(user.update).not.toHaveBeenCalled();
+    expect(subscription.update).not.toHaveBeenCalled();
   });
 
   it("is a no-op when the same externalRefundId has already been recorded (duplicate webhook redelivery)", async () => {

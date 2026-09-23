@@ -6,6 +6,20 @@ import { CONTACT_EMAIL, siteConfig } from "@/config/site";
 export const metadata: Metadata = {
   title: `문의하기 - ${siteConfig.name}`,
   description: "StudyOS 이용 중 궁금한 점이나 문제가 있으면 이메일로 문의해주세요.",
+  alternates: { canonical: "/contact" },
+  openGraph: {
+    title: `문의하기 - ${siteConfig.name}`,
+    description: "StudyOS 이용 중 궁금한 점이나 문제가 있으면 이메일로 문의해주세요.",
+    url: "/contact",
+    locale: "ko_KR",
+    siteName: "StudyOS",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `문의하기 - ${siteConfig.name}`,
+    description: "StudyOS 이용 중 궁금한 점이나 문제가 있으면 이메일로 문의해주세요.",
+  },
 };
 
 export default function ContactPage() {

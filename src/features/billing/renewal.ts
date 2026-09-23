@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { PLAN_META } from "@/features/billing/plans";
 import { applyPaymentEvent } from "@/features/billing/payment-service";
 import { chargeBillingKey } from "@/features/billing/toss-client";
+import { capture } from "@/features/analytics/capture";
 
 const GRACE_DAYS = 3;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -18,10 +19,17 @@ export type RenewalRunSummary = {
 /**
  * Daily reconciliation for recurring billing-key subscriptions. Toss's
  * billing-key API has no built-in scheduler (see toss-client.ts) — this
- * function IS the scheduler, meant to run once a day via Vercel Cron
- * (see app/api/cron/billing-renewals/route.ts).
+ * function IS the scheduler for LEGACY Toss subscriptions, meant to run once
+ * a day via Vercel Cron (see app/api/cron/billing-renewals/route.ts).
  *
- * For every ACTIVE subscription whose currentPeriodEnd has passed, it either:
+ * Polar subscriptions are deliberately excluded: Polar schedules its own
+ * renewals and reports them over signed webhooks (see polar-events.ts), so
+ * the cron only processes subscriptions whose paymentProvider is toss (or
+ * pre-provider legacy rows with a null provider). The paymentProvider filter
+ * is what keeps the two billing systems from double-charging.
+ *
+ * For every such ACTIVE subscription whose currentPeriodEnd has passed, it
+ * either:
  *  - expires it (User.plan -> TRIAL) if cancelAtPeriodEnd was set — no charge
  *    attempted, mirroring an explicit user cancellation;
  *  - charges the next period and extends currentPeriodEnd (via
@@ -33,7 +41,11 @@ export type RenewalRunSummary = {
  */
 export async function runBillingRenewals(now: Date = new Date()): Promise<RenewalRunSummary> {
   const due = await prisma.subscription.findMany({
-    where: { status: "ACTIVE", currentPeriodEnd: { lte: now } },
+    where: {
+      status: "ACTIVE",
+      currentPeriodEnd: { lte: now },
+      OR: [{ paymentProvider: "toss" }, { paymentProvider: null }],
+    },
   });
 
   const summary: RenewalRunSummary = {
@@ -62,6 +74,10 @@ export async function runBillingRenewals(now: Date = new Date()): Promise<Renewa
           data: { plan: "TRIAL", subscriptionStatus: "CANCELED" },
         }),
       ]);
+      capture({
+        name: "subscription_expired",
+        props: { plan: subscription.plan, reason: "cancel" },
+      });
       summary.canceled += 1;
       continue;
     }
@@ -116,6 +132,10 @@ export async function runBillingRenewals(now: Date = new Date()): Promise<Renewa
             data: { plan: "TRIAL", subscriptionStatus: "EXPIRED" },
           }),
         ]);
+        capture({
+          name: "subscription_expired",
+          props: { plan: subscription.plan, reason: "grace" },
+        });
         summary.expired += 1;
       } else {
         // Left ACTIVE with a still-past currentPeriodEnd, so this same

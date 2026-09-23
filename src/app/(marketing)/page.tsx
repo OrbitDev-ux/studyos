@@ -25,10 +25,9 @@ export const metadata: Metadata = {
 
 // "2026년 8월" — bumped by hand in config/site.ts when homepage content
 // actually changes (see CONTENT_UPDATED_AT), not on every render.
-const CONTENT_UPDATED_LABEL = new Date(`${CONTENT_UPDATED_AT}T00:00:00`).toLocaleDateString(
-  "ko-KR",
-  { year: "numeric", month: "long" },
-);
+const CONTENT_UPDATED_LABEL = new Date(
+  `${CONTENT_UPDATED_AT}T00:00:00`,
+).toLocaleDateString("ko-KR", { year: "numeric", month: "long" });
 
 // Icons are presentation-only, so they're mapped here by title rather than
 // living in the shared config/features.ts (which JSON-LD also reads).
@@ -36,7 +35,7 @@ const FEATURE_ICONS: Record<string, LucideIcon> = {
   "AI 문제 생성": Sparkles,
   "오답 DNA 분석": Dna,
   "나만의 교재": BookMarked,
-  "모의고사": ClipboardCheck,
+  모의고사: ClipboardCheck,
   "공부시간·목표 관리": Target,
   "친구·랭킹·배틀": Users,
 };
@@ -103,9 +102,7 @@ export default function LandingPage() {
       </section>
 
       <section className="mx-auto w-full max-w-5xl px-4 pb-24 sm:px-6">
-        <h2 className="mb-6 text-center text-2xl font-semibold tracking-tight">
-          요금제
-        </h2>
+        <h2 className="mb-6 text-center text-2xl font-semibold tracking-tight">요금제</h2>
         <p className="text-muted-foreground mx-auto mb-6 max-w-xl text-center text-sm text-balance">
           가입하면 {TRIAL_DAYS}일간 결제 없이 StudyOS를 체험할 수 있어요.
         </p>
@@ -117,7 +114,9 @@ export default function LandingPage() {
                 <CardHeader>
                   <div className="flex items-baseline justify-between gap-2">
                     <h3 className="text-base font-medium">{meta.name}</h3>
-                    <span className="text-muted-foreground text-xs">{meta.priceLabel}</span>
+                    <span className="text-muted-foreground text-xs">
+                      {meta.notForSale ? "출시 예정" : meta.priceLabel}
+                    </span>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -151,12 +150,10 @@ export default function LandingPage() {
       </section>
 
       <section className="mx-auto flex w-full max-w-5xl flex-col items-center gap-4 px-4 pb-24 text-center sm:px-6">
-        <h2 className="text-2xl font-semibold tracking-tight">
-          지금 바로 시작해보세요
-        </h2>
+        <h2 className="text-2xl font-semibold tracking-tight">지금 바로 시작해보세요</h2>
         <p className="text-muted-foreground max-w-md text-sm text-balance">
-          가입 없이 데모로 먼저 둘러보거나, {TRIAL_DAYS}일 무료 체험으로 바로
-          시작할 수 있어요.
+          가입 없이 데모로 먼저 둘러보거나, {TRIAL_DAYS}일 무료 체험으로 바로 시작할 수
+          있어요.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg" className="px-6 text-base">
@@ -178,7 +175,9 @@ export default function LandingPage() {
             문의하기
           </Link>
         </p>
-        <p className="text-muted-foreground text-xs">마지막 업데이트: {CONTENT_UPDATED_LABEL}</p>
+        <p className="text-muted-foreground text-xs">
+          마지막 업데이트: {CONTENT_UPDATED_LABEL}
+        </p>
       </div>
 
       <FaqStructuredData />

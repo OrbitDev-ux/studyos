@@ -3,16 +3,20 @@
 import { useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { getBillingAuthConfig } from "@/features/billing/checkout-actions";
+import { startCheckout } from "@/features/billing/checkout-actions";
 
 /**
- * Starts a Toss "billing key" card-registration flow for PRO/PREMIUM. The
- * server action only ever hands back the public client key + this user's own
- * id/email/name — the secret key and the actual charge happen server-side in
- * /billing/callback after Toss redirects back with an authKey.
+ * Starts a checkout for PRO/PREMIUM. Provider-aware (see providers.ts):
+ *  - Polar (primary): the server action creates a hosted Checkout Session and
+ *    we hard-redirect the browser to it. The card charge + entitlement happen
+ *    at Polar and arrive via the signed order.paid / subscription.* webhooks.
+ *  - Toss (legacy): the server action hands back the public client key + this
+ *    user's own id/email/name — the secret key and the actual charge happen
+ *    server-side in /billing/callback after Toss redirects back with an
+ *    authKey.
  *
- * Degrades gracefully (a toast, not a crash) when TOSS_SECRET_KEY /
- * NEXT_PUBLIC_TOSS_CLIENT_KEY aren't configured yet — see checkout-actions.ts.
+ * Degrades gracefully (a toast, not a crash) when neither provider is
+ * configured — see providers.ts's fail-closed design.
  */
 export function UpgradeCheckoutButton({
   plan,
@@ -29,9 +33,14 @@ export function UpgradeCheckoutButton({
   function handleClick() {
     startTransition(async () => {
       try {
-        const result = await getBillingAuthConfig(plan);
+        const result = await startCheckout(plan);
         if (!result.ok) {
           toast({ title: result.error, variant: "error" });
+          return;
+        }
+
+        if (result.kind === "polar") {
+          window.location.assign(result.checkoutUrl);
           return;
         }
 

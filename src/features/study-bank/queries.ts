@@ -1,13 +1,15 @@
-import type { Problem, Subject } from "@/generated/prisma/client";
-import { createClient } from "@/lib/supabase/server";
+import type { Difficulty, Prisma, Problem, QuestionType, Subject } from "@/generated/prisma/client";
+import { prisma } from "@/lib/prisma";
 import { IMPORT_SOURCE } from "@/features/problems/import/types";
 import { PAGE_SIZE, type StudyBankParams } from "@/features/study-bank/search-params";
 
 /**
  * 문제은행 data access. Reuses the existing per-user Problem model (no new table)
- * and the same Supabase + explicit `.eq("userId", …)` authorization policy as
- * features/problems/queries. New problems (from AI generation OR a future import
- * pipeline) show up automatically because the page reads live from the DB.
+ * and Prisma with the same explicit `userId` scoping as features/problems/queries.
+ * New problems (from AI generation OR a future import pipeline) show up
+ * automatically because the page reads live from the DB. The former Supabase
+ * anon-REST path was migrated here (trust-boundary cleanup) — these queries run
+ * as the DB owner and every filter carries the userId server-side.
  */
 
 // No `isCorrect` — this flows into StudyBankCard's SolveProblemPanel before
@@ -25,31 +27,25 @@ export type StudyBankFacets = {
 
 /** Filter option data derived from the user's OWN problems/subjects. */
 export async function getStudyBankFacets(userId: string): Promise<StudyBankFacets> {
-  const supabase = await createClient();
-
-  const [{ data: subjects }, { data: unitRows }] = await Promise.all([
-    supabase
-      .from("Subject")
-      .select("id, name, color")
-      .eq("userId", userId)
-      .order("order", { ascending: true }),
+  const [subjects, unitRows] = await Promise.all([
+    prisma.subject.findMany({
+      where: { userId },
+      select: { id: true, name: true, color: true },
+      orderBy: { order: "asc" },
+    }),
     // Units across the user's OWN problems AND shared (imported) bank problems.
-    supabase
-      .from("Problem")
-      .select("unit")
-      .or(`userId.eq.${userId},source.eq.${IMPORT_SOURCE}`)
-      .not("unit", "is", null),
+    prisma.problem.findMany({
+      where: { OR: [{ userId }, { source: IMPORT_SOURCE }], unit: { not: null } },
+      select: { unit: true },
+    }),
   ]);
 
   const allUnits = new Set<string>();
-  for (const row of (unitRows ?? []) as { unit: string | null }[]) {
+  for (const row of unitRows) {
     if (row.unit) allUnits.add(row.unit);
   }
 
-  return {
-    subjects: (subjects ?? []) as Pick<Subject, "id" | "name" | "color">[],
-    allUnits: [...allUnits].sort(),
-  };
+  return { subjects, allUnits: [...allUnits].sort() };
 }
 
 /** Escape a search term for a PostgREST `.or(...ilike...)` filter. */
@@ -76,81 +72,88 @@ export async function getStudyBankProblems(
   userId: string,
   params: StudyBankParams,
 ): Promise<StudyBankResult> {
-  const supabase = await createClient();
-
   // "오답" tab: restrict to problems the user has a WrongAnswer for (reuse the
   // existing table). Resolve ids first, then filter — avoids a fragile join.
   let wrongProblemIds: string[] | null = null;
   if (params.tab === "wrong") {
-    const { data } = await supabase
-      .from("WrongAnswer")
-      .select("problemId")
-      .eq("userId", userId);
-    wrongProblemIds = [...new Set((data ?? []).map((r) => r.problemId as string))];
+    const rows = await prisma.wrongAnswer.findMany({
+      where: { userId },
+      select: { problemId: true },
+    });
+    wrongProblemIds = [...new Set(rows.map((r) => r.problemId))];
     if (wrongProblemIds.length === 0) {
       return emptyResult(params.page);
     }
   }
 
-  let query = supabase
-    .from("Problem")
-    .select("*, choices:Choice(id,problemId,label,content), subject:Subject(*)", {
-      count: "exact",
-    });
-
   // Scope. "저장" is the user's OWN favorites (isFavorite is owner-specific). Every
   // other tab shows the user's own problems PLUS shared imported bank problems.
-  if (params.tab === "saved") {
-    query = query.eq("userId", userId).eq("isFavorite", true);
-  } else if (wrongProblemIds) {
-    // Wrong-answer ids are already the user's; they may point at shared problems.
-    query = query.in("id", wrongProblemIds);
-  } else {
-    query = query.or(`userId.eq.${userId},source.eq.${IMPORT_SOURCE}`);
-  }
+  const scope: Prisma.ProblemWhereInput = params.tab === "saved"
+    ? { userId, isFavorite: true }
+    : wrongProblemIds
+      ? { id: { in: wrongProblemIds } }
+      : { OR: [{ userId }, { source: IMPORT_SOURCE }] };
 
   // Subject filter is by NAME (resolve to the matching Subject ids). The scope
   // above already restricts rows to own/shared, so ids of other users named the
-  // same are harmless. Works for shared problems (owned by the import account).
+  // same are harmless (same semantics as the PostgREST version).
   if (params.subject) {
-    const { data: subs } = await supabase
-      .from("Subject")
-      .select("id")
-      .eq("name", params.subject);
-    const ids = (subs ?? []).map((s) => s.id as string);
+    const subs = await prisma.subject.findMany({
+      where: { name: params.subject },
+      select: { id: true },
+    });
+    const ids = subs.map((s) => s.id);
     if (ids.length === 0) return emptyResult(params.page);
-    query = query.in("subjectId", ids);
+    scope.subjectId = { in: ids };
   }
-  if (params.unit) query = query.eq("unit", params.unit);
-  if (params.difficulty) query = query.eq("difficulty", params.difficulty);
-  if (params.type) query = query.eq("type", params.type);
+  if (params.unit) scope.unit = params.unit;
+  if (params.difficulty) scope.difficulty = params.difficulty as Difficulty;
+  if (params.type) scope.type = params.type as QuestionType;
 
   const search = sanitizeSearch(params.q);
   if (search) {
-    query = query.or(`prompt.ilike.%${search}%,unit.ilike.%${search}%`);
+    scope.AND = [
+      {
+        OR: [
+          { prompt: { contains: search, mode: "insensitive" } },
+          { unit: { contains: search, mode: "insensitive" } },
+        ],
+      },
+    ];
   }
 
   // Sort. `recommended` shows most-recent (matches the existing "오늘 추천 문제"
   // behavior — no separate recommendation engine is introduced here).
   const difficultyAsc = params.sort === "difficulty_asc";
   const difficultyDesc = params.sort === "difficulty_desc";
+  const orderBy: Prisma.ProblemOrderByWithRelationInput[] = [];
   if (difficultyAsc || difficultyDesc) {
     // Postgres enum orders by declared order (EASY < MEDIUM < HARD).
-    query = query
-      .order("difficulty", { ascending: difficultyAsc })
-      .order("createdAt", { ascending: false });
+    orderBy.push(
+      { difficulty: difficultyAsc ? "asc" : "desc" },
+      { createdAt: "desc" },
+    );
   } else {
-    query = query.order("createdAt", { ascending: params.sort === "oldest" });
+    orderBy.push({ createdAt: params.sort === "oldest" ? "asc" : "desc" });
   }
 
-  const from = (params.page - 1) * PAGE_SIZE;
-  const to = from + PAGE_SIZE - 1;
-  const { data, error, count } = await query.range(from, to);
-  if (error) throw error;
+  const skip = (params.page - 1) * PAGE_SIZE;
+  const [items, total] = await Promise.all([
+    prisma.problem.findMany({
+      where: scope,
+      include: {
+        choices: { select: { id: true, problemId: true, label: true, content: true } },
+        subject: true,
+      },
+      orderBy,
+      skip,
+      take: PAGE_SIZE,
+    }),
+    prisma.problem.count({ where: scope }),
+  ]);
 
-  const total = count ?? 0;
   return {
-    items: (data ?? []) as BankProblem[],
+    items: items as BankProblem[],
     total,
     page: params.page,
     pageSize: PAGE_SIZE,

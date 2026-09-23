@@ -6,7 +6,6 @@ import { Prisma } from "@/generated/prisma/client";
 import { createConversationMessage } from "@/features/social/message-service";
 import { createNotification, markAsReadByTarget } from "@/features/notifications/service";
 import { prisma } from "@/lib/prisma";
-import { createClient } from "@/lib/supabase/server";
 import { requireCurrentUser } from "@/lib/session";
 
 /** Match helper for markAsReadByTarget over `friend_request`/DM-shaped metadata. */
@@ -25,12 +24,10 @@ export async function sendFriendRequest(email: string) {
     throw new Error("자기 자신에게는 친구 요청을 보낼 수 없습니다.");
   }
 
-  const supabase = await createClient();
-  const { data: target } = await supabase
-    .from("User")
-    .select("id")
-    .eq("email", targetEmail)
-    .maybeSingle();
+  const target = await prisma.user.findFirst({
+    where: { email: targetEmail },
+    select: { id: true },
+  });
   if (!target) {
     throw new Error("해당 이메일의 사용자를 찾을 수 없습니다.");
   }

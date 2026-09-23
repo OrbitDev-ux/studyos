@@ -6,14 +6,15 @@ import { Prisma } from "@/generated/prisma/client";
  * requests), and sendFriendRequest must refuse a blocked relationship in
  * EITHER direction. No test coverage existed for this file before.
  */
-const { friendship, blockedUser, conversationParticipant, message, transaction } = vi.hoisted(
-  () => {
+const { friendship, blockedUser, conversationParticipant, message, user, transaction } =
+  vi.hoisted(() => {
     const message = { count: vi.fn(), create: vi.fn(), findFirst: vi.fn() };
     return {
       friendship: { findFirst: vi.fn(), create: vi.fn(), deleteMany: vi.fn() },
       blockedUser: { findFirst: vi.fn(), create: vi.fn(), deleteMany: vi.fn() },
       conversationParticipant: { findUnique: vi.fn() },
       message,
+      user: { findFirst: vi.fn() },
       transaction: vi.fn((ops: unknown[]) => Promise.all(ops)),
     };
   },
@@ -24,6 +25,7 @@ vi.mock("@/lib/prisma", () => ({
     blockedUser,
     conversationParticipant,
     message,
+    user,
     conversation: { update: vi.fn().mockResolvedValue({}) },
     $transaction: transaction,
   },
@@ -37,9 +39,6 @@ const { createNotification, markAsReadByTarget } = vi.hoisted(() => ({
   markAsReadByTarget: vi.fn(),
 }));
 vi.mock("@/features/notifications/service", () => ({ createNotification, markAsReadByTarget }));
-
-const { createClient } = vi.hoisted(() => ({ createClient: vi.fn() }));
-vi.mock("@/lib/supabase/server", () => ({ createClient }));
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
@@ -58,15 +57,7 @@ function duplicateBlockError() {
 beforeEach(() => {
   vi.clearAllMocks();
   requireCurrentUser.mockResolvedValue(USER);
-  createClient.mockResolvedValue({
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          maybeSingle: () => Promise.resolve({ data: { id: TARGET_ID } }),
-        }),
-      }),
-    }),
-  });
+  user.findFirst.mockResolvedValue({ id: TARGET_ID });
 });
 
 describe("sendFriendRequest — block guard", () => {

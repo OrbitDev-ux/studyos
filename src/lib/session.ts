@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import type { Plan, SubscriptionStatus } from "@/generated/prisma/client";
+import type { Plan, SubscriptionStatus, User as UserRow } from "@/generated/prisma/client";
 import { auth } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/prisma";
 
 export type CurrentUser = {
   id: string;
@@ -15,7 +15,7 @@ export type CurrentUser = {
   /** Subscription plan; the authoritative server value used for entitlements. */
   plan: Plan;
   subscriptionStatus: SubscriptionStatus;
-  /** ISO strings from Supabase; null only for rows created before the backfill. */
+  /** ISO strings; null only for rows created before the backfill. */
   trialStartedAt: string | null;
   trialEndsAt: string | null;
   /** Admin-only TEST plan override (features/billing/admin-override). Flows into
@@ -24,45 +24,73 @@ export type CurrentUser = {
   adminPlanOverrideEnabled: boolean;
 };
 
+const CURRENT_USER_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  image: true,
+  timezone: true,
+  school: true,
+  locale: true,
+  plan: true,
+  subscriptionStatus: true,
+  trialStartedAt: true,
+  trialEndsAt: true,
+  adminPlanOverride: true,
+  adminPlanOverrideEnabled: true,
+  bannedAt: true,
+  passwordChangedAt: true,
+} as const;
+
+/** Map a Prisma row to CurrentUser: timestamps arrive as Date from Prisma but
+ * the former Supabase client returned ISO strings — preserve that contract. */
+function toCurrentUser(row: Pick<UserRow, keyof typeof CURRENT_USER_SELECT>): CurrentUser {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    image: row.image,
+    timezone: row.timezone,
+    school: row.school,
+    locale: row.locale,
+    plan: row.plan,
+    subscriptionStatus: row.subscriptionStatus,
+    trialStartedAt: row.trialStartedAt?.toISOString() ?? null,
+    trialEndsAt: row.trialEndsAt?.toISOString() ?? null,
+    adminPlanOverride: row.adminPlanOverride,
+    adminPlanOverrideEnabled: row.adminPlanOverrideEnabled,
+  };
+}
+
 export async function requireCurrentUser(): Promise<CurrentUser> {
   const session = await auth();
   if (!session?.user) {
     redirect("/login");
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("User")
-    .select(
-      "id, name, email, image, timezone, school, locale, plan, subscriptionStatus, trialStartedAt, trialEndsAt, adminPlanOverride, adminPlanOverrideEnabled, bannedAt, passwordChangedAt",
-    )
-    .eq("id", session.user.id)
-    .single();
-  if (error) {
-    // A deleted account can still have a stale JWT. Treat the missing row as
-    // an invalid session instead of leaking a database error to the user.
-    if (error.code === "PGRST116") redirect("/login?deleted=1");
-    throw error;
-  }
-  if (!data) redirect("/login?deleted=1");
+  // Anon-REST trust boundary closed: resolve the session's user through Prisma
+  // (owner role) instead of the public Supabase endpoint.
+  const row = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: CURRENT_USER_SELECT,
+  });
+  if (!row) redirect("/login?deleted=1");
 
   // A banned account keeps its data but loses access everywhere the app gates
   // through requireCurrentUser. The admin ban action sets bannedAt; without
   // this check the ban would have no effect at all.
-  if ((data as { bannedAt: string | null }).bannedAt) {
+  if (row.bannedAt) {
     redirect("/suspended");
   }
 
   // Session invalidation: a password reset stamps passwordChangedAt, so any
   // JWT session issued before then (e.g. on another device) is no longer valid.
-  const passwordChangedAt = (data as { passwordChangedAt: string | null })
-    .passwordChangedAt;
   const loginAt = session.user.loginAt;
-  if (passwordChangedAt && loginAt && loginAt < new Date(passwordChangedAt).getTime()) {
+  if (row.passwordChangedAt && loginAt && loginAt < row.passwordChangedAt.getTime()) {
     redirect("/login");
   }
 
-  return data as CurrentUser;
+  return toCurrentUser(row);
 }
 
 /**
@@ -86,35 +114,18 @@ export async function getCurrentUserOrNull(): Promise<CurrentUser | null> {
   const session = await auth();
   if (!session?.user) return null;
 
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("User")
-    .select(
-      "id, name, email, image, timezone, school, locale, plan, subscriptionStatus, trialStartedAt, trialEndsAt, adminPlanOverride, adminPlanOverrideEnabled, bannedAt, passwordChangedAt",
-    )
-    .eq("id", session.user.id)
-    .single();
-  if (error) {
-    // A deleted account can still have a stale JWT — same "not authenticated"
-    // treatment as requireCurrentUser(). Any OTHER error is unexpected (a real
-    // DB failure), so it's rethrown rather than misreported as a 401 — the
-    // Route Handler's own error handling turns it into a 500 instead.
-    if (error.code === "PGRST116") return null;
-    throw error;
-  }
-  if (!data) return null;
+  const row = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: CURRENT_USER_SELECT,
+  });
+  if (!row) return null;
 
-  const row = data as { bannedAt: string | null; passwordChangedAt: string | null };
   if (row.bannedAt) return null;
 
   const loginAt = session.user.loginAt;
-  if (
-    row.passwordChangedAt &&
-    loginAt &&
-    loginAt < new Date(row.passwordChangedAt).getTime()
-  ) {
+  if (row.passwordChangedAt && loginAt && loginAt < row.passwordChangedAt.getTime()) {
     return null;
   }
 
-  return data as CurrentUser;
+  return toCurrentUser(row);
 }

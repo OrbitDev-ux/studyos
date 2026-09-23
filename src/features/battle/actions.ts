@@ -7,7 +7,7 @@ import {
   type CreateBattleFormValues,
 } from "@/features/battle/schema";
 import { createNotification, createNotifications, markAsReadByTarget } from "@/features/notifications/service";
-import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/session";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -21,19 +21,13 @@ export async function createBattle(values: CreateBattleFormValues): Promise<stri
     throw new Error("입력값을 확인해주세요.");
   }
   const parsed = result.data;
-  const supabase = await createClient();
-
-  const { data: friendships, error: friendError } = await supabase
-    .from("Friendship")
-    .select("requesterId, addresseeId")
-    .eq("status", "accepted")
-    .or(`requesterId.eq.${user.id},addresseeId.eq.${user.id}`);
-  if (friendError) throw friendError;
+  const friendships = await prisma.friendship.findMany({
+    where: { status: "accepted", OR: [{ requesterId: user.id }, { addresseeId: user.id }] },
+    select: { requesterId: true, addresseeId: true },
+  });
 
   const friendIds = new Set(
-    (friendships ?? []).map((f) =>
-      f.requesterId === user.id ? f.addresseeId : f.requesterId,
-    ),
+    friendships.map((f) => (f.requesterId === user.id ? f.addresseeId : f.requesterId)),
   );
   if (parsed.friendUserIds.some((id) => !friendIds.has(id))) {
     throw new Error("친구가 아닌 사용자는 초대할 수 없습니다.");
@@ -44,32 +38,34 @@ export async function createBattle(values: CreateBattleFormValues): Promise<stri
   const endAt = new Date(startAt.getTime() + durationDays * DAY_MS);
   const battleId = randomUUID();
 
-  const { error: battleError } = await supabase.from("Battle").insert({
-    id: battleId,
-    creatorId: user.id,
-    metric: parsed.metric,
-    durationDays,
-    startAt: startAt.toISOString(),
-    endAt: endAt.toISOString(),
-  });
-  if (battleError) throw battleError;
+  // One transaction: Battle + all participants commit or roll back together,
+  // so no partial participant list can land (the old Supabase path had to
+  // delete the Battle row manually as best-effort cleanup on a failed
+  // participant insert).
+  await prisma.$transaction(async (tx) => {
+    await tx.battle.create({
+      data: {
+        id: battleId,
+        creatorId: user.id,
+        metric: parsed.metric,
+        durationDays,
+        startAt,
+        endAt,
+      },
+    });
 
-  // A single .insert([...]) call is one INSERT statement (all rows or
-  // none), so no partial participant list can land — only the Battle row
-  // itself needs cleanup if this fails.
-  const { error: participantsError } = await supabase.from("BattleParticipant").insert([
-    { id: randomUUID(), battleId, userId: user.id, status: "accepted" },
-    ...parsed.friendUserIds.map((friendId) => ({
-      id: randomUUID(),
-      battleId,
-      userId: friendId,
-      status: "invited",
-    })),
-  ]);
-  if (participantsError) {
-    await supabase.from("Battle").delete().eq("id", battleId);
-    throw participantsError;
-  }
+    await tx.battleParticipant.createMany({
+      data: [
+        { id: randomUUID(), battleId, userId: user.id, status: "accepted" },
+        ...parsed.friendUserIds.map((friendId) => ({
+          id: randomUUID(),
+          battleId,
+          userId: friendId,
+          status: "invited",
+        })),
+      ],
+    });
+  });
 
   const actorName = user.name ?? user.email ?? "";
   await createNotifications(
@@ -89,28 +85,22 @@ export async function createBattle(values: CreateBattleFormValues): Promise<stri
 
 export async function respondToBattleInvite(battleId: string, accept: boolean) {
   const user = await requireCurrentUser();
-  const supabase = await createClient();
 
-  const { data: participant } = await supabase
-    .from("BattleParticipant")
-    .select("id")
-    .eq("battleId", battleId)
-    .eq("userId", user.id)
-    .eq("status", "invited")
-    .maybeSingle();
+  const participant = await prisma.battleParticipant.findFirst({
+    where: { battleId, userId: user.id, status: "invited" },
+    select: { id: true },
+  });
   if (!participant) return;
 
-  const { error } = await supabase
-    .from("BattleParticipant")
-    .update({ status: accept ? "accepted" : "declined" })
-    .eq("id", participant.id);
-  if (error) throw error;
+  await prisma.battleParticipant.update({
+    where: { id: participant.id },
+    data: { status: accept ? "accepted" : "declined" },
+  });
 
-  const { data: battle } = await supabase
-    .from("Battle")
-    .select("creatorId")
-    .eq("id", battleId)
-    .maybeSingle();
+  const battle = await prisma.battle.findUnique({
+    where: { id: battleId },
+    select: { creatorId: true },
+  });
   if (battle) {
     const actorName = user.name ?? user.email ?? "";
     await createNotification({
@@ -145,22 +135,17 @@ export async function respondToBattleInvite(battleId: string, accept: boolean) {
  */
 export async function leaveBattle(battleId: string) {
   const user = await requireCurrentUser();
-  const supabase = await createClient();
 
-  const { data: battle } = await supabase
-    .from("Battle")
-    .select("creatorId")
-    .eq("id", battleId)
-    .maybeSingle();
+  const battle = await prisma.battle.findUnique({
+    where: { id: battleId },
+    select: { creatorId: true },
+  });
   if (!battle || battle.creatorId === user.id) return;
 
-  const { error } = await supabase
-    .from("BattleParticipant")
-    .update({ status: "left" })
-    .eq("battleId", battleId)
-    .eq("userId", user.id)
-    .eq("status", "accepted");
-  if (error) throw error;
+  await prisma.battleParticipant.updateMany({
+    where: { battleId, userId: user.id, status: "accepted" },
+    data: { status: "left" },
+  });
 
   revalidatePath("/battle");
   revalidatePath(`/battle/${battleId}`);
@@ -168,20 +153,14 @@ export async function leaveBattle(battleId: string) {
 
 /**
  * Creator-only: ends the battle outright. Deletes the Battle row, which
- * cascades to BattleParticipant at the DB level (onDelete: Cascade) even
- * though this goes through the Supabase client rather than Prisma —
- * cascade is enforced by Postgres itself, not the calling client.
+ * cascades to BattleParticipant at the DB level (onDelete: Cascade).
  */
 export async function cancelBattle(battleId: string) {
   const user = await requireCurrentUser();
-  const supabase = await createClient();
 
-  const { error } = await supabase
-    .from("Battle")
-    .delete()
-    .eq("id", battleId)
-    .eq("creatorId", user.id);
-  if (error) throw error;
+  await prisma.battle.deleteMany({
+    where: { id: battleId, creatorId: user.id },
+  });
 
   revalidatePath("/battle");
   revalidatePath(`/battle/${battleId}`);
