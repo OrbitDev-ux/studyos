@@ -1,8 +1,79 @@
 # STUDYOS — P0 FINAL LAUNCH GATE REPORT
 
+## Latest Production Recheck — 2026-09-23
+
+**BLOCKED — do not deploy or create a production checkout.** This section is
+the current evidence and supersedes older workspace-state notes below.
+
+- Git/Vercel: branch `main`, launch candidate `9d6bd66`; this work includes
+  reviewed docs/route-comment updates and a Google OAuth safe-disable fix not
+  present in the latest READY deployment. Vercel account/project are
+  `yesungvibecodes-3119/studyos`. Latest READY Production deployment is the
+  launch candidate and its aliases include
+  `https://studyos-teal-eta.vercel.app` and
+  `https://studyos-yesungvibecodes-3119.vercel.app`.
+- Production env names: required DB/Auth/Supabase/Admin and Polar names exist;
+  `GROQ_API_KEY` is absent. Google OAuth names are absent but are now optional:
+  login/signup UI exposes only Credentials and Guest; source changes omit the
+  Google provider unless both credentials exist. `AI_PROVIDER` is absent and
+  defaults to Groq, so AI generation is unavailable and remains a launch P0.
+  Vercel masks sensitive values from local pull/run; actual DB URLs and Polar
+  PRO ID mapping remain NOT VERIFIED. The isolated Vercel CLI probe marked
+  only non-sensitive values available; do not confuse its omitted secrets with
+  actual env-name absence.
+- Domain: verified aliases and the production `NEXT_PUBLIC_SITE_URL` agree on
+  `https://studyos-teal-eta.vercel.app`. `/`, `/pricing`, `/login`, `/signup`,
+  legal pages, robots and sitemap return 200; canonical and Open Graph URLs use
+  that domain. `/api/auth/providers`, `/api/auth/session` return 200. Pricing
+  shows `$9.99`, not `₩4,900`, and no PREMIUM purchase CTA. Anonymous admin and
+  revenue routes redirect to `/` (302).
+- Polar: fresh read-only production audit returned active `StudyOS PRO`, 999
+  USD cents/month. Vercel product/price ID values are hidden, so mapping is
+  NOT VERIFIED. The enabled existing endpoint targets the correct route, has
+  all required events, and its signing secret matches local Production config.
+  Unsigned/signed synthetic no-op probes were 401/200. Real provider delivery
+  remains NOT VERIFIED; no checkout/payment was created.
+- Sandbox isolation: PASS by Production env-name audit; no sandbox API/base,
+  sandbox IDs, `POLAR_DEV_SINGLE_PLAN`, or `POLAR_TEST_*` names are configured.
+- Database: Supabase Management SQL identifies linked ref
+  `okhgmyuixobxiczkinej`, database `postgres`, PostgreSQL 17.6; its ref matches
+  the Production Supabase URL. Whether Vercel's masked `DATABASE_URL` and
+  `DIRECT_URL` point to that same DB is NOT VERIFIED. Production SQL confirms
+  47/47 migration names and SHA-256 checksums exactly match local, all finished,
+  none rolled back, and no pending migrations. Duplicate refund groups: 0.
+  Refund unique index, both study reward columns, the 13 intended RLS tables,
+  sole anon `Maintenance` SELECT policy/grant, and zero anon/authenticated
+  grants on other public tables/sequences are verified. `PUBLIC` has no public
+  table grants; `postgres` has no anon/authenticated default grants on future
+  public tables/sequences, and all 64 current public tables are owned by
+  `postgres`. Supabase-managed `supabase_admin` defaults remain platform-owned;
+  no current public tables are owned by that role. User/Payment/Refund/
+  Subscription counts are all zero; no cleanup was performed.
+- Backup: Supabase managed backup list remains empty and PITR is disabled. A
+  private 161,797-byte custom-format `public` dump was made using the CLI's
+  temporary login credentials and local `pg_dump` 18.4, with mode 600 at
+  `/private/tmp/studyos-production.backup`. `pg_restore -l` validated 64 tables
+  and 64 table-data entries. An isolated local PostgreSQL 16 restore succeeded
+  (after omitting the PG17-only `transaction_timeout` setting and creating the
+  Supabase `anon`/`authenticated` roles locally); it restored 64 public tables,
+  47 migration rows, and the four inventory counts remained zero. Point-in-time
+  production restore/PITR is not configured.
+- Verification: `prisma generate`, typecheck, lint (2 existing warnings), 124
+  files / 891 tests, and compile-only `npx next build` PASS. This does not
+  replace `npm run verify:production`; sensitive env masking and missing Groq
+  prevent that from passing.
+- Secret hygiene: tracked env files are examples only; prior tracked-file scan
+  found no real credentials. Private backup artifacts are outside Git.
+
+Exact remaining blockers: missing `GROQ_API_KEY`; Vercel's masked `DATABASE_URL`
+and `DIRECT_URL` target plus Polar PRO product/price ID match cannot be proven
+from this CLI context; canonical Production preflight/runtime DB smoke cannot
+be executed with the masked values; Production deploy, post-deploy smoke, real
+Polar-originated event, and a first production checkout are not performed.
+
 ## Final Status
 
-**BLOCKED** — production DB/credentials and production webhook delivery remain.
+**BLOCKED** — missing AI provider key; Vercel DB URL and Polar ID mapping remain unverified; production runtime verification, deploy, post-deploy smoke and checkout remain.
 Sandbox-side closure is complete. **The Polar price-consistency blocker is
 RESOLVED** by the $9.99 launch decision (this session): PRO = $9.99 USD / month
 is the official catalog and `PLAN_META`/UI/checkout/webhook/analytics were
@@ -10,14 +81,16 @@ aligned to it; PREMIUM is not-for-sale.
 
 **BLOCKED AT (production closure run):**
 
-- Production DB migration — `DATABASE_URL`/`DIRECT_URL` MISSING in `.env.production`; identity gate, backup gate, and §10.7 pre-probe cannot run (probe rehearsed on scratch → 0 duplicate rows).
-- Production env completeness — preflight exit 1 (CORE MISSING), billing requires the PRO price/product ids in the prod env.
-- ~~Production Polar price consistency — FAIL~~ **RESOLVED ($9.99 launch decision, this session)**: one product "StudyOS PRO" @ **$9.99 USD / month** (price `d8aaa433-…`, product `0827b724-…`) IS the official launch product; `PLAN_META` now defines PRO = 999 USD / month, PREMIUM not-for-sale. Remaining: set `POLAR_PRO_PRICE_ID`+`POLAR_PRO_PRODUCT_ID` in prod env and run the §4/§19 read-only id-consistency probe.
-- Production webhook registration + real delivery — endpoint `https://<prod-domain>/api/webhooks/polar` needs a production domain (AUTH_URL/SITE_URL unset) and dashboard registration; the `polar listen` session secret must never be reused there.
+- Production DB migration — Vercel lists `DATABASE_URL`/`DIRECT_URL`, but masks their values from local checks; identity, backup, migration history, and §10.7 probe remain NOT VERIFIED.
+- Production env completeness — required `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, and `GROQ_API_KEY` names are absent; sensitive env values cannot be validated locally.
+- Polar catalog price — production API confirms active "StudyOS PRO" at 999 USD/month, matching `PLAN_META`; Vercel's PRO IDs remain NOT VERIFIED against the catalog.
+- Production webhook registration — **PASS**: existing endpoint corrected in place, enabled, matching secret and required events; unsigned/signed no-op probes returned 401/200. A real Polar-originated delivery remains NOT VERIFIED.
 - Cancel-at-period-end / partial-refund / `subscription.revoked` live lifecycle — unit-tested; not live-verified (no prod webhook transport).
-- Deploy + post-deploy smoke — no Vercel project link, no commit of the phase A–K tree yet.
+- Deploy + post-deploy smoke — Vercel project is linked and candidate `9d6bd66` is committed/clean; no production deploy was made because P0 gates remain open.
 
-Nothing in this run modified production.
+The only production-side mutation was correcting the existing Polar webhook
+endpoint URL. No production DB mutation, migration, deploy, checkout, or real
+payment occurred.
 
 ---
 
@@ -43,7 +116,7 @@ Nothing in this run modified production.
 | 16 Production environment validation                     | **BLOCKED**                                                     | `.env.production` exists but holds only `POLAR_TOKEN` (probed READ-ONLY: prod-scoped — 200 on `api.polar.sh`, 401 on `sandbox-api.polar.sh`; ≠ sandbox token) + `POLAR_WEBHOOK_SECRET` (whsec_-format, ≠ sandbox secret). `production-preflight.mjs --require-billing` → **exit 1**: CORE MISSING (DATABASE_URL, DIRECT_URL, AUTH_SECRET, AUTH_URL, AUTH_GOOGLE_*×2, NEXT_PUBLIC_SUPABASE_*×2, SUPABASE_SERVICE_ROLE_KEY, ADMIN_*×2, GROQ_API_KEY) and BILLING partial (4 price/product ids missing) | human: fill Vercel/target-env secrets (never copy `.env.local`)       |
 | 17 Production build                                      | PASS (compile) / BLOCKED (canonical)                            | compile-only `npx next build` re-run this session against the scratch env → **exit 0** (92/92 pages, only known warnings); canonical `npm run build` (migrate deploy + next build) NOT run against production (no DB creds)                                                                                                                                                                                                                                                                          | run after gate 1                                                      |
 | 18 Regression suite                                      | PASS                                                            | re-run this session: `prisma generate` ✔ · `typecheck` ✔ · `lint` 0 errors (2 pre-existing warnings: `verify-ban.mjs`, `file-explorer.tsx`) · `test` 122 files / 880 tests ✔ · compile `next build` exit 0                                                                                                                                                                                                                                                                                           | —                                                                     |
-| 19 Deployment smoke test                                 | **BLOCKED**                                                     | no production deployment; no Vercel project linked (no `.vercel/`; `vercel.json` present but nothing deployed from this workspace)                                                                                                                                                                                                                                                                                                                                                                   | human: approve deploy + credentials                                   |
+| 19 Deployment smoke test                                 | **BLOCKED**                                                     | latest recheck: project linked, but no candidate deployment or verified production alias; no deployment was performed                                                                                                                                                                                                                                                                                                                                                                              | complete every production gate, then deploy and smoke                  |
 | 20 Feature freeze                                        | PASS                                                            | only P0 fixes + one harness (verification-tool) fix; no new features                                                                                                                                                                                                                                                                                                                                                                                                                                 | —                                                                     |
 
 ---
@@ -187,38 +260,36 @@ after a real deploy.
 
 ## Human Actions Remaining
 
-1. Provide production `DATABASE_URL`/`DIRECT_URL` (+ `AUTH_SECRET`/`AUTH_URL`/`AUTH_GOOGLE_*`/`NEXT_PUBLIC_SUPABASE_*`/`SUPABASE_SERVICE_ROLE_KEY`/`ADMIN_*`/`GROQ_API_KEY`), then preflight (exit 0) → identity gate → backup gate → §10.7 probe → `prisma migrate deploy` (gates 1/2/3 proof on prod).
-2. ~~Decide production Polar pricing~~ **DONE ($9.99 launch decision, this session)**: the production product "StudyOS PRO" @ $9.99 USD/month IS the catalog. Set `POLAR_PRO_PRICE_ID`+`POLAR_PRO_PRODUCT_ID` in the prod env (PREMIUM pair only if a not-for-sale legacy config is wanted) and run the §4/§19 read-only id-consistency probe before the first live checkout.
-3. Register `https://<prod-domain>/api/webhooks/polar` with the production `POLAR_WEBHOOK_SECRET` and re-walk the lifecycle live: `order.paid`, cancel-at-period-end, partial refund, `subscription.revoked` (with/without `metadata.userId`), duplicate redelivery.
-4. Commit the phase A–K working tree (currently uncommitted on `main`, incl. the 3 canonical migrations) before deploy; run canonical `npm run build` + deploy + post-deploy smoke (gates 17/19).
+1. Resolve missing `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, and `GROQ_API_KEY`; run preflight where actual sensitive Production values are available.
+2. Create and restore-verify a Production DB backup; confirm the DB connection target, migration history, and duplicate-refund probe before `prisma migrate deploy`.
+3. Verify Vercel Production's Polar PRO IDs against the catalog and capture a real Polar-originated webhook delivery at the corrected endpoint.
+4. Candidate is already committed and clean at `9d6bd66`; run the canonical production build/deploy/smoke only after all prior gates pass.
 
-## Production Audit (this run) — read-only, nothing mutated
+## Production Audit (earlier closure run) — historical evidence
 
 - **Env presence**: `.env.production` (git-ignored) contains exactly `POLAR_TOKEN` + `POLAR_WEBHOOK_SECRET`. `POLAR_TOKEN` probed (read-only, value never printed): **production-scoped** (200 `api.polar.sh`, 401 `sandbox-api.polar.sh`), distinct from the sandbox token (hash-compared; no copy). `POLAR_WEBHOOK_SECRET` is `whsec_`-format, distinct from both the `.env.local` stored secret and the CLI session secret. NO sandbox secret is present in the production file — isolation holds (§5 PASS).
 - **Preflight**: `node --env-file=.env.production scripts/production-preflight.mjs --require-billing` → **exit 1 (CORE MISSING)**: `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `AUTH_URL`, `AUTH_GOOGLE_ID/SECRET`, `NEXT_PUBLIC_SUPABASE_URL/ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_SECRET`, `ADMIN_SESSION_SECRET`, `GROQ_API_KEY`; BILLING partial (4 price/product ids missing). → CORE/BLOCKED.
 - **Production Polar orphan audit**: `GET /v1/products` (api.polar.sh) → 1 product: `0827b724-…` "StudyOS PRO", price `d8aaa433-…` usd 999 / month (not archived), no PREMIUM, no KRW. **vs** `PLAN_META` (plans.ts, after the $9.99 launch alignment): PRO = 999 USD / month — **MATCH** ✅; `PLAN_META.PRO.priceKrw` (4,900) is now explicitly legacy Toss-rail only, not the catalog price; PREMIUM `notForSale`. **BILLING PRICE CONSISTENCY = PASS** (code ↔ Polar). Launch still needs the PRO price/product ids present in the prod env (§19 probe).
-- **Migrations**: `prisma/migrations/` = 47 dirs; top three below `20260828100000_dev_agent_local_pairing` are exactly the canonical set in order (no drift). Files are **untracked** in git (created this working tree — nothing committed since `ca84aae`).
+- **Migrations**: `prisma/migrations/` = 47 dirs; the three canonical migrations follow `20260828100000_dev_agent_local_pairing` in order. These are included in launch candidate `9d6bd66`.
 - **Webhook security re-review** (code): signature verification mandatory + constant-time; missing secret → 500 (retry), bad/missing signature → 401 before any state; unknown event → safe no-op; duplicate → idempotent (unique keys); owner resolution is order/checkout-scoped (customer.external_id → metadata.userId → subscription), all signed-Polar-derived so cross-account mutation is not reachable; no raw-secret logging.
 - **Billing state machine re-reviewed** (code): checkout → `order.paid` → `applyPaymentEvent` (create SUCCEEDED Payment + ACTIVE Subscription + `User.plan`/`subscriptionStatus`) → `subscription.canceled/updated` mirrors `cancel_at_period_end` (no entitlement change) → `order.refunded` **full** reverts (Refund + CANCELED + TRIAL), **partial** records money only (`revokeEntitlement:false` kept) → `subscription.revoked` reverts current ACTIVE sub only (fallback to own row, orphan still closed). No policy changed.
 - **Refund-duplicate pre-probe** rehearsed on scratch: 0 duplicate `externalRefundId` rows (probe SQL healthy). Live probe pending production DB access.
 
 ## Known P1/P2 (non-blocking)
 
-- P1 (deploy-prep): the phase A–K working tree + 3 canonical migrations are uncommitted on `main` — commit/tag before deploy.
+- P1 (deploy-prep): confirm the clean launch candidate `9d6bd66` is the approved deployment commit.
 - P2: stop-vs-heartbeat race (≤ one 90s interval, few-ms window) — documented, unfixed.
 - P2 (cleanup): paid order's `checkout_id` (`0dcac8f8-…`) timestamp vs today's-signup metadata discrepancy — reconcile checkout records in the Polar dashboard (no code impact).
 - P1: Polar product/price ids needed in the prod env (PRO pair; PREMIUM optional/not-for-sale) — set in the env + run §19 probe; preflight/billing validate presence. No dashboard change needed.
 
 ## Exact Launch Decision
 
-**BLOCKED** — do NOT open the first production checkout until the production
-DB migrations are applied (gates 1–3), the production env is complete
-(preflight exit 0, including the PRO Polar price/product ids), the production
-webhook is registered and live-verified (gates 8–15 on the real account), the
-canonical build runs green, and the deploy is smoke-tested. **Pricing is now
-decided and aligned ($9.99 USD/month PRO, PREMIUM not-for-sale).** The
-remaining blockers are credentials and production-side webhook
-registration/delivery only.
+**BLOCKED** — do NOT open the first production checkout until required env
+names/values are complete and validated, DB identity/backup/history/probes are
+verified and migrations are applied, Vercel's production alias and Polar ID
+mapping are confirmed, the webhook is registered and live-verified, and the
+candidate is deployed and smoke-tested. **Pricing is decided and aligned
+($9.99 USD/month PRO, PREMIUM not-for-sale).**
 
 ## Feature freeze
 
@@ -231,13 +302,13 @@ and evidence docs were updated.
 
 | Gate                                   | Environment   | Status                        | Evidence                                                                         | Remaining Action                                                |
 | -------------------------------------- | ------------- | ----------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| Prod DB migration                      | PRODUCTION    | **BLOCKED**                   | no `DATABASE_URL`/`DIRECT_URL`; dry-run + post-state verified on scratch (47/47) | provide creds → identity/backup/probe → `prisma migrate deploy` |
+| Prod DB migration                      | PRODUCTION    | **BLOCKED**                   | Vercel lists DB env names but masks values; no physical backups/PITR; production history not queried | create/restore backup → verify DB identity/history/probe → migrate |
 | Refund duplicate preflight             | PRODUCTION    | **BLOCKED**                   | probe rehearsed on scratch → 0 dup; live DB unreachable                          | run probe on live DB before migration 2                         |
 | RLS / anon boundary                    | PRODUCTION    | BLOCKED (verified on scratch) | 13 tables RLS, 1 carve-out, grants revoked                                       | verify post-deploy                                              |
-| Production env completeness            | PRODUCTION    | **BLOCKED**                   | preflight exit 1 (CORE MISSING); billing partial                                 | fill Vercel/target secrets                                      |
-| Production Polar product mapping       | PRODUCTION    | **PASS** (mapping)            | one product $9.99 USD == PLAN_META PRO; PREMIUM not-for-sale (ids optional)      | set PRO ids in prod env + §19 probe                              |
+| Production env completeness            | PRODUCTION    | **BLOCKED**                   | Vercel env list lacks AUTH_GOOGLE_ID/SECRET and GROQ_API_KEY; sensitive values cannot be validated locally | provide/fix required env, rerun in a trusted target           |
+| Production Polar product mapping       | PRODUCTION    | **NOT VERIFIED** (env IDs)    | Polar catalog product is 999 USD/month; Vercel PRO ID values are masked         | verify IDs against Polar catalog                                |
 | Price consistency (UI/PLAN_META/Polar) | PRODUCTION    | **PASS** (this session)       | UI/`PLAN_META` all show PRO $9.99/month + "출시 예정" for PREMIUM, == Polar       | re-verify after §19 id probe                                    |
-| Production webhook registration        | PRODUCTION    | **BLOCKED**                   | domain unset; endpoint unregistered; secrecy isolation verified                  | register + set prod secret                                      |
+| Production webhook registration        | PRODUCTION    | **PASS**                      | existing endpoint corrected; enabled; secret matches; required events present; signed no-op accepted | verify actual Polar-originated delivery                         |
 | Webhook security                       | CODE          | PASS                          | fail-closed 401/500, constant-time, idempotent, owner-scoped, no secret logs     | re-verify live                                                  |
 | Sandbox payment → grant                | POLAR SANDBOX | PASS                          | real $9.99 order → Payment/Subscription/User PRO                                 | —                                                               |
 | Currency isolation                     | POLAR SANDBOX | PASS                          | `byCurrency {usd:1,999}`, KRW total 0                                            | —                                                               |
@@ -248,6 +319,6 @@ and evidence docs were updated.
 | `subscription.revoked` (2 variants)    | POLAR SANDBOX | NOT VERIFIED (unit-tested)    | 4 unit cases incl. orphan + fallback                                             | live via prod webhook                                           |
 | Regression                             | LOCAL SCRATCH | PASS                          | 122 files / 880 + typecheck + lint 0/2 + compile build exit 0                    | re-run in CI                                                    |
 | Production build                       | PRODUCTION    | BLOCKED (compile PASS)        | compile-only exit 0; canonical needs DB creds                                    | after gate 1 in CI                                              |
-| Deployment                             | PRODUCTION    | **BLOCKED**                   | no `.vercel`, no deploy                                                          | human: approve + link project                                   |
+| Deployment                             | PRODUCTION    | **BLOCKED**                   | linked project confirmed, launch gates remain open                               | resolve P0 gates before deployment                              |
 | Post-deploy smoke                      | PRODUCTION    | **BLOCKED**                   | no deploy                                                                        | after deploy, non-destructive smoke                             |
 | Anti-cheat / regression                | LOCAL SCRATCH | PASS                          | eligibility + heartbeat race tests green                                         | —                                                               |

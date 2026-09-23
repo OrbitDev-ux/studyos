@@ -9,8 +9,9 @@ in `features/billing/payment-service.ts` and both are read by
 
 ## Provider selection (fail-closed)
 
-- If `POLAR_TOKEN`, `POLAR_PRO_PRICE_ID`, `POLAR_PREMIUM_PRICE_ID` are all set →
-  new checkouts use Polar (`activeBillingProvider() === "polar"`).
+- If `POLAR_TOKEN`, `POLAR_PRO_PRICE_ID`, and `POLAR_PRO_PRODUCT_ID` are set →
+  new checkouts use Polar (`activeBillingProvider() === "polar"`). PREMIUM is
+  not-for-sale and its IDs are optional.
 - Otherwise Toss legacy is used if `TOSS_SECRET_KEY` + `NEXT_PUBLIC_TOSS_CLIENT_KEY`
   are set.
 - If neither is configured, `isCheckoutUsable()` is false and the pricing CTA is
@@ -32,7 +33,7 @@ it grants nothing (that is the `order.paid` webhook's job).
 ## Webhook trust model
 
 Register `https://<domain>/api/webhooks/polar` in the Polar organization and
-enable: `checkout.created/updated/confirmed`, `order.paid/refunded`,
+enable: `checkout.created/updated`, `order.paid/refunded`,
 `subscription.created/active/updated/canceled/past_due/uncanceled/revoked`.
 
 `POST /api/webhooks/polar` is fail-closed:
@@ -82,10 +83,10 @@ would ship the webhook secret / token to every browser.
 | -------------------------- | ------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | --------------- | ------------ |
 | `POLAR_TOKEN`              | server | ✅       | Polar REST access token. CAREFUL: the same token works for DEV and PROD in Polar — keep the account it belongs to locked down.                                                                      | sandbox token   | sandbox token   | prod token   |
 | `POLAR_WEBHOOK_SECRET`     | server | ✅       | HMAC secret for `/api/webhooks/polar`; empty/absent fails closed (500).                                                                                                                             | sandbox         | sandbox         | prod         |
-| `POLAR_PRO_PRICE_ID`       | server | ✅       | Price id → StudyOS PRO (with `POLAR_PREMIUM_PRICE_ID` it also selects Polar as the active provider).                                                                                                | sandbox price   | sandbox price   | prod price   |
-| `POLAR_PREMIUM_PRICE_ID`   | server | ✅       | Price id → StudyOS PREMIUM.                                                                                                                                                                         | sandbox price   | sandbox price   | prod price   |
+| `POLAR_PRO_PRICE_ID`       | server | ✅       | Price id → StudyOS PRO ($9.99 USD/month); required for signed order identity mapping.                                                                                                                | sandbox price   | sandbox price   | prod price   |
+| `POLAR_PREMIUM_PRICE_ID`   | server | optional | Historical mapping only; PREMIUM is not-for-sale at launch.                                                                                                                                         | unset           | unset           | unset        |
 | `POLAR_PRO_PRODUCT_ID`     | server | ✅       | Product id → StudyOS PRO. The current Checkout API selects items by PRODUCT id (`products: [productId]`), so a plan needs its product id in addition to the price id used for webhook plan-mapping. | sandbox product | sandbox product | prod product |
-| `POLAR_PREMIUM_PRODUCT_ID` | server | ✅       | Product id → StudyOS PREMIUM (same rationale as PRO).                                                                                                                                               | sandbox product | sandbox product | prod product |
+| `POLAR_PREMIUM_PRODUCT_ID` | server | optional | Historical mapping only; PREMIUM is not-for-sale at launch.                                                                                                                                         | unset           | unset           | unset        |
 | `POLAR_SANDBOX`            | server | optional | `"1"` (or truthy) switches the API base to `https://sandbox-api.polar.sh`.                                                                                                                          | `1`             | unset/`""`      | unset/`""`   |
 | `POLAR_API_URL`            | server | optional | Overrides the base URL outright (useful for a fixed sandbox/proxy). Highest priority.                                                                                                               | sandbox         | as needed       | unset        |
 
@@ -253,6 +254,20 @@ before go-live.
 > USD, monthly). There is no PREMIUM product and none is required (not-for-sale).
 > Any PRICE below is verified in minor units of the product's OWN currency and
 > never converted.
+
+### Latest production API observation — 2026-09-23
+
+The credential in the git-ignored `.env.production` authenticated to
+`api.polar.sh` (sandbox host rejected it). A read-only catalog request found an
+active `StudyOS PRO` product at 999 USD cents/month, matching the launch plan.
+The Vercel Production env list contains both PRO ID variable names, but its
+sensitive values could not be read locally, so their exact mapping is NOT
+VERIFIED. The existing Polar webhook endpoint was corrected to the configured
+Production route without creating a duplicate; its signing secret matches the
+local Production secret and required events are enabled. The deployed route
+returned 401 for unsigned input and 200 for a signed synthetic no-op. A real
+Polar-originated event delivery remains NOT VERIFIED. No payment or billing
+record was created or changed.
 
 ## Must verify before go-live (live credentials exist only in git-ignored env)
 

@@ -19,7 +19,6 @@
  *
  * FLAGS:
  *   --require-billing   fail (exit 2) when Polar/Toss credentials are missing.
- *   --no-ai             skip the AI-provider key check (headless CI without AI).
  */
 
 const FLAGS = new Set(process.argv.slice(2));
@@ -32,8 +31,6 @@ const CORE = Object.freeze([
   { name: "DIRECT_URL", purpose: "prisma migrate/generate (unpooled connection)" },
   { name: "AUTH_SECRET", purpose: "session signing (NextAuth)" },
   { name: "AUTH_URL", purpose: "auth callback + SITE_URL/canonical origin" },
-  { name: "AUTH_GOOGLE_ID", purpose: "Google OAuth login" },
-  { name: "AUTH_GOOGLE_SECRET", purpose: "Google OAuth login" },
   {
     name: "NEXT_PUBLIC_SUPABASE_URL",
     purpose: "edge maintenance gate + storage (public, not secret)",
@@ -97,6 +94,9 @@ const collect = (name, present, group) =>
 for (const item of CORE)
   collect(item.name, Boolean(process.env[item.name]?.trim()), "core");
 collect(aiProviderKey().name, Boolean(process.env[aiProviderKey().name]?.trim()), "core");
+for (const name of ["AUTH_GOOGLE_ID", "AUTH_GOOGLE_SECRET"]) {
+  collect(name, Boolean(process.env[name]?.trim()), "optional-auth");
+}
 
 let billingPresentCount = 0;
 const devSandbox =

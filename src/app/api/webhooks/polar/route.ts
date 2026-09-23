@@ -4,7 +4,7 @@ import { verifyPolarWebhookSignature } from "@/features/billing/polar-client";
 
 /**
  * POST /api/webhooks/polar — register this URL in the Polar organization
- * settings and enable at least: checkout.created/updated/confirmed,
+ * settings and enable at least: checkout.created/updated,
  * order.paid, order.refunded, subscription.created/active/updated/canceled/
  * past_due/uncanceled/revoked.
  *

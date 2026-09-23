@@ -6,6 +6,24 @@ the sandbox step passes end-to-end.
 
 Legend: ☐ pending · ☑ verified · ⛔ blocked (reason at bottom).
 
+## Latest Production Recheck — 2026-09-23
+
+**BLOCKED.** Current evidence is in `docs/P0_CLOSURE.md`. The target is
+`yesungvibecodes-3119/studyos`; `studyos-teal-eta.vercel.app` is an alias of
+the latest READY Production deployment, and public/canonical URLs match it.
+Vercel Production lacks `GROQ_API_KEY`; Google OAuth IDs are absent but are
+safe-disabled (not required by the current login/signup UI). Sensitive env
+values are masked from local CLI, so the actual Vercel DB connection target
+and Polar product/price ID mapping remain NOT VERIFIED. Polar catalog and
+webhook configuration are verified; provider-originated delivery is not.
+Production DB SQL confirms all 47 migrations/checksums match local, zero
+pending, duplicate-refund count zero, the expected RLS/grants/index/columns,
+and zero users/payments/refunds/subscriptions. A private dump and isolated
+restore drill PASS; managed backup listing is empty and PITR is disabled.
+The only anon table privilege is Maintenance SELECT; postgres-owner default
+table/sequence grants for anon/authenticated are revoked.
+No Production DB mutation, deploy, checkout, or payment was performed.
+
 ---
 
 ## 1. Database (the migrations)
@@ -24,44 +42,39 @@ EXPECTED: exactly **THREE** pending migrations, applied strictly in this order:
 3. `20260923000000_study_session_reward_eligibility` — `StudySession`
    `rewardEligibleDurationSec` + `lastVerifiedAt` (+ backfill).
 
-ACTUAL: **credentials unavailable / not verified** on the production DB from
-this workspace. Any count/order other than the above must be investigated
-before proceeding.
+ACTUAL: **zero pending**. A read-only Supabase Management SQL audit confirmed
+47/47 production migration names match the local directory, all completed,
+none rolled back, and SHA-256 checksums match exactly. The three expected
+migrations are already applied in order. Vercel's masked DB URL values mean
+the app's own runtime connection target is still not independently verified.
 
-1. [ ] ☐ **Confirmation** — `AWS_PROFILE`/Supabase dashboard project is the
-       right one; `DATABASE_URL`/`DIRECT_URL` point at the target. Check with
-       `npm run migrate:status` (prints applied vs pending; exit code reflects
-       drift). Expect the DB's last applied migration to be the one immediately
-       before the pending set (`20260828100000_dev_agent_local_pairing`) with the
-       three above pending.
-2. [ ] ☐ **Backup / recovery** — take a fresh snapshot (Supabase dashboard
-       "Backups") AND verify you can actually restore it: restore into a scratch
-       project and confirm row counts on `User`/`Subscription`/`Payment`. A
-       backup you've never restored is not a backup.
-3. [ ] ☐ **Migration history review** — `prisma migrate status` shows exactly
-       the three pending migrations above (nothing else), and nothing applied
-       that doesn't exist locally. Confirm the local `migrations/` folder is a
-       suffix of the DB's history (`prisma migrate diff` against the live schema
-       if in doubt).
-4. [ ] ☐ **Pending check** — exactly THREE pending migrations, in this order:
-       `20260921000000_close_anon_rest_trust_boundary` →
-       `20260922000000_refund_external_refund_id_unique` →
-       `20260923000000_study_session_reward_eligibility`. Zero / N>3 / a
-       different order means the deploy ordering is wrong — investigate before
-       running anything.
+1. [ ] ☐ **Confirmation** — linked Supabase project ref is
+       `okhgmyuixobxiczkinej`, database `postgres`, PostgreSQL 17.6. It matches
+       the configured Supabase URL; separately verify Vercel's masked
+       `DATABASE_URL`/`DIRECT_URL` target before any runtime DB action.
+2. [x] ✅ **Backup / recovery** — `/private/tmp/studyos-production.backup`
+       is a mode-600, 161,797-byte custom-format public-schema dump. Archive
+       listing validates 64 tables and data entries; isolated local restore
+       restored 64 tables and 47 migration rows with inventory counts matching
+       production. Managed physical backups remain empty and PITR disabled.
+3. [x] ✅ **Migration history review** — exact 47 local/production names,
+       checksums identical, 47 finished, zero failed/rolled back.
+4. [x] ✅ **Pending check** — zero pending. The expected three latest
+       migrations are already applied in order; do not run migrate deploy.
 5. [ ] ☐ **Destructive SQL review** — the pending migrations REVOKE grants on
        the `public` schema, enable RLS on 12 tables, add a single `Maintenance`
        SELECT carve-out, add a unique index on refund external ids, and add
        `rewardEligibleDurationSec`/`lastVerifiedAt` (+ backfill) to
        `StudySession`. There are NO drops/renames of columns or tables.
        Re-`git diff` the migration files against what ships to be sure.
-6. [ ] ☐ **Pre-deploy duplicate check (from the static audit)** — before step 7,
-       run the read-only SQL probe + data fix plan from
+6. [x] ✅ **Pre-deploy duplicate check** — the production read-only probe found
+       zero duplicate non-NULL external refund IDs. The query + data fix plan from
        `docs/PRODUCTION_CHECKLIST.md` §10.7 (see "duplicate refund external ids"
        probe in the audit notes) so `migration 2`'s unique index cannot fail on
        legacy duplicates.
-7. [ ] ☐ **Deploy** — `npm run build` (runs migrate deploy + next build) or
-       `npm run migrate:deploy` explicitly, THEN deploy the build.
+7. [ ] ⛔ **Deploy** — blocked by missing Production `GROQ_API_KEY`, masked
+       DB target / Polar ID mapping, and incomplete canonical production
+       verification. Do not run `npm run build` because it applies migrations.
 8. [ ] ☐ **Post-deploy smoke** — a real (non-admin) login works; anon REST
        call on a user-data table returns empty/denied (RLS holds); the
        `Maintenance` app-gate toggle still reads via the anon carve-out; the
@@ -92,12 +105,14 @@ scripts/polar-sandbox-smoke.mjs` — create checkout, complete the test
       **$9.99 launch decision (2026):** `PLAN_META` now defines PRO = 999 USD /
       month; PREMIUM is NOT for sale (`notForSale`) with its checkout failing
       closed. The four `POLAR_*_PRICE_ID`/`POLAR_*_PRODUCT_ID`: only the PRO
-      pair is required; PREMIUM pair is optional/expected-empty. Re-verify the
-      PRO price id in the prod .env maps to that exact product/price (read-only
-      §4/§19 probe) before the first live checkout.
-- [ ] ☐ Register `https://<domain>/api/webhooks/polar` and enable events:
-      `checkout.*`, `order.paid/refunded`,
-      `subscription.created/active/updated/canceled/past_due/uncanceled/revoked`.
+      pair is required; PREMIUM pair is optional/expected-empty. Vercel has
+      both PRO ID variable names, but values are masked, so their catalog
+      mapping remains NOT VERIFIED.
+- [x] ✅ Existing Polar endpoint corrected in place to
+      `https://studyos-teal-eta.vercel.app/api/webhooks/polar`, enabled with
+      the matching secret and required event coverage. Unsigned/signed
+      synthetic no-op probes returned 401/200; real Polar-originated delivery
+      remains NOT VERIFIED.
 - [ ] ☐ Confirm partial refunds record without revoking access, full refunds
       revert to TRIAL, `subscription.revoked` reverts even without
       `metadata.userId`, and dedupe survives redelivery.
@@ -330,8 +345,9 @@ deploy` is atomic per-file (Prisma rolls the transaction back).
 - [ ] ☐ `npm run verify:production` — typecheck → lint → tests → env preflight
       (`scripts/production-preflight.mjs --require-billing`) → compile-only
       `next build`. This command never runs migrations or billing mutations.
-      (This workspace: typecheck/lint/tests/compile build PASS; preflight fails
-      closed with MISSING core vars — expected outside the target env.)
+      (Local typecheck/lint/tests/compile build PASS. Vercel masks sensitive
+      values from local `env run`; actual preflight against all secrets remains
+      NOT VERIFIED, and three required Production env names are absent.)
 - [ ] ⛔ Migrations now evidence-verified on a scratch Postgres 16 (47/47 apply,
       0 pending, RLS/grants/columns/index probed, refund-unique functionally
       tested) — still needs the **live production** apply to be recorded.
@@ -345,36 +361,35 @@ deploy` is atomic per-file (Prisma rolls the transaction back).
       (PREMIUM not-for-sale). Re-verify PRO price id mapping at §19 before the
       first production charge.
 
-Gate state as of this session is consolidated in `docs/P0_CLOSURE.md`
-(status: `BLOCKED` — production DB/credentials and production-registered
-webhook delivery; the Polar price-consistency blocker is RESOLVED by the
-$9.99 launch decision + `PLAN_META` alignment; P0 gates 1, 8-15-live-transport,
-16, 17(canonical), 19).
+Gate state as of the latest recheck is consolidated in `docs/P0_CLOSURE.md`
+(status: `BLOCKED` — missing Groq Production key; Vercel-masked DB target and
+Polar PRO ID mapping; canonical runtime preflight/DB health, deployment and
+post-deploy smoke remain. Production migration history/RLS/refund probe and a
+private dump/restore drill now pass; managed backups/PITR remain off. Catalog
+pricing is aligned and the webhook endpoint is correctly configured).
 
 ---
 
 ## Blocked items (why, and what unblocks them)
 
-- **Production DB / env**: `DATABASE_URL`/`DIRECT_URL` (+ `AUTH_SECRET`,
-  `AUTH_URL`, Google, Supabase, ADMIN, AI key) MISSING in `.env.production`;
-  preflight exits 1. Add them to the target env (Vercel/secure store, best via
-  the dashboard — never paste values into chat), then re-run
-  `production-preflight.mjs --require-billing` → exit 0, identity gate, backup
-  gate, §10.7 probe, `prisma migrate deploy`. Execution-ready evidence exists
-  on scratch (see `docs/P0_CLOSURE.md`).
+- **Production env/runtime**: `GROQ_API_KEY` is absent and AI generation is a
+  launch-critical capability. Google OAuth IDs are absent but safe-disabled by
+  the reviewed source fix; the login/signup UI exposes Credentials/Guest only.
+  Vercel masks sensitive values, so privately verify `DATABASE_URL` and
+  `DIRECT_URL` target Supabase ref `okhgmyuixobxiczkinej`, then run canonical
+  verification and a read-only app DB health check. Do not share values.
+- **Production DB / backup**: all 47 migration checksums match local, zero
+  pending; RLS/grants, refund unique index/zero duplicate probe and reward
+  columns pass. Private public-schema dump and isolated restore drill pass.
+  Supabase-managed backups/PITR are still disabled. Do not run migrations.
 - **Polar production pricing (RESOLVED — $9.99 launch decision, this
   session)**: production org has ONE product "StudyOS PRO" @ $9.99 USD/month
   (price `d8aaa433-…`). The operator decision is now FINAL: **PRO = $9.99 USD /
   month is the production catalog**; PREMIUM not-for-sale. `PLAN_META`/UI/
-  checkout/webhook/tests were aligned to it. Remaining: set
-  `POLAR_PRO_PRICE_ID`+`POLAR_PRO_PRODUCT_ID` (+ PREMIUM pair only if a
-  not-for-sale legacy is desired) in the prod env and run the §4/§19 read-only
-  id-consistency probe.
-- **Polar webhook registration/delivery**: register
-  `https://<prod-domain>/api/webhooks/polar` with the production secret (never
-  the `polar listen` session secret), then observe real `order.paid` and
-  redelivery. Only then can cancel-at-period-end / partial refund /
-  `subscription.revoked` be live-verified (unit-tested today).
-- **Commit + canonical build/CI**: the phase A–K working tree (incl. the 3
-  canonical migrations) is uncommitted on `main` — commit before deploy; run
-  `npm run verify:production` and the canonical build in CI.
+  checkout/webhook/tests were aligned to it. Remaining: compare the masked
+  Vercel Production PRO ID values to the catalog with the §4/§19 probe.
+- **Polar webhook delivery**: endpoint URL, secret, enabled state, and required
+  event coverage are verified; a real Polar-originated delivery and redelivery
+  remain to be observed.
+- **Canonical build/CI**: candidate `9d6bd66` is committed and clean on `main`;
+  run production verification/build only after all env and DB gates pass.

@@ -16,6 +16,8 @@ import { auth, signIn, signOut } from "@/lib/auth";
 import { getClientIp } from "@/lib/ip";
 import { prisma } from "@/lib/prisma";
 import { capture } from "@/features/analytics/capture";
+import { isGoogleOAuthConfigured } from "@/features/auth/provider-config";
+import { redirect } from "next/navigation";
 
 const INVALID_CREDENTIALS_ERROR = "이메일 또는 비밀번호가 올바르지 않습니다.";
 
@@ -37,6 +39,7 @@ const SIGNUP_RATE_WINDOW_MS = 15 * 60 * 1000;
 const MAX_SIGNUPS_PER_IP = 10;
 
 export async function signInWithGoogle() {
+  if (!isGoogleOAuthConfigured()) redirect("/login?google=unavailable");
   await signIn("google", { redirectTo: "/dashboard?welcome=1" });
 }
 

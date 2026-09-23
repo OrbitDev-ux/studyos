@@ -3,6 +3,22 @@
 Status of the phased rebuild. Each phase is "done" only when
 typecheck + lint + the full test suite are green (see `docs/HANDOFF.md`).
 
+## Latest Production Launch State — 2026-09-23
+
+The latest Production deployment remains launch candidate `9d6bd66` at
+`studyos-teal-eta.vercel.app`. This source includes reviewed evidence updates
+and a Google OAuth safe-disable fix not yet in that deployment. The linked Supabase SQL
+audit confirms 47 exact migration names/checksums, zero pending, refund
+duplicate count zero, intended RLS/grants/index/columns, and zero User/Payment/
+Refund/Subscription rows. A private dump and isolated restore drill PASS;
+managed backup/PITR are still absent. Polar product and webhook configuration
+are verified, but Vercel product/price ID mapping and Vercel DB URL target are
+masked/unverified. `GROQ_API_KEY` is absent and AI remains launch-critical.
+The public site, pricing, auth endpoints, and unauthenticated admin redirects
+PASS. Full local suite now has 891 tests; typecheck/lint/build PASS. No new
+Production deploy, DB mutation, checkout, or payment was performed. See
+`docs/P0_CLOSURE.md` for the current evidence and exact blockers.
+
 | Phase                                             | Scope                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Status                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | A                                                 | RLS + session hardening: battle, ranking, social (row-level security, `requireCurrentUser`, party-scoped access)                                                                                                                                                                                                                                                                                                                                           | ✅ done                                                                                                                                                                                                                                                                                                                                                                                                                              |
@@ -23,34 +39,33 @@ typecheck + lint + the full test suite are green (see `docs/HANDOFF.md`).
 | I — Revenue Readiness Phase 11                    | Full verification + attempted production build                                                                                                                                                                                                                                                                                                                                                                                                             | 🟡 code verified; build blocked (no env)                                                                                                                                                                                                                                                                                                                                                                                             |
 | J — Final Pre-Deployment Gate                     | Regression audit (Toss PARTIAL_CANCELED parity fix + test), metrics semantics documented (+net label), preflight `scripts/production-preflight.mjs`, `npm run verify:production`, DB deploy-safety checklist, Polar sandbox runbook, failure/rollback runbook, P0/P1/P2 classification                                                                                                                                                                     | ✅ done (runtime creds still blocked)                                                                                                                                                                                                                                                                                                                                                                                                |
 | K — Study-session reward eligibility (anti-cheat) | `StudySession.rewardEligibleDurationSec` + `lastVerifiedAt` (migration + backfill), `eligibility.ts` policy + checkpoint stamped from existing `touchPresence` heartbeat, `stopStudySession` rewards only verified time, competitive surfaces (streak/ranking/battle study_time/friend feed) read the verified field, tests                                                                                                                                | ✅ done                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| PRE-LAUNCH P0 CLOSURE (this session)              | Checklist consistency (§1/§10.1/§10.7/§11), migration static audit (3 pending), Phase K security review (multi-tab double-credit race fixed), USD/KRW revenue isolation fix, final regression (880 tests green), `docs/P0_CLOSURE.md` gate report; **production closure audit**: prod Polar org = 1× "$9.99 USD/month" product (no KRW/PREMIUM) → **price consistency FAIL**, preflight exit 1 (CORE MISSING), prod webhook unregistered, tree uncommitted | ✅ code/dry-run closed; **live sandbox workflow closed**: real USD payment → `order.paid`/`subscription.created` → Payment/Subscription/entitlement grant, idempotent redelivery, full-refund revert (gates 8–11,13); **BLOCKED**: prod creds (gates 1/16/17-canonical/19) + Polar price decision + prod webhook delivery of cancel/partial-refund/`subscription.revoked` (gates 12,14,15 — unit-tested, live delivery NOT observed) |
+| PRE-LAUNCH P0 CLOSURE (this session)              | Production DB history/RLS/refund probe/backup restore verification; env and Polar audit; final local regression | ✅ DB migrations/RLS/backup drill, Polar catalog/webhook registration, and local verification closed; **BLOCKED**: missing Groq key, masked Vercel DB target and Polar PRO ID mapping, canonical runtime verification, deploy/checkout |
 
 ## Deploy-gated items
 
-- [ ] `prisma migrate deploy` for `20260921000000_close_anon_rest_trust_boundary`,
-      `20260922000000_refund_external_refund_id_unique`, and
-      `20260923000000_study_session_reward_eligibility` (needs live DB creds;
-      execution dry-run + post-state validation + §10.7 probe on a scratch
-      Postgres 16 already PASS — see `docs/P0_CLOSURE.md`).
-- [ ] Prisma migrations (47/47) apply-clean + 3 canonical pending verified on a scratch
-      Postgres 16 (`prisma migrate status` → up to date; RLS/grants/columns/index/probe PASS
-      — see `docs/P0_CLOSURE.md`); **live production** apply still needs DB creds
-      (`DATABASE_URL`/`DIRECT_URL` MISSING in `.env.production`).
-- [x] **Production Polar pricing RESOLVED ($9.99 launch decision, this session)**:
-      the production product "StudyOS PRO" @ **$9.99 USD/month** IS the canonical
-      catalog price. Code aligned (`PLAN_META` PRO = 999 USD/월, PREMIUM
-      `notForSale`, isPolarConfigured = PRO-only, revenue per-currency).
-      Action: set `POLAR_PRO_PRICE_ID`+`POLAR_PRO_PRODUCT_ID` in the prod env
-      (PREMIUM pair optional) and run the §4/§19 id-consistency probe.
+- [x] Production migrations: direct read-only SQL confirms 47/47 exact names
+      and checksums, all finished, zero pending; the three canonical migrations
+      are already applied. Do not rerun `prisma migrate deploy`.
+- [x] Production RLS/grants, refund uniqueness/duplicate probe, reward columns,
+      postgres-owner default grants, and user/financial inventory verified via
+      Supabase Management SQL.
+- [x] Private public-schema backup and isolated local restore drill verified;
+      managed backups/PITR remain disabled.
+- [x] **Production Polar catalog price verified**: read-only production API
+      lookup found active StudyOS PRO at 999 USD cents/month. Vercel's sensitive
+      PRO product/price values remain NOT VERIFIED against that catalog.
+      PREMIUM remains not-for-sale.
 - [ ] Polar sandbox lifecycle — **payment→webhook→entitlement now verified live**
       (real USD order → `order.paid` grant, idempotent redelivery, full-refund revert).
       Remaining: cancel-at-period-end, partial refund (no-revoke), `subscription.revoked`
       (unit-tested only — the `polar listen` tunnel relays only `checkout.*`, so those
       events were never observed live; deliver them via a registered production webhook).
-- [ ] Production webhook registration + real delivery at
-      `https://<prod-domain>/api/webhooks/polar` (production domain/env unset).
-- [ ] Commit the phase A–K tree (everything since `ca84aae` is uncommitted, incl. the 3
-      canonical migrations); then canonical build/deploy/CI + post-deploy smoke.
+- [x] Production webhook endpoint corrected in place; enabled with matching
+      secret and required event coverage. Signed no-op reached the route;
+      actual Polar-originated delivery remains NOT VERIFIED.
+- [ ] Pass remaining env/runtime/Polar ID gates, commit reviewed work, then run
+      canonical Production verification/deploy + post-deploy smoke. Latest
+      READY Production deployment is still `9d6bd66`; current work is uncommitted.
 - [ ] Full gate report: `docs/P0_CLOSURE.md` (status `BLOCKED`).
 
 ## Local sandbox E2E phase (current)

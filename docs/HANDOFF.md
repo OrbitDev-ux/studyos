@@ -12,14 +12,35 @@ Tailwind UI. Payments: Polar (primary) + Toss (legacy). Analytics: Vercel
 Web Analytics + Sentry + Google AdSense (TRIAL-only). i18n: hand-rolled
 `src/features/i18n` (marketing pages stay static Korean).
 
-## Green baseline (last full verification)
+## Local verification (2026-09-23)
 
 - `npx tsc --noEmit` — clean.
 - `npm run lint` — 0 errors; 2 pre-existing warnings (`scripts/verify-ban.mjs:32`,
   `src/features/dev/components/file-explorer.tsx:69`).
-- `npm run test` — 122 files / 880 tests pass.
+- `npm run test` — 124 files / 891 tests pass.
+- `npx prisma generate` and `npm run typecheck` — pass.
+- `npx next build` — pass as a compile-only build on the localhost scratch
+  environment; this is not a production build.
 
-## What was just done (this session)
+## Latest production closure update — 2026-09-23
+
+The Production alias and pricing/auth/admin public smoke checks pass. Supabase
+Management SQL now confirms all 47 local migrations/checksums are applied with
+zero pending, the expected RLS/grants/index/reward columns, zero refund
+duplicates, and zero User/Payment/Refund/Subscription rows. A 161,797-byte
+mode-600 dump was restored into an isolated local PostgreSQL 16 drill. Managed
+backup/PITR are still absent. Polar's production StudyOS PRO is active at
+$9.99 USD/month and its enabled webhook endpoint/secret/event coverage match
+the live route; Polar ID mapping and real provider delivery are not verified.
+Vercel hides sensitive DB and Polar ID values from the local CLI, and
+`GROQ_API_KEY` is absent. Google OAuth is now safe-disabled unless both
+credentials exist; current login/signup exposes email and guest flows only.
+These source changes are not yet in the Production deployment. Full local
+verification is now 124 files / 891 tests, typecheck/lint and compile-only
+build PASS. See
+`docs/P0_CLOSURE.md` before any deployment.
+
+## Previous implementation work
 
 1. **Closed the anon-REST trust boundary (Phase C2)** — every client that
    talked to Supabase REST with the anon key now uses Prisma:
@@ -110,24 +131,34 @@ Web Analytics + Sentry + Google AdSense (TRIAL-only). i18n: hand-rolled
 
 ## Known pending / blocked
 
-- **Production deployment closure (current phase)**: sandbox lifecycle is closed
-  (see below). Production audit (read-only) findings:
-  - `.env.production` has only `POLAR_TOKEN` (prod-scoped, distinct from sandbox)
-    - `POLAR_WEBHOOK_SECRET`; **preflight exit 1** (CORE MISSING: DATABASE_URL/
-      AUTH/Supabase/ADMIN/AI; billing price+product ids missing).
+- **Production deployment closure (current phase)**: latest read-only recheck
+  confirms `main` is clean at launch candidate `9d6bd66` and linked Vercel
+  project `yesungvibecodes-3119/studyos`. Production env names omit required
+  `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, and `GROQ_API_KEY`; sensitive values
+  cannot be validated via local Vercel pull/run. The configured
+  `NEXT_PUBLIC_SITE_URL` is `https://studyos-teal-eta.vercel.app`; its public
+  StudyOS routes return 200. The production-scoped Polar token read the catalog
+  successfully. The single existing endpoint was corrected to this origin's
+  `/api/webhooks/polar`, with matching secret and required events; unsigned and
+  signed no-op probes returned 401/200. Real Polar-originated delivery and the
+  Vercel PRO ID mapping remain NOT VERIFIED.
+  - Production Supabase project ref matches the configured Supabase URL, but
+    sensitive DB connection values are masked. Supabase backup listing reports
+    no physical backups and PITR disabled (**backup gate FAIL**). Migration
+    history, duplicate-refund probe, RLS and restore remain NOT VERIFIED. No DB
+    mutation or deployment was performed.
+  - Latest local regression: Prisma generate, typecheck, lint (2 warnings),
+    and 123 files / 889 tests PASS.
   - **Production Polar pricing RESOLVED ($9.99 launch decision)**: org's ONE
     product "StudyOS PRO" @ $9.99 USD/month IS the catalog. `PLAN_META`/UI/
     checkout/webhook/analytics aligned to PRO = 999 USD / month; PREMIUM is
     not-for-sale (`notForSale`), its checkout fails closed. Only the PRO
     price/product ids are required in the prod env; PREMIUM pair optional.
-  - Production webhook (`https://<prod-domain>/api/webhooks/polar`) unregistered
-    (no domain set); live delivery of cancel/partial/`subscription.revoked`
-    remains unit-tested only.
-  - Deployment: no `.vercel` project link, no commit/tag of the phase A–K tree
-    (everything since `ca84aae` is uncommitted, incl. the 3 canonical migrations).
-  - Next: provide prod creds → preflight exit 0 → identity/backup → §10.7 probe →
-    `prisma migrate deploy`; set PRO Polar ids + §19 probe; register webhook;
-    commit; CI build; deploy; post-deploy smoke — detail in `docs/P0_CLOSURE.md`.
+  - Next: resolve missing env names, establish a restorable backup, validate
+    sensitive values in the actual target, inspect the DB and refund probe, then
+    verify the masked Polar PRO ID mapping and capture a real Polar-originated
+    webhook delivery. Follow `docs/P0_CLOSURE.md`; do not deploy until all P0
+    gates pass.
 - **Polar sandbox E2E (current phase)**: local DB recovered via an isolated
   Homebrew Postgres cluster on `:5433` (Docker/Supabase CLI not runnable on this
   Mac — colima VZ/QEMU OOM, no Docker Desktop; the pre-existing Postgres cluster

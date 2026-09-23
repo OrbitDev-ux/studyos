@@ -10,6 +10,7 @@ import { capture } from "@/features/analytics/capture";
 import { authConfig } from "@/lib/auth.config";
 import { getClientIp } from "@/lib/ip";
 import { prisma } from "@/lib/prisma";
+import { isGoogleOAuthConfigured } from "@/features/auth/provider-config";
 
 // Brute-force guard on password sign-in (Security audit: unlike admin login,
 // this had no rate limit at all — only bcrypt's inherent compare delay).
@@ -24,7 +25,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(prisma),
   providers: [
-    Google,
+    ...(isGoogleOAuthConfigured() ? [Google] : []),
     Credentials({
       credentials: {
         email: { label: "이메일", type: "email" },

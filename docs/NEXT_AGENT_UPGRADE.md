@@ -9,7 +9,7 @@ the "what to do next".
 The security (A–C2), billing (D–E), marketing/SEO (F first slice), analytics
 (G), project docs (H), Revenue Readiness Phase I, Final Pre-Deployment Gate (J),
 and study-session reward-eligibility anti-cheat (K) work is **done and fully
-verified** (122 test files / 880 tests, typecheck clean, lint 0 errors).
+verified** (124 test files / 891 tests, typecheck clean, lint 0 errors).
 Phase K (new this session): `StudySession.rewardEligibleDurationSec` +
 `lastVerifiedAt` (migration 20260923000000 + backfill), reward-eligibility
 policy+checkpoint in `eligibility.ts` wired into the existing `touchPresence`
@@ -20,14 +20,19 @@ modulo credentials: sandbox harness, billing hardening, funnel events, revenue
 metrics (+`/admin/revenue`), security tests, and the go-live checklist
 `docs/PRODUCTION_CHECKLIST.md`.
 
-## The immediate follow-up (deploy-level — needs production credentials)
+## The immediate follow-up (deploy-level — production gates remain blocked)
 
-The **sandbox billing lifecycle is now verified** (see `docs/P0_CLOSURE.md` and
-`docs/HANDOFF.md`): a real sandbox USD card payment ran through
-`order.paid`/`subscription.created` → Payment/Subscription/entitlement, idempotent
-redelivery, full-refund revert, and currency isolation. This session also ran a
-**read-only production closure audit** with these NEW findings (must be cleared
-before any checkout):
+The **sandbox billing lifecycle is verified** (see `docs/P0_CLOSURE.md`). The
+latest Production SQL audit verifies all 47 migration names/checksums, zero
+pending, refund duplicate probe 0, expected RLS/index/columns, and zero user or
+financial rows. A private dump and isolated restore drill pass, though managed
+backup/PITR are off. Production Polar catalog and existing webhook config pass;
+masked Vercel PRO IDs and DB URL mapping remain unverified. The login pages use
+Credentials/Guest; code now omits Google unless both credentials exist.
+`GROQ_API_KEY` is missing, so AI remains launch-critical and production
+preflight cannot pass. Latest READY deployment is still `9d6bd66`; reviewed
+source changes are not deployed. Do not deploy until the remaining P0 gates
+are cleared:
 
 0. **Production Polar pricing RESOLVED ($9.99 launch decision)**: the
    production Polar org's product "StudyOS PRO" @ **$9.99 USD / month** is now
@@ -36,21 +41,20 @@ before any checkout):
    fails closed). Only `POLAR_PRO_PRICE_ID`+`POLAR_PRO_PRODUCT_ID` are required
    (PREMIUM pair optional/empty) — verify against the dashboard with the §4/§19
    read-only probe before the first live checkout.
-1. Obtain **production** DB/`POLAR_*` credentials. Then:
-   - `node --env-file=.env.production scripts/production-preflight.mjs --require-billing`
-     (currently **exit 1**: `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`,
-     `AUTH_URL`, Google, Supabase, ADMIN, GROQ, and 4 billing ids all MISSING —
-     only `POLAR_TOKEN`/`POLAR_WEBHOOK_SECRET` are present and correct/prod-scoped).
-   - walk `docs/PRODUCTION_CHECKLIST.md` sections 2–10 (DB backup →
-     migration → webhook registration → funnel check → rollback rehearsal).
-   - deploy applies THREE pending migrations: `...trust_boundary`,
-     `...refund_external_refund_id_unique`, `...study_session_reward_eligibility`.
-2. Register `https://<prod-domain>/api/webhooks/polar` with the **production**
-   secret (never the `polar listen` session secret) and re-walk the live
-   lifecycle: `order.paid`, cancel-at-period-end, partial refund (no-revoke),
-   `subscription.revoked` (with/without `metadata.userId`), duplicate redelivery.
-3. Commit the phase A–K working tree (uncommitted on `main`, incl. the 3
-   canonical migrations); confirm `next build` + `prisma migrate deploy` in CI.
+1. Set `GROQ_API_KEY` in Vercel Production. In Vercel/Supabase dashboards,
+   privately verify `DATABASE_URL`/`DIRECT_URL` target ref
+   `okhgmyuixobxiczkinej` and verify `POLAR_PRO_PRODUCT_ID`/`POLAR_PRO_PRICE_ID`
+   match the active $9.99 USD monthly StudyOS PRO objects; do not share values.
+2. Run canonical production verification from a context with the real runtime
+   variables, then perform a read-only Prisma DB health check. Do not rerun
+   migrations: all three expected migrations are already applied and there are
+   zero pending.
+3. No production provider-originated event exists yet. A real
+   `checkout.created` delivery can be verified when the single non-payment
+   launch checkout session is created after every other gate passes. Later
+   verify cancel-at-period-end, partial refund, revocation and redelivery.
+4. Commit the reviewed local fix/evidence, then deploy only after all P0 gates
+   pass. No production deploy/checkout has been done by this recheck.
 
 ## The open decision (ask the user before building)
 

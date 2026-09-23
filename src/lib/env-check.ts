@@ -9,8 +9,6 @@ const REQUIRED: { key: string; breaks: string }[] = [
   { key: "DIRECT_URL", breaks: "prisma migrate/generate" },
   { key: "AUTH_SECRET", breaks: "세션 서명 — 로그인 불가" },
   { key: "AUTH_URL", breaks: "인증 콜백 + SEO 절대 URL(robots/sitemap/OpenGraph/JSON-LD)" },
-  { key: "AUTH_GOOGLE_ID", breaks: "Google 로그인" },
-  { key: "AUTH_GOOGLE_SECRET", breaks: "Google 로그인" },
   { key: "NEXT_PUBLIC_SUPABASE_URL", breaks: "점검 게이트 엣지 읽기(lib/maintenance-edge.ts) + 스토리지" },
   { key: "NEXT_PUBLIC_SUPABASE_ANON_KEY", breaks: "점검 게이트 엣지 읽기(lib/maintenance-edge.ts)" },
   { key: "ADMIN_SECRET", breaks: "관리자 부트스트랩 로그인" },
