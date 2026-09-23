@@ -35,7 +35,8 @@ the live route; Polar ID mapping and real provider delivery are not verified.
 Vercel hides sensitive DB and Polar ID values from the local CLI, and
 `GROQ_API_KEY` is absent. Google OAuth is now safe-disabled unless both
 credentials exist; current login/signup exposes email and guest flows only.
-These source changes are not yet in the Production deployment. Full local
+The source checkpoint is committed locally as `3ccf283`, but is not yet in the
+Production deployment. Full local
 verification is now 124 files / 891 tests, typecheck/lint and compile-only
 build PASS. See
 `docs/P0_CLOSURE.md` before any deployment.

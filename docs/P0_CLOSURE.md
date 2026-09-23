@@ -5,9 +5,10 @@
 **BLOCKED — do not deploy or create a production checkout.** This section is
 the current evidence and supersedes older workspace-state notes below.
 
-- Git/Vercel: branch `main`, launch candidate `9d6bd66`; this work includes
-  reviewed docs/route-comment updates and a Google OAuth safe-disable fix not
-  present in the latest READY deployment. Vercel account/project are
+- Git/Vercel: source branch `main` is at local checkpoint `3ccf283` (one commit
+  ahead of `origin/main`). Latest READY Production deployment remains
+  `9d6bd66`; this checkpoint's docs/route-comment updates and Google OAuth
+  safe-disable fix are not deployed. Vercel account/project are
   `yesungvibecodes-3119/studyos`. Latest READY Production deployment is the
   launch candidate and its aliases include
   `https://studyos-teal-eta.vercel.app` and

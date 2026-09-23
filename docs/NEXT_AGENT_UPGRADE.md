@@ -30,8 +30,8 @@ backup/PITR are off. Production Polar catalog and existing webhook config pass;
 masked Vercel PRO IDs and DB URL mapping remain unverified. The login pages use
 Credentials/Guest; code now omits Google unless both credentials exist.
 `GROQ_API_KEY` is missing, so AI remains launch-critical and production
-preflight cannot pass. Latest READY deployment is still `9d6bd66`; reviewed
-source changes are not deployed. Do not deploy until the remaining P0 gates
+preflight cannot pass. Latest READY deployment is still `9d6bd66`; source
+checkpoint `3ccf283` is committed locally but not deployed. Do not deploy until the remaining P0 gates
 are cleared:
 
 0. **Production Polar pricing RESOLVED ($9.99 launch decision)**: the

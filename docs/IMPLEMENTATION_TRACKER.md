@@ -7,7 +7,8 @@ typecheck + lint + the full test suite are green (see `docs/HANDOFF.md`).
 
 The latest Production deployment remains launch candidate `9d6bd66` at
 `studyos-teal-eta.vercel.app`. This source includes reviewed evidence updates
-and a Google OAuth safe-disable fix not yet in that deployment. The linked Supabase SQL
+and a Google OAuth safe-disable fix, committed locally as `3ccf283` but not yet
+in that deployment. The linked Supabase SQL
 audit confirms 47 exact migration names/checksums, zero pending, refund
 duplicate count zero, intended RLS/grants/index/columns, and zero User/Payment/
 Refund/Subscription rows. A private dump and isolated restore drill PASS;
