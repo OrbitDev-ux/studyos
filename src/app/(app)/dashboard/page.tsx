@@ -23,10 +23,6 @@ import { MilestoneBanner } from "@/features/announcements/components/milestone-b
 import { getHeaderNotifications } from "@/features/notifications/queries";
 import { OnboardingLauncher } from "@/features/onboarding/components/onboarding-launcher";
 import { getOnboardingState } from "@/features/onboarding/queries";
-import { TrialBanner } from "@/features/billing/components/trial-banner";
-import { getPlanSummary } from "@/features/billing/usage";
-import { adsVisibleFor } from "@/features/billing/access";
-import { AdSlot } from "@/features/ads/components/ad-slot";
 import { getFriends, getConversations, getReceivedFriendRequestCount } from "@/features/social/queries";
 import {
   getActiveStudySession,
@@ -44,6 +40,8 @@ import { formatLongDate } from "@/lib/date";
 import { getMessages } from "@/features/i18n/messages";
 import { getServerLocale } from "@/features/i18n/server";
 import { requireCurrentUser } from "@/lib/session";
+import { MidnightEventCard } from "@/features/theme-events/components/midnight-event-card";
+import { getActiveThemeEvent } from "@/features/theme-events/theme-event";
 
 const CARD_PREVIEW_LIMIT = 3;
 const CONTINUE_ITEM_LIMIT = 3;
@@ -66,7 +64,6 @@ export default async function DashboardPage() {
     missionBoard,
     weakProblemBoard,
     onboarding,
-    planSummary,
     weeklyStats,
     activeMissions,
     tutorConversations,
@@ -89,7 +86,6 @@ export default async function DashboardPage() {
     getDailyMissionBoard(user.id, user.timezone),
     getWeakProblemBoard(user.id, user.timezone),
     getOnboardingState(user.id),
-    getPlanSummary(user.id),
     getWeeklyStatistics(user.id, user.timezone),
     getActiveMissions(user.id),
     getTutorConversations(user.id),
@@ -98,7 +94,6 @@ export default async function DashboardPage() {
     getReceivedFriendRequestCount(user.id),
     getHeaderNotifications(user.id),
   ]);
-  const showAds = adsVisibleFor(user);
   const locale = await getServerLocale(user.locale);
   const messages = getMessages(locale);
   const t = messages.dashboard;
@@ -106,6 +101,7 @@ export default async function DashboardPage() {
   const completedTodos = todos.filter((todo) => todo.completed).length;
   const progressPercent =
     todos.length === 0 ? 0 : Math.round((completedTodos / todos.length) * 100);
+  const activeThemeEvent = getActiveThemeEvent();
 
   // "이어서 하기": real, already-fetched signals only, in priority order —
   // never a fabricated "recently used app" list. An active study session
@@ -164,8 +160,6 @@ export default async function DashboardPage() {
 
       <MilestoneBanner />
 
-      <TrialBanner summary={planSummary} />
-
       {/* ── 인사 + 핵심 지표: 카드/그라디언트 없이 컴팩트하게 ── */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -198,6 +192,20 @@ export default async function DashboardPage() {
       </div>
 
       <ContinueWorkingCard items={continueItems} t={t} />
+
+      <MidnightEventCard
+        event={
+          activeThemeEvent
+            ? {
+                name: activeThemeEvent.name,
+                copy: activeThemeEvent.copy,
+                endsAt: activeThemeEvent.endsAt.toISOString(),
+              }
+            : null
+        }
+        studiedToday={todaySeconds > 0 || activeSession !== null}
+        completedFocus={todos.length > 0 && todos.every((todo) => todo.completed)}
+      />
 
       {/* ── Main(2/3) + Sidebar(1/3): 세로 스택 대신 병렬 컬럼으로 배치해
           첫 화면 스크롤을 줄인다. 모바일에서는 자연스럽게 1열로 쌓이고,
@@ -265,8 +273,6 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Ads only for trial-active users. 학습 흐름을 끊지 않도록 대시보드 최하단으로 분리. */}
-      <AdSlot placement="dashboard" show={showAds} />
     </div>
   );
 }

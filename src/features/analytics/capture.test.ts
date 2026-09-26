@@ -17,6 +17,7 @@ const SAMPLE_EVENTS: AnalyticsEvent[] = [
   { name: "login_completed", props: { method: "google" } },
   { name: "problems_generated", props: { count: 3, subject: "수학", type: "MULTIPLE_CHOICE" } },
   { name: "demo_started", props: {} },
+  { name: "study_session_completed", props: { durationSec: 1800 } },
   { name: "charge_succeeded", props: { plan: "PRO", amount: 9900, currency: "KRW", provider: "polar" } },
   { name: "subscription_canceled", props: { plan: "PRO", atPeriodEnd: true } },
   { name: "subscription_expired", props: { plan: "PRO", reason: "grace" } },

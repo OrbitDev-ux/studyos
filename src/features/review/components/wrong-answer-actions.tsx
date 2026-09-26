@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
@@ -223,11 +222,7 @@ export function WrongAnswerActions({
             >
               {isAnalyzing ? "분석 중..." : "오답 원인 분석"}
             </Button>
-          ) : (
-            <Button type="button" size="sm" variant="outline" asChild>
-              <Link href="/pricing">🔒 오답 DNA (PRO)</Link>
-            </Button>
-          ))}
+          ) : null)}
         {!wrongAnswer.resolved && (
           <Button
             type="button"

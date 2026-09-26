@@ -1,5 +1,16 @@
 # Production Revenue Readiness — Go-Live Checklist
 
+## Superseding Product Policy — 2026-09-27 (Local, Not Deployed)
+
+The current product direction is FREE ONLY, not a paid launch. New checkout is
+disabled in application code; the Toss renewal cron is gated off; billing rows,
+migrations, and webhook/history compatibility are preserved. Polar external
+configuration was not changed. Do not use the historical paid-launch checklist
+below to re-enable checkout. Before claiming the free release is legally
+complete, review the existing paid-service Terms/Privacy text and unresolved
+placeholders with the responsible operator/legal reviewer. This section is a
+local code-state note, not evidence of a Production deployment.
+
 Version pre-first-charge. Work the "Deploy" section first (migrations + build),
 then Polar, then observability. **Do not** open checkouts to real traffic until
 the sandbox step passes end-to-end.

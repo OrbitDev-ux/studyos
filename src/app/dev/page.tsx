@@ -1,4 +1,4 @@
-import { UpgradeNotice } from "@/features/billing/components/upgrade-notice";
+import { Card, CardContent } from "@/components/ui/card";
 import { accessStateFor } from "@/features/billing/access";
 import { canUseFeature } from "@/features/billing/entitlements";
 import { getMyDevices } from "@/features/dev/agent-actions";
@@ -18,7 +18,7 @@ export default async function DevHomePage() {
       <h1 className="font-mono text-xl font-semibold tracking-tight">🛠️ {t.homeTitle}</h1>
 
       {!canDev ? (
-        <UpgradeNotice title={t.upgradeTitle} message={t.upgradeMessage} cta={t.upgradeCta} />
+        <Card><CardContent className="text-muted-foreground pt-6 text-sm">아직 사용할 수 없는 기능입니다.</CardContent></Card>
       ) : (
         <AgentConnectPanel devices={devices ?? []} />
       )}

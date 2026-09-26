@@ -148,6 +148,35 @@
   --sidebar-ring: oklch(0.68 0.17 266);
 }
 
+html[data-study-event="midnight"] body {
+  background-image:
+    radial-gradient(circle at 14% 18%, rgb(190 208 255 / 32%) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 82% 9%, rgb(190 208 255 / 24%) 0 1px, transparent 1.5px),
+    linear-gradient(180deg, rgb(53 73 122 / 5%), transparent 34%);
+  background-size: 137px 119px, 181px 157px, auto;
+}
+
+.event-midnight {
+  border-color: color-mix(in oklch, var(--primary) 24%, var(--border));
+  background-color: color-mix(in oklch, var(--card) 92%, #263653);
+}
+
+.event-moon-mark {
+  color: #d9e5ff;
+  background: #344461;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-study-event="midnight"] *,
+  html[data-study-event="midnight"] *::before,
+  html[data-study-event="midnight"] *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

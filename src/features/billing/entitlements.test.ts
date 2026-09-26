@@ -8,88 +8,89 @@ import {
 } from "@/features/billing/entitlements";
 
 describe("entitlements — limits", () => {
-  it("AI problem generation limits per state", () => {
-    expect(getFeatureLimit("TRIAL", "AI_PROBLEM_GENERATION")).toBe(10);
-    expect(getFeatureLimit("PRO", "AI_PROBLEM_GENERATION")).toBe(50);
-    expect(getFeatureLimit("PREMIUM", "AI_PROBLEM_GENERATION")).toBeNull(); // unlimited
-    expect(getFeatureLimit("TRIAL_EXPIRED", "AI_PROBLEM_GENERATION")).toBe(0);
+  it("keeps fair-use limits independent of historical plan and trial state", () => {
+    for (const state of ["TRIAL", "TRIAL_EXPIRED", "PRO", "PREMIUM"] as const) {
+      expect(getFeatureLimit(state, "AI_PROBLEM_GENERATION")).toBe(10);
+      expect(getFeatureLimit(state, "MOCK_EXAM_GENERATION")).toBe(2);
+      expect(getFeatureLimit(state, "STUDY_BOOK_GENERATION")).toBe(1);
+      expect(getUsageWindow(state, "AI_PROBLEM_GENERATION")).toBe("day");
+      expect(getUsageWindow(state, "MOCK_EXAM_GENERATION")).toBe("month");
+      expect(getUsageWindow(state, "STUDY_BOOK_GENERATION")).toBe("month");
+    }
   });
 
-  it("mock exam limits per state", () => {
-    expect(getFeatureLimit("TRIAL", "MOCK_EXAM_GENERATION")).toBe(2);
-    expect(getFeatureLimit("PRO", "MOCK_EXAM_GENERATION")).toBe(10);
-    expect(getFeatureLimit("PREMIUM", "MOCK_EXAM_GENERATION")).toBeNull();
+  it("applies the daily problem cap to expired-trial history as well", () => {
+    expect(getFeatureLimit("TRIAL_EXPIRED", "AI_PROBLEM_GENERATION")).toBe(10);
+    expect(getUsageWindow("TRIAL_EXPIRED", "AI_PROBLEM_GENERATION")).toBe("day");
   });
 
-  it("mock exam usage window depends on state", () => {
-    expect(getUsageWindow("TRIAL", "MOCK_EXAM_GENERATION")).toBe("trial");
-    expect(getUsageWindow("PRO", "MOCK_EXAM_GENERATION")).toBe("month");
-    expect(getUsageWindow("PREMIUM", "MOCK_EXAM_GENERATION")).toBe("unlimited");
-    expect(getUsageWindow("TRIAL", "AI_PROBLEM_GENERATION")).toBe("day");
+  it("applies the monthly mock-exam cap to every historical state", () => {
+    for (const state of ["TRIAL", "TRIAL_EXPIRED", "PRO", "PREMIUM"] as const) {
+      expect(getFeatureLimit(state, "MOCK_EXAM_GENERATION")).toBe(2);
+      expect(getUsageWindow(state, "MOCK_EXAM_GENERATION")).toBe("month");
+    }
   });
 
-  it("study book limits + window per state", () => {
-    expect(getFeatureLimit("TRIAL", "STUDY_BOOK_GENERATION")).toBe(1);
-    expect(getFeatureLimit("PRO", "STUDY_BOOK_GENERATION")).toBe(5);
-    expect(getFeatureLimit("PREMIUM", "STUDY_BOOK_GENERATION")).toBeNull();
-    expect(getFeatureLimit("TRIAL_EXPIRED", "STUDY_BOOK_GENERATION")).toBe(0);
-    expect(getUsageWindow("TRIAL", "STUDY_BOOK_GENERATION")).toBe("trial");
-    expect(getUsageWindow("PRO", "STUDY_BOOK_GENERATION")).toBe("month");
-    expect(getUsageWindow("PREMIUM", "STUDY_BOOK_GENERATION")).toBe("unlimited");
+  it("applies the monthly study-book cap to every historical state", () => {
+    for (const state of ["TRIAL", "TRIAL_EXPIRED", "PRO", "PREMIUM"] as const) {
+      expect(getFeatureLimit(state, "STUDY_BOOK_GENERATION")).toBe(1);
+      expect(getUsageWindow(state, "STUDY_BOOK_GENERATION")).toBe("month");
+    }
   });
 });
 
 describe("entitlements — access", () => {
-  it("TRIAL: basic features yes, advanced/DNA no, AI recommendation (basic) yes", () => {
-    expect(canUseFeature("TRIAL", "BASIC_ANALYTICS")).toBe(true);
-    expect(canUseFeature("TRIAL", "SPACED_REPETITION")).toBe(true);
-    expect(canUseFeature("TRIAL", "AI_RECOMMENDATION")).toBe(true);
-    expect(canUseFeature("TRIAL", "ADVANCED_ANALYTICS")).toBe(false);
-    expect(canUseFeature("TRIAL", "WRONG_ANSWER_DNA")).toBe(false);
-    expect(canUseFeature("TRIAL", "ADVANCED_AI_RECOMMENDATION")).toBe(false);
+  it("grants the same learning capabilities to every historical plan state", () => {
+    for (const state of ["TRIAL", "TRIAL_EXPIRED", "PRO", "PREMIUM"] as const) {
+      for (const feature of [
+        "BASIC_ANALYTICS",
+        "ADVANCED_ANALYTICS",
+        "WEAKNESS_ANALYSIS",
+        "WRONG_ANSWER_DNA",
+        "SPACED_REPETITION",
+        "AI_RECOMMENDATION",
+        "ADVANCED_AI_RECOMMENDATION",
+        "CUSTOM_THEMES",
+      ] as const) {
+        expect(canUseFeature(state, feature), `${state}:${feature}`).toBe(true);
+      }
+    }
+    expect(canUseFeature("TRIAL_EXPIRED", "DEV_WORKSPACE")).toBe(false);
   });
 
-  it("PRO unlocks advanced analytics + DNA, not advanced AI recommendation", () => {
-    expect(canUseFeature("PRO", "ADVANCED_ANALYTICS")).toBe(true);
-    expect(canUseFeature("PRO", "WRONG_ANSWER_DNA")).toBe(true);
-    expect(canUseFeature("PRO", "AI_RECOMMENDATION")).toBe(true);
-    expect(canUseFeature("PRO", "ADVANCED_AI_RECOMMENDATION")).toBe(false);
-  });
-
-  it("PREMIUM unlocks everything incl. advanced AI recommendation + custom themes", () => {
-    expect(canUseFeature("PREMIUM", "ADVANCED_AI_RECOMMENDATION")).toBe(true);
-    expect(canUseFeature("PREMIUM", "CUSTOM_THEMES")).toBe(true);
-  });
-
-  it("expired trial blocks generation", () => {
-    expect(canUseFeature("TRIAL_EXPIRED", "AI_PROBLEM_GENERATION")).toBe(false);
-    expect(canUseFeature("TRIAL_EXPIRED", "MOCK_EXAM_GENERATION")).toBe(false);
+  it("allows metered study generation while fair-use capacity remains", () => {
+    expect(canUseFeature("TRIAL_EXPIRED", "AI_PROBLEM_GENERATION")).toBe(true);
+    expect(canUseFeature("TRIAL_EXPIRED", "MOCK_EXAM_GENERATION")).toBe(true);
+    expect(canUseFeature("TRIAL_EXPIRED", "STUDY_BOOK_GENERATION")).toBe(true);
   });
 });
 
 describe("entitlements — ads", () => {
-  it("only TRIAL-active shows ads", () => {
-    expect(shouldShowAds("TRIAL")).toBe(true);
-    expect(shouldShowAds("TRIAL_EXPIRED")).toBe(false);
-    expect(shouldShowAds("PRO")).toBe(false);
-    expect(shouldShowAds("PREMIUM")).toBe(false);
+  it("never shows ads in the free-only product", () => {
+    for (const state of ["TRIAL", "TRIAL_EXPIRED", "PRO", "PREMIUM"] as const) {
+      expect(shouldShowAds(state)).toBe(false);
+    }
+  });
+
+  it("keeps the legacy access-state switch fail-closed for unknown feature keys", () => {
+    expect(canUseFeature("TRIAL", "ADS")).toBe(false);
   });
 });
 
 describe("entitlements — upgrade mapping", () => {
-  it("min plan that unlocks a feature", () => {
-    expect(minPlanForFeature("AI_PROBLEM_GENERATION")).toBeNull(); // TRIAL has it
-    expect(minPlanForFeature("WRONG_ANSWER_DNA")).toBe("PRO");
-    expect(minPlanForFeature("ADVANCED_ANALYTICS")).toBe("PRO");
-    expect(minPlanForFeature("ADVANCED_AI_RECOMMENDATION")).toBe("PREMIUM");
+  it("has no paid plan to recommend for an available learning feature", () => {
+    expect(minPlanForFeature("AI_PROBLEM_GENERATION")).toBeNull();
+    expect(minPlanForFeature("WRONG_ANSWER_DNA")).toBeNull();
+    expect(minPlanForFeature("ADVANCED_ANALYTICS")).toBeNull();
+    expect(minPlanForFeature("ADVANCED_AI_RECOMMENDATION")).toBeNull();
   });
 });
 
 describe("entitlements — Study OS Dev (DEV_WORKSPACE)", () => {
-  it("available during active trial and on paid plans, blocked once trial expires", () => {
-    expect(canUseFeature("TRIAL", "DEV_WORKSPACE")).toBe(true);
-    expect(canUseFeature("PRO", "DEV_WORKSPACE")).toBe(true);
-    expect(canUseFeature("PREMIUM", "DEV_WORKSPACE")).toBe(true);
+  it("stays unavailable across historical plan states because its backend is not connected", () => {
+    expect(canUseFeature("TRIAL", "DEV_WORKSPACE")).toBe(false);
+    expect(canUseFeature("PRO", "DEV_WORKSPACE")).toBe(false);
+    expect(canUseFeature("PREMIUM", "DEV_WORKSPACE")).toBe(false);
     expect(canUseFeature("TRIAL_EXPIRED", "DEV_WORKSPACE")).toBe(false);
   });
 

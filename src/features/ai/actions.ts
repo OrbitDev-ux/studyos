@@ -16,16 +16,14 @@ import { requireCurrentUser } from "@/lib/session";
 
 const WEEKLY_REPORT_WINDOW_DAYS = 7;
 
-/** Weakness/weekly-report AI analysis is a PRO+ feature (see the stats page,
- * which hides these cards the same way behind ADVANCED_ANALYTICS — this is
- * the server-authoritative backstop for that same boundary, not a separate
- * policy). Returns a user-safe error string when blocked, else null. */
+/** Server-authoritative access backstop for advanced analysis. Returns a
+ * user-safe error string when blocked, else null. */
 function aiRecommendationGateError(
   user: Parameters<typeof accessStateFor>[0],
 ): string | null {
   return canUseFeature(accessStateFor(user), "ADVANCED_ANALYTICS")
     ? null
-    : "AI 분석은 Pro 플랜부터 사용할 수 있어요.";
+    : "현재 이 분석을 사용할 수 없습니다. 잠시 후 다시 시도해주세요.";
 }
 
 export async function generateWeaknessAnalysis(): Promise<

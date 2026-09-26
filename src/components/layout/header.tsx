@@ -6,6 +6,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { NotificationsMenu } from "@/components/layout/notifications-menu";
 import { SearchDialog } from "@/components/layout/search-dialog";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { ThemeEventToggle } from "@/features/theme-events/theme-event-toggle";
 import { navItems } from "@/config/nav";
 import { useI18n } from "@/features/i18n/provider";
 import type { HeaderNotifications } from "@/features/notifications/queries";
@@ -23,8 +24,12 @@ const EMPTY_NOTIFICATIONS: HeaderNotifications = { items: [], unreadCount: 0 };
 
 export function Header({
   notifications = EMPTY_NOTIFICATIONS,
+  themeEventActive = false,
+  themeEventEndsAt,
 }: {
   notifications?: HeaderNotifications;
+  themeEventActive?: boolean;
+  themeEventEndsAt?: string;
 }) {
   const { messages } = useI18n();
   const titleKey = usePageTitleKey();
@@ -44,6 +49,10 @@ export function Header({
       <div className="flex items-center gap-1.5">
         <SearchDialog />
         <NotificationsMenu initial={notifications} />
+        <ThemeEventToggle
+          active={themeEventActive && Boolean(themeEventEndsAt)}
+          endsAt={themeEventEndsAt ?? ""}
+        />
         <ThemeToggle />
       </div>
     </header>

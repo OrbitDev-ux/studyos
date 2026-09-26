@@ -6,6 +6,7 @@ import { onStudySessionCompleted } from "@/features/growth/hooks";
 import { finalizeEligibleDuration } from "@/features/study-sessions/eligibility";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/session";
+import { capture } from "@/features/analytics/capture";
 
 const STUDY_SESSION_TYPES = ["FOCUS", "PROBLEM", "MOCK_EXAM", "REVIEW", "AI_TUTOR"] as const;
 export type StudySessionType = (typeof STUDY_SESSION_TYPES)[number];
@@ -85,6 +86,7 @@ export async function stopStudySession() {
   revalidatePath("/dashboard");
 
   if (closed.count > 0) {
+    capture({ name: "study_session_completed", props: { durationSec } });
     // Growth/Mission progress — server-measured, reward-eligible duration
     // only, keyed by this session's own id so it can never be credited twice
     // (features/growth/hooks.ts).

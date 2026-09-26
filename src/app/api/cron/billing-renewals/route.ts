@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { runBillingRenewals } from "@/features/billing/renewal";
+import { FREE_ONLY_MODE } from "@/features/billing/providers";
 
 /**
  * GET /api/cron/billing-renewals — invoked daily by Vercel Cron (see
@@ -10,6 +11,9 @@ import { runBillingRenewals } from "@/features/billing/renewal";
  * through.
  */
 export async function GET(request: Request) {
+  if (FREE_ONLY_MODE) {
+    return NextResponse.json({ disabled: true, reason: "free_only" });
+  }
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 503 });

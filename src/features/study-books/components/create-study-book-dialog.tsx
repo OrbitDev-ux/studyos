@@ -29,7 +29,7 @@ import {
 } from "@/features/curriculum/taxonomy";
 import { STUDY_BOOK_TYPES } from "@/features/study-books/types";
 import { createStudyBook } from "@/features/study-books/actions";
-import { UpgradeNotice } from "@/features/billing/components/upgrade-notice";
+import { FairUseNotice } from "@/features/billing/components/fair-use-notice";
 
 const GRADES = listGrades();
 const FIRST_GRADE = GRADES[0]?.id ?? "";
@@ -205,10 +205,9 @@ export function CreateStudyBookDialog({ trigger }: { trigger: ReactNode }) {
             </div>
 
             {feedback?.code === "FEATURE_LIMIT_REACHED" ? (
-              <UpgradeNotice
-                title="교재 생성 한도를 모두 사용했어요"
-                message={`${feedback.upgradePlan ?? "상위"} 플랜으로 업그레이드하면 더 많이 만들 수 있어요.`}
-                cta={`${feedback.upgradePlan ?? "플랜"} 알아보기`}
+              <FairUseNotice
+                title="이번 달 교재 생성 한도를 사용했어요"
+                message={`이번 달 ${feedback.used ?? 0}/${feedback.limit ?? 0}회 사용했어요. 다음 달에 다시 생성할 수 있습니다.`}
               />
             ) : (
               feedback?.error && <p className="text-destructive text-xs">{feedback.error}</p>

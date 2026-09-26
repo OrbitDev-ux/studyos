@@ -3,15 +3,9 @@ import { PLANS, PLAN_META } from "@/features/billing/plans";
 import type { AccessState } from "@/features/billing/subscription";
 
 /**
- * Central entitlement policy — the ONE place access/limits live, keyed by the
- * resolved AccessState (TRIAL / TRIAL_EXPIRED / PRO / PREMIUM). Pure (no DB/IO):
- * unit-testable and safe on client & server. Feature code must call these
- * helpers instead of comparing `plan` inline. A future billing layer only ever
- * changes User.plan/status; all gating flows from here automatically.
- *
- * TRIAL_EXPIRED keeps read access to existing learning data (those surfaces are
- * not gated here) but blocks generation and hides ads — the upgrade screen takes
- * over.
+ * Free-only product access policy. Plan enums remain for historical billing
+ * rows, but learning access no longer depends on a paid tier or trial expiry.
+ * Metered AI work still has explicit fair-use limits and separate abuse guards.
  */
 
 /** Canonical feature keys — never write these strings ad hoc elsewhere. */
@@ -42,7 +36,7 @@ export const METERED_FEATURES = [
 ] as const;
 export type MeteredFeature = (typeof METERED_FEATURES)[number];
 
-/** The window a metered limit resets over. "trial" = whole trial period. */
+/** The window a metered fair-use limit resets over. Historical values remain for compatibility. */
 export type UsageWindow = "day" | "month" | "trial" | "unlimited";
 
 /** null = unlimited (no numeric cap; abuse still limited by the server guard). */
@@ -70,66 +64,29 @@ type Entitlement = {
   advancedRecommendation: boolean;
   customThemes: ThemeAccess;
   ads: boolean;
-  /** Study OS Dev: create/use a personal dev workspace. Mirrors the
-   * generation-feature gating pattern (blocked once trial expires). */
+  /** Study OS Dev workspace; stays unavailable until its backend is ready. */
   devWorkspace: boolean;
 };
 
+const FREE_ENTITLEMENT: Entitlement = {
+  limits: { AI_PROBLEM_GENERATION: 10, MOCK_EXAM_GENERATION: 2, STUDY_BOOK_GENERATION: 1 },
+  basicAnalytics: true,
+  advancedAnalytics: true,
+  weakness: "advanced",
+  wrongAnswerDna: true,
+  spacedRepetition: true,
+  recommendation: "advanced",
+  advancedRecommendation: true,
+  customThemes: "all",
+  ads: false,
+  devWorkspace: false,
+};
+
 export const ACCESS_ENTITLEMENTS: Record<AccessState, Entitlement> = {
-  TRIAL: {
-    limits: { AI_PROBLEM_GENERATION: 10, MOCK_EXAM_GENERATION: 2, STUDY_BOOK_GENERATION: 1 },
-    basicAnalytics: true,
-    advancedAnalytics: false,
-    weakness: "basic",
-    wrongAnswerDna: false,
-    spacedRepetition: true,
-    recommendation: "basic",
-    advancedRecommendation: false,
-    customThemes: "none",
-    ads: true,
-    devWorkspace: true,
-  },
-  TRIAL_EXPIRED: {
-    // Generation blocked; existing data stays viewable (those reads aren't gated
-    // here). Ads OFF — the upgrade prompt replaces them.
-    limits: { AI_PROBLEM_GENERATION: 0, MOCK_EXAM_GENERATION: 0, STUDY_BOOK_GENERATION: 0 },
-    basicAnalytics: true,
-    advancedAnalytics: false,
-    weakness: "basic",
-    wrongAnswerDna: false,
-    spacedRepetition: true,
-    recommendation: "none",
-    advancedRecommendation: false,
-    customThemes: "none",
-    ads: false,
-    devWorkspace: false,
-  },
-  PRO: {
-    limits: { AI_PROBLEM_GENERATION: 50, MOCK_EXAM_GENERATION: 10, STUDY_BOOK_GENERATION: 5 },
-    basicAnalytics: true,
-    advancedAnalytics: true,
-    weakness: "detailed",
-    wrongAnswerDna: true,
-    spacedRepetition: true,
-    recommendation: "basic",
-    advancedRecommendation: false,
-    customThemes: "some",
-    ads: false,
-    devWorkspace: true,
-  },
-  PREMIUM: {
-    limits: { AI_PROBLEM_GENERATION: null, MOCK_EXAM_GENERATION: null, STUDY_BOOK_GENERATION: null },
-    basicAnalytics: true,
-    advancedAnalytics: true,
-    weakness: "advanced",
-    wrongAnswerDna: true,
-    spacedRepetition: true,
-    recommendation: "advanced",
-    advancedRecommendation: true,
-    customThemes: "all",
-    ads: false,
-    devWorkspace: true,
-  },
+  TRIAL: FREE_ENTITLEMENT,
+  TRIAL_EXPIRED: FREE_ENTITLEMENT,
+  PRO: FREE_ENTITLEMENT,
+  PREMIUM: FREE_ENTITLEMENT,
 };
 
 /** The per-window numeric limit for a metered feature (null = unlimited). */
@@ -142,20 +99,10 @@ export function isUnlimited(limit: Limit): boolean {
 }
 
 /** Which window a metered feature's limit is counted over, for this state. */
-export function getUsageWindow(state: AccessState, feature: MeteredFeature): UsageWindow {
-  // Daily quota for problem generation; MOCK_EXAM + STUDY_BOOK reset per
-  // trial (during trial), per month on PRO, and are uncapped on PREMIUM.
+export function getUsageWindow(_state: AccessState, feature: MeteredFeature): UsageWindow {
+  // Free fair-use windows are independent of historical billing plan state.
   if (feature === "AI_PROBLEM_GENERATION") return "day";
-  switch (state) {
-    case "PRO":
-      return "month";
-    case "PREMIUM":
-      return "unlimited";
-    case "TRIAL":
-    case "TRIAL_EXPIRED":
-    default:
-      return "trial";
-  }
+  return "month";
 }
 
 export function getFeatureTier(state: AccessState, feature: FeatureKey): Tier {
@@ -184,7 +131,8 @@ export function canUseFeature(state: AccessState, feature: FeatureKey): boolean 
   const e = ACCESS_ENTITLEMENTS[state];
   switch (feature) {
     case "AI_PROBLEM_GENERATION":
-    case "MOCK_EXAM_GENERATION": {
+    case "MOCK_EXAM_GENERATION":
+    case "STUDY_BOOK_GENERATION": {
       const limit = e.limits[feature];
       return limit === null || limit > 0;
     }
@@ -215,14 +163,14 @@ export function getThemeAccess(state: AccessState): ThemeAccess {
   return ACCESS_ENTITLEMENTS[state].customThemes;
 }
 
-/** Only TRIAL_ACTIVE sees ads; expired trial and paid plans don't. */
+/** Ads are disabled across all historical plan states in the free product. */
 export function shouldShowAds(state: AccessState): boolean {
   return ACCESS_ENTITLEMENTS[state].ads;
 }
 
 /**
- * The lowest PLAN (TRIAL→PRO→PREMIUM, ignoring expiry) that unlocks a feature,
- * for upgrade messaging. Returns null if TRIAL already has it.
+ * Historical helper retained for billing compatibility. Free features have no
+ * upgrade tier, so this returns null under the current product policy.
  */
 export function minPlanForFeature(feature: FeatureKey): Plan | null {
   const stateForPlan: Record<Plan, AccessState> = {
@@ -235,7 +183,7 @@ export function minPlanForFeature(feature: FeatureKey): Plan | null {
   return found;
 }
 
-/** Human label for the min plan that unlocks a feature ("PRO", "PREMIUM"). */
+/** Historical API retained for old payload consumers; free access has no upsell. */
 export function upgradePlanLabel(feature: FeatureKey): string | null {
   const min = minPlanForFeature(feature);
   return min ? PLAN_META[min].name : null;

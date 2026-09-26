@@ -9,7 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "verify:production": "npm run typecheck && npm run lint && npm run test && node scripts/production-preflight.mjs --require-billing && next build",
+    "verify:production": "npm run typecheck && npm run lint && npm run test && node scripts/production-preflight.mjs && next build",
     "verify:ban": "node scripts/verify-ban.mjs",
     "check:curriculum": "node scripts/check-curriculum.mjs",
     "format": "prettier --write .",

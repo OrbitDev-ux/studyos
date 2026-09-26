@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { generateMockExam } from "@/features/mock-exam/actions";
-import { UpgradeNotice } from "@/features/billing/components/upgrade-notice";
+import { FairUseNotice } from "@/features/billing/components/fair-use-notice";
 import {
   mockExamGenerationFormSchema,
   type MockExamGenerationFormInput,
@@ -185,13 +185,9 @@ export function ExamSetupForm({
           </div>
 
           {limitInfo && (
-            <UpgradeNotice
-              title="모의고사 생성 한도를 모두 사용했어요"
-              message={
-                `${limitInfo.upgradePlan ?? "상위"} 플랜으로 업그레이드하면 더 많이 만들 수 있어요.` +
-                (limitInfo.limit != null ? ` (${limitInfo.used}/${limitInfo.limit})` : "")
-              }
-              cta={`${limitInfo.upgradePlan ?? "플랜"} 알아보기`}
+            <FairUseNotice
+              title="이번 달 모의고사 생성 한도를 사용했어요"
+              message={`이번 달 ${limitInfo.used}/${limitInfo.limit ?? 0}회 사용했어요. 다음 달에 다시 생성할 수 있습니다.`}
             />
           )}
           {error && <p className="text-destructive text-xs">{error}</p>}

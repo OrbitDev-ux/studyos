@@ -13,16 +13,13 @@ import {
 } from "@/features/billing/entitlements";
 
 /**
- * Server-side AI cost + plan protection. Every AI generation goes through
+ * Server-side AI cost + fair-use protection. Every AI generation goes through
  * withGenerationQuota(): it reserves a slot behind a per-user Postgres advisory
  * lock (concurrent requests can't both pass the gate — race-condition safe),
  * runs the AI work, then records the outcome.
  *
- * The numeric cap now comes from the caller's resolved plan/trial entitlement
- * (features/billing), per feature and per window:
- *   - AI problem generation → daily limit (TRIAL 10 / PRO 50 / PREMIUM ∞)
- *   - Mock-exam generation → TRIAL: whole-trial limit (2); PRO: monthly (10);
- *     PREMIUM: unlimited.
+ * The numeric cap comes from the free-product fair-use policy in
+ * features/billing/entitlements, per feature and reset window.
  * Counts are per `kind` (problem vs mock-exam never share a budget). Even an
  * "unlimited" plan keeps the perMinute + concurrency ABUSE guards.
  *

@@ -103,10 +103,10 @@ export async function analyzeWrongAnswerDna(
 ): Promise<WrongAnswerDna | { error: string }> {
   const user = await requireCurrentUser();
 
-  // Plan gate (server-authoritative backstop; the UI also hides this for
-  // non-entitled plans). 오답 DNA is a PRO+ feature.
+  // Keep the server-authoritative access check even though the current free
+  // policy enables this feature for every authenticated learner.
   if (!canUseFeature(accessStateFor(user), "WRONG_ANSWER_DNA")) {
-    return { error: "오답 DNA는 PRO 플랜에서 사용할 수 있어요." };
+    return { error: "현재 이 분석을 사용할 수 없습니다. 잠시 후 다시 시도해주세요." };
   }
 
   const wrongAnswer = await prisma.wrongAnswer.findFirst({

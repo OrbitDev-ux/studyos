@@ -1,5 +1,18 @@
 # Implementation Tracker — StudyOS
 
+## FREE ONLY + Major Update — 2026-09-27 (Local, Not Deployed)
+
+Current target product policy supersedes the Polar pre-checkout notes below:
+FREE ONLY; PRO/PREMIUM inactive; new checkout/provider selection disabled;
+legacy billing rows, webhook/history support, and migrations preserved; Toss
+renewal cron blocked from charges. Fair-use generation limits and existing
+auth, ownership, AI quota, and admin checks remain server-side. Major Update
+adds a build-timestamp-based seven-day `MIDNIGHT STUDY WEEK`, user opt-out,
+landing/dashboard treatments based on actual data, duplicate-grading defense,
+and tutor answer copy feedback. Local regression/build/browser status must be
+recorded before push. Public legal text still has obsolete paid-plan wording and
+placeholders, pending human review.
+
 ## Polar Pre-Checkout Release Gate — 2026-09-26
 
 Lemon Squeezy runtime changes were removed selectively. Polar checkout,

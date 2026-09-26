@@ -1,10 +1,7 @@
-import { PLAN_META, TRIAL_DAYS } from "@/features/billing/plans";
-
 /**
  * Landing-page FAQ — the single source shared by the visible section and the
  * FAQPage JSON-LD. Google requires the structured data to match the on-page
- * content exactly, so both must read from here. Prices come from PLAN_META so
- * they never drift from the pricing page.
+ * content exactly, so both must read from here.
  */
 export const FAQ_ITEMS: { question: string; answer: string }[] = [
   {
@@ -14,7 +11,7 @@ export const FAQ_ITEMS: { question: string; answer: string }[] = [
   },
   {
     question: "무료로 사용할 수 있나요?",
-    answer: `회원가입하면 ${TRIAL_DAYS}일간 무료로 체험할 수 있습니다. 이후에는 ${PLAN_META.PRO.priceLabel}의 Pro 플랜으로 정식 이용할 수 있습니다. (고급 무제한 플랜인 Premium은 준비 중입니다.)`,
+    answer: "네. StudyOS는 무료로 사용할 수 있으며, 가입 후 학습 계획·문제 풀이·복습·AI 학습 도움을 이용할 수 있습니다.",
   },
   {
     question: "로그인 없이 둘러볼 수 있나요?",

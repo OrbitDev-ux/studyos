@@ -2,7 +2,7 @@
 
 import { unstable_rethrow } from "next/navigation";
 import { ArrowRight, Check, X } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -55,11 +55,14 @@ export function SolveProblemPanel({
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const requestInFlight = useRef(false);
 
   const isEssay = problem.type === "ESSAY";
   const isMc = problem.type === "MULTIPLE_CHOICE";
 
   function submit(payload: { choiceId?: string; text?: string; selfCorrect?: boolean }) {
+    if (requestInFlight.current || result !== null) return;
+    requestInFlight.current = true;
     setError(null);
     startTransition(async () => {
       try {
@@ -74,6 +77,8 @@ export function SolveProblemPanel({
         // framework signals so navigation happens instead of a misleading error.
         unstable_rethrow(err);
         setError("채점에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      } finally {
+        requestInFlight.current = false;
       }
     });
   }
@@ -239,8 +244,9 @@ export function SolveProblemPanel({
               <button
                 key={choice.id}
                 type="button"
-                disabled={revealedResult}
+                disabled={revealedResult || isPending}
                 onClick={() => setSelectedChoiceId(choice.id)}
+                aria-pressed={isSelected}
                 className={cn(
                   "flex min-h-11 items-center gap-2 rounded-md border px-3 py-2 text-left text-sm transition-colors",
                   isSelected && !revealedResult && "border-primary bg-primary/5",

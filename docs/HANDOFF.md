@@ -1,5 +1,31 @@
 # StudyOS — Handoff Notes
 
+## Current Product Direction — 2026-09-27 (Local, Not Yet Deployed)
+
+StudyOS is moving to **FREE ONLY**. User-facing plan/upgrade/pricing-tier
+surfaces are removed; `/pricing` remains as a free-product compatibility page.
+Server checkout actions and provider selection fail closed, and the legacy
+Toss renewal cron returns without charging. Historical Payment, Subscription,
+Refund rows, migrations, Polar/Toss webhook compatibility, and cancellation
+controls for existing subscribers are retained. No production data or external
+Polar settings were changed. AI generation still has server-side fair-use and
+abuse limits (10 AI problems/day, 2 mock exams/month, 1 study book/month).
+
+The Major Update adds the `MIDNIGHT STUDY WEEK` event, enabled for exactly seven
+days from the deployment build timestamp (end is exclusive), an opt-out theme
+toggle, a small landing/dashboard treatment, and a challenge computed only from
+today's existing study-session/Todo state. Study answer submission now guards
+against concurrent duplicate grading; tutor answers include copy feedback.
+Release notes: improved today/continue dashboard hierarchy, safer answer
+submission, tutor answer copying, a free product path with fair-use limits, and
+the seven-day Midnight event.
+
+This tree is local work and has not been committed, pushed, or deployed yet.
+Production browser QA/performance and authenticated flows remain unverified.
+Existing legal documents still describe paid plans and contain review
+placeholders; do not treat this code change as legal approval. Operator/legal
+review is required before representing those documents as current.
+
 State of the project for anyone (human or agent) picking up next. Read
 `README.md` and `DEVELOPMENT.md`-style notes in `docs/` for depth; this is the
 short version.

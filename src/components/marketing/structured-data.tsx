@@ -1,7 +1,6 @@
 import { FAQ_ITEMS } from "@/config/faq";
 import { FEATURES } from "@/config/features";
 import { siteConfig } from "@/config/site";
-import { PLANS, PLAN_META } from "@/features/billing/plans";
 import { SITE_URL } from "@/lib/site-url";
 
 /**
@@ -41,19 +40,7 @@ export function StructuredData() {
       isPartOf: { "@id": `${SITE_URL}/#website` },
       provider: { "@id": `${SITE_URL}/#organization` },
       featureList: FEATURES.map((feature) => feature.title),
-      offers: PLANS.filter((plan) => !PLAN_META[plan].notForSale).map((plan) => {
-        const meta = PLAN_META[plan];
-        // Schema.org `price` is in the currency's main unit (KRW is the minor
-        // unit itself); USD minor units are scaled up from cents.
-        const price = meta.currency === "USD" ? meta.priceMinor / 100 : meta.priceMinor;
-        return {
-          "@type": "Offer",
-          name: meta.name,
-          price,
-          priceCurrency: meta.currency,
-          category: meta.priceMinor === 0 ? "free" : "subscription",
-        };
-      }),
+      isAccessibleForFree: true,
     },
   ];
 

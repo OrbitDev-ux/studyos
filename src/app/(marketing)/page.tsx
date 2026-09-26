@@ -13,11 +13,12 @@ import {
 import { ProductPreview } from "@/components/marketing/product-preview";
 import { FaqStructuredData } from "@/components/marketing/structured-data";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { FAQ_ITEMS } from "@/config/faq";
 import { FEATURES } from "@/config/features";
 import { CONTENT_UPDATED_AT, siteConfig } from "@/config/site";
-import { PLANS, PLAN_META, TRIAL_DAYS } from "@/features/billing/plans";
+import { getActiveThemeEvent } from "@/features/theme-events/theme-event";
+import { ThemeEventBanner } from "@/features/theme-events/theme-event-banner";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -45,6 +46,7 @@ const FEATURE_ICONS: Record<string, LucideIcon> = {
 // the CDN. The CTA points at /signup for everyone; a logged-in visitor is
 // redirected on to /dashboard by middleware, so the link still works for both.
 export default function LandingPage() {
+  const themeEvent = getActiveThemeEvent();
   return (
     <main className="flex flex-1 flex-col">
       <section className="mx-auto flex w-full max-w-5xl flex-col items-center gap-5 px-4 pt-12 pb-12 text-center sm:px-6 sm:pt-16 sm:pb-16">
@@ -72,6 +74,14 @@ export default function LandingPage() {
             </Link>
           </Button>
         </div>
+        {themeEvent && (
+          <ThemeEventBanner event={{
+            name: themeEvent.name,
+            copy: themeEvent.copy,
+            startsAt: themeEvent.startsAt.toISOString(),
+            endsAt: themeEvent.endsAt.toISOString(),
+          }} />
+        )}
       </section>
 
       <section className="landing-preview mx-auto w-full max-w-5xl px-4 pb-16 sm:px-6 sm:pb-20">
@@ -104,36 +114,12 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-5xl px-4 pb-24 sm:px-6">
-        <h2 className="mb-6 text-center text-2xl font-semibold tracking-tight">요금제</h2>
-        <p className="text-muted-foreground mx-auto mb-6 max-w-xl text-center text-sm text-balance">
-          가입하면 {TRIAL_DAYS}일간 결제 없이 StudyOS를 체험할 수 있어요.
+      <section className="mx-auto flex w-full max-w-5xl flex-col items-center gap-3 px-4 pb-24 text-center sm:px-6">
+        <h2 className="text-2xl font-semibold tracking-tight">StudyOS를 무료로 사용할 수 있습니다</h2>
+        <p className="text-muted-foreground max-w-xl text-sm text-balance">
+          계획, 문제 풀이, 복습, AI 학습 도움을 한곳에서 시작해보세요.
         </p>
-        <div className="grid gap-4 sm:grid-cols-3">
-          {PLANS.map((plan) => {
-            const meta = PLAN_META[plan];
-            return (
-              <Card key={plan}>
-                <CardHeader>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <h3 className="text-base font-medium">{meta.name}</h3>
-                    <span className="text-muted-foreground text-xs">
-                      {meta.notForSale ? "출시 예정" : meta.priceLabel}
-                    </span>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground text-sm">{meta.tagline}</p>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-        <p className="mt-6 text-center">
-          <Link href="/pricing" className="text-primary text-sm hover:underline">
-            요금제 자세히 비교하기
-          </Link>
-        </p>
+        <Button asChild variant="outline"><Link href="/pricing">StudyOS 살펴보기</Link></Button>
       </section>
 
       <section className="mx-auto w-full max-w-3xl px-4 pb-24 sm:px-6">
@@ -155,8 +141,7 @@ export default function LandingPage() {
       <section className="mx-auto flex w-full max-w-5xl flex-col items-center gap-4 px-4 pb-24 text-center sm:px-6">
         <h2 className="text-2xl font-semibold tracking-tight">지금 바로 시작해보세요</h2>
         <p className="text-muted-foreground max-w-md text-sm text-balance">
-          가입 없이 데모로 먼저 둘러보거나, {TRIAL_DAYS}일 무료 체험으로 바로 시작할 수
-          있어요.
+          가입 없이 데모로 둘러보거나 무료 계정으로 오늘의 공부를 시작하세요.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg" className="px-6 text-base">

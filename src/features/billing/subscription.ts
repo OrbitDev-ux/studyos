@@ -10,7 +10,7 @@ import { TRIAL_DAYS } from "@/features/billing/plans";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** The effective access level after accounting for trial expiry. */
+/** Historical billing state; learning access is resolved separately. */
 export type AccessState = "TRIAL" | "TRIAL_EXPIRED" | "PRO" | "PREMIUM";
 
 export type SubscriptionInput = {

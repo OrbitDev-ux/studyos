@@ -31,6 +31,9 @@ const contentSecurityPolicy = [
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: dirname(fileURLToPath(import.meta.url)),
+  // Gives the first time-limited launch event one stable timestamp across all
+  // serverless instances. On Vercel this is evaluated for the deployment build.
+  env: { NEXT_PUBLIC_STUDYOS_BUILD_RELEASE_AT: new Date().toISOString() },
   // Baseline security headers applied to every response. HSTS only takes effect
   // over HTTPS (browsers ignore it on http://localhost).
   async headers() {

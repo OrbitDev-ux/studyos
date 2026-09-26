@@ -12,16 +12,13 @@
  *   npm run verify:production        # runs typecheck → lint → test → this → build
  *
  * EXIT CODES (intended for CI gating):
- *   0  ready — every CORE var present; every BILLING var present if
- *      --require-billing (or run under `npm run verify:production`).
+ *   0  ready — every CORE var present. Billing is inactive for new checkouts.
  *   1  CORE variables are missing — do NOT migrate/build/deploy.
- *   2  CORE present but BILLING variables are missing while --require-billing.
+ *   2  deprecated/abandoned Lemon Squeezy env variables remain configured.
  *
  * FLAGS:
- *   --require-billing   fail (exit 2) when Polar/Toss credentials are missing.
+ *   --require-billing   retained for compatibility; ignored in FREE_ONLY mode.
  */
-
-const FLAGS = new Set(process.argv.slice(2));
 
 // ─── What the app actually reads (src/lib/env-check.ts REQUIRED, plus the
 // ─── billing env table in docs/BILLING_POLAR.md). Keep in lockstep. ─────────
@@ -51,25 +48,13 @@ function aiProviderKey() {
     : { name: "GROQ_API_KEY", purpose: "AI features (AI_PROVIDER=groq / default)" };
 }
 
-// Billing block — validated as a unit so revenue can be "not configured" (a
-// valid, fail-closed state) instead of half-configured (the dangerous one:
-// POLAR_TOKEN set but no PRO price/product ids → 500s on live clicks).
-//
-// LAUNCH CONTRACT (since the $9.99 decision): the catalog sells ONLY PRO
-// ($9.99 USD / month via Polar). Required = POLAR_TOKEN + POLAR_WEBHOOK_SECRET
-// + POLAR_PRO_PRICE_ID + POLAR_PRO_PRODUCT_ID. PREMIUM ids are OPTIONAL
-// (not-for-sale); a only-one-of-pair PREMIUM config is a WARNING, never a P0.
-const BILLING_REQUIRED = Object.freeze([
-  { name: "POLAR_TOKEN", purpose: "Polar REST access token (server-only)" },
-  { name: "POLAR_WEBHOOK_SECRET", purpose: "HMAC secret for /api/webhooks/polar" },
-  { name: "POLAR_PRO_PRICE_ID", purpose: "price id → StudyOS PRO ($9.99/month)" },
-  {
-    name: "POLAR_PRO_PRODUCT_ID",
-    purpose: "product id → StudyOS PRO (checkout API selects by product)",
-  },
-]);
-
+// Billing remains available only for historical records and webhook
+// compatibility. It is not a release requirement in FREE_ONLY mode.
 const BILLING_OPTIONAL = Object.freeze([
+  { name: "POLAR_TOKEN", purpose: "inactive new-checkout runtime" },
+  { name: "POLAR_WEBHOOK_SECRET", purpose: "legacy webhook compatibility" },
+  { name: "POLAR_PRO_PRICE_ID", purpose: "historical catalog mapping" },
+  { name: "POLAR_PRO_PRODUCT_ID", purpose: "historical catalog mapping" },
   {
     name: "POLAR_PREMIUM_PRICE_ID",
     purpose: "optional — PREMIUM not-for-sale at launch",
@@ -78,6 +63,8 @@ const BILLING_OPTIONAL = Object.freeze([
     name: "POLAR_PREMIUM_PRODUCT_ID",
     purpose: "optional — PREMIUM not-for-sale at launch",
   },
+  { name: "TOSS_SECRET_KEY", purpose: "legacy billing-key subscriptions" },
+  { name: "NEXT_PUBLIC_TOSS_CLIENT_KEY", purpose: "legacy billing UI (inactive)" },
 ]);
 
 // ─── Report ─────────────────────────────────────────────────────────────────
@@ -98,43 +85,9 @@ for (const name of ["AUTH_GOOGLE_ID", "AUTH_GOOGLE_SECRET"]) {
   collect(name, Boolean(process.env[name]?.trim()), "optional-auth");
 }
 
-let billingPresentCount = 0;
-const devSandbox =
-  process.env.POLAR_SANDBOX === "1" &&
-  ["pro", "premium"].includes(process.env.POLAR_DEV_SINGLE_PLAN ?? "");
-
-// Dev-only single-plan sandbox substitution: in POLAR_SANDBOX=1 the PRO and/or
-// PREMIUM price+product requirements are satisfied by ONE real sandbox
-// product/price (POLAR_TEST_PRICE_ID / POLAR_TEST_PRODUCT_ID).
-const devReplaces = (name) =>
-  [
-    "POLAR_PRO_PRICE_ID",
-    "POLAR_PREMIUM_PRICE_ID",
-    "POLAR_PRO_PRODUCT_ID",
-    "POLAR_PREMIUM_PRODUCT_ID",
-  ].includes(name);
-
-for (const item of [...BILLING_REQUIRED, ...BILLING_OPTIONAL]) {
-  if (devSandbox && devReplaces(item.name)) {
-    const testEnv = item.name.endsWith("_PRODUCT_ID")
-      ? "POLAR_TEST_PRODUCT_ID"
-      : "POLAR_TEST_PRICE_ID";
-    const satisfied = Boolean(process.env[testEnv]?.trim());
-    const required = BILLING_REQUIRED.includes(item);
-    collect(
-      `${item.name} (dev single-plan ${process.env.POLAR_DEV_SINGLE_PLAN}: ${testEnv})`,
-      satisfied,
-      "note",
-    );
-    // Count only REQUIRED satisfied vars toward the billing gate; optional
-    // dev substitutions still show up in the notes.
-    if (satisfied && required) billingPresentCount += 1;
-    continue;
-  }
+for (const item of BILLING_OPTIONAL) {
   const present = Boolean(process.env[item.name]?.trim());
-  const required = BILLING_REQUIRED.includes(item);
-  if (present && required) billingPresentCount += 1;
-  collect(item.name, present, required ? "billing" : "billing-optional");
+  collect(item.name, present, "historical-billing");
 }
 
 const sandboxFlag = process.env.POLAR_SANDBOX;
@@ -167,18 +120,6 @@ if (process.env.POLAR_SANDBOX && process.env.POLAR_DEV_SINGLE_PLAN) {
 }
 
 const coreMissing = report.some(([, s, g]) => s === "MISSING" && g === "core");
-const requireBilling = FLAGS.has("--require-billing");
-const billingMissing = billingPresentCount < BILLING_REQUIRED.length;
-const sandboxContamination = Boolean(
-  process.env.POLAR_SANDBOX ||
-  process.env.POLAR_API_URL?.trim() ||
-  process.env.POLAR_DEV_SINGLE_PLAN?.trim() ||
-  process.env.POLAR_TEST_PRICE_ID?.trim() ||
-  process.env.POLAR_TEST_PRODUCT_ID?.trim(),
-);
-if (requireBilling && sandboxContamination) {
-  report.push(["POLAR sandbox/dev flags (FORBIDDEN)", "FAIL", "billing", false]);
-}
 const abandonedProviderNames = Object.keys(process.env).filter(
   (name) => name.startsWith("LEMONSQUEEZY_") && process.env[name]?.trim(),
 );
@@ -203,39 +144,11 @@ if (coreMissing) {
   process.exit(1);
 }
 
-if (requireBilling && billingMissing) {
-  console.log(
-    "✗ BLOCKED(--require-billing): Polar launch billing is only partially configured.",
-  );
-  console.log(
-    "  Required: POLAR_TOKEN + POLAR_WEBHOOK_SECRET + POLAR_PRO_PRICE_ID + POLAR_PRO_PRODUCT_ID.",
-  );
-  console.log(
-    "  A full set keeps checkout fail-closed; a partial set 500s on live clicks.",
-  );
-  process.exit(2);
-}
-
 if (abandonedProviderNames.length > 0) {
   console.log("✗ BLOCKED: Lemon Squeezy variables remain in the active environment.");
   process.exit(2);
 }
 
-if (requireBilling && sandboxContamination) {
-  console.log("✗ BLOCKED: Polar sandbox/dev-only settings are present in the production environment.");
-  process.exit(2);
-}
-
 console.log("✓ CORE environment ready.");
-if (billingPresentCount === BILLING_REQUIRED.length) {
-  console.log(
-    "✓ Polar launch billing configured (PRO only; PREMIUM optional/not-for-sale).",
-  );
-} else if (billingPresentCount === 0) {
-  console.log("• Billing not configured — fail-closed (checkout disabled).");
-} else {
-  console.log(
-    "• WARNING: billing is PARTIALLY configured; resolve before revenue go-live.",
-  );
-}
+console.log("• New checkout disabled by FREE_ONLY policy; historical billing compatibility retained.");
 process.exit(0);

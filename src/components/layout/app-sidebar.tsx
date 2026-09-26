@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GraduationCap, Sparkles } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 import type { Session } from "next-auth";
 import { UserMenu } from "@/components/layout/user-menu";
 import {
@@ -25,12 +25,9 @@ import { useI18n } from "@/features/i18n/provider";
 export function AppSidebar({
   user,
   socialCount = 0,
-  showUpgrade = false,
 }: {
   user: Session["user"];
   socialCount?: number;
-  /** Show the "업그레이드하기" CTA (hidden for PREMIUM users). */
-  showUpgrade?: boolean;
 }) {
   const pathname = usePathname();
   const { messages } = useI18n();
@@ -88,23 +85,6 @@ export function AppSidebar({
             this entry point is hidden. Reachable directly at /dev. */}
       </SidebarContent>
       <SidebarFooter>
-        {showUpgrade && (
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname.startsWith("/pricing")}
-                tooltip={messages.account.upgrade}
-                className="text-primary font-medium"
-              >
-                <Link href="/pricing">
-                  <Sparkles />
-                  <span>{messages.account.upgrade}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        )}
         <UserMenu user={user} />
       </SidebarFooter>
     </Sidebar>

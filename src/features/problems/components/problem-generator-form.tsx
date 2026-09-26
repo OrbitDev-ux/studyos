@@ -34,7 +34,7 @@ import {
   listSubjects,
   listUnits,
 } from "@/features/curriculum/taxonomy";
-import { UpgradeNotice } from "@/features/billing/components/upgrade-notice";
+import { FairUseNotice } from "@/features/billing/components/fair-use-notice";
 
 // Curriculum-driven defaults: preselect the first valid (grade → subject → unit)
 // path so the form is submittable immediately and never starts in an invalid
@@ -280,13 +280,9 @@ export function ProblemGeneratorForm({ trigger }: { trigger: ReactNode }) {
           </div>
 
           {feedback?.code === "FEATURE_LIMIT_REACHED" ? (
-            <UpgradeNotice
-              title="AI 문제 생성 한도를 모두 사용했어요"
-              message={
-                `${feedback.upgradePlan ?? "상위"} 플랜으로 업그레이드하면 더 많이 사용할 수 있어요.` +
-                (feedback.limit != null ? ` (오늘 ${feedback.used}/${feedback.limit})` : "")
-              }
-              cta={`${feedback.upgradePlan ?? "플랜"} 알아보기`}
+            <FairUseNotice
+              title="오늘의 AI 문제 생성 한도를 사용했어요"
+              message={`오늘 ${feedback.used ?? 0}/${feedback.limit ?? 0}회 사용했어요. 내일 다시 생성할 수 있습니다.`}
             />
           ) : (
             feedback?.error && (

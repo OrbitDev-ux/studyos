@@ -102,7 +102,7 @@ export async function createStudyBook(
   try {
     chapters = await generateBookChapters(guardCtx(user, ip), promptInput);
   } catch (err) {
-    // Quota/limit → structured payload (with upgrade info).
+    // Fair-use limit → structured payload for the client.
     const payload = generationErrorPayload(err);
     if (payload) return payload;
     // Non-quota failure (AI timeout / model error / off-schema output). Surface

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, GraduationCap, Menu, Send } from "lucide-react";
+import { ArrowLeft, Check, Clipboard, GraduationCap, Menu, Send } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { MathText } from "@/components/ui/math-text";
@@ -56,6 +56,7 @@ export function TutorChat({
   // The last message that produced no reply at all — offered a "resend" action.
   // null once nothing needs resending (success, or some reply arrived anyway).
   const [retryable, setRetryable] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -176,6 +177,16 @@ export function TutorChat({
     startTransition(() => streamReply(content));
   }
 
+  async function copyReply(message: Msg) {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopiedId(message.id);
+      window.setTimeout(() => setCopiedId((current) => current === message.id ? null : current), 1800);
+    } catch {
+      setError("답변을 복사하지 못했습니다. 브라우저 권한을 확인해주세요.");
+    }
+  }
+
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     // Enter sends; Shift+Enter = newline.
     if (e.key === "Enter" && !e.shiftKey) {
@@ -251,7 +262,7 @@ export function TutorChat({
             >
               <div
                 className={cn(
-                  "max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm",
+                  "min-w-0 max-w-[90%] rounded-2xl px-3.5 py-2.5 text-sm sm:max-w-[82%]",
                   isUser ? "bg-primary text-primary-foreground" : "bg-muted",
                 )}
               >
@@ -278,6 +289,20 @@ export function TutorChat({
                   <MathText className={isUser ? "text-primary-foreground" : ""}>
                     {m.content}
                   </MathText>
+                )}
+                {!isUser && !m.streaming && m.content && (
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="ghost"
+                    className="mt-2 h-7 px-2"
+                    onClick={() => void copyReply(m)}
+                    aria-label={copiedId === m.id ? "답변 복사 완료" : "답변 복사"}
+                    title={copiedId === m.id ? "복사 완료" : "답변 복사"}
+                  >
+                    {copiedId === m.id ? <Check /> : <Clipboard />}
+                    <span>{copiedId === m.id ? "복사됨" : "복사"}</span>
+                  </Button>
                 )}
               </div>
             </div>

@@ -1,5 +1,14 @@
 # Polar Billing Integration
 
+## Current Status — Historical / Inactive for New Sales (2026-09-27)
+
+The application is moving to FREE ONLY. New checkout selection is disabled by
+`FREE_ONLY_MODE`, and the legacy Toss renewal cron is gated from charging.
+Polar/Toss records, webhook processing, provider identifiers, and migration
+history remain for historical compatibility; no external Polar settings were
+changed. This file below preserves the prior integration contract as history,
+not as authorization to sell or charge in the current product mode.
+
 StudyOS uses **Polar** as its primary recurring-billing provider. **Toss**
 remains supported as a legacy provider for existing subscribers only. This doc
 describes the Polar side; the provider-neutral payment/entitlement records live

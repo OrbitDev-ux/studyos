@@ -1,5 +1,15 @@
 # STUDYOS — P0 FINAL LAUNCH GATE REPORT
 
+## Product-Policy Supersession — 2026-09-27 (Local, Not Deployed)
+
+The current launch direction has changed from paid checkout to FREE ONLY.
+Application checkout/provider selection is fail-closed, Toss renewal cron is
+disabled in this mode, and historical billing data/webhooks remain intact.
+Polar external configuration is untouched. The paid launch evidence below is
+historical and must not be read as the current release objective. Current local
+code still requires regression/build/visual QA and legal-text human review;
+Production status is not yet changed by this note.
+
 ## Superseding Pre-Checkout Update — 2026-09-26
 
 Polar Production configuration was subsequently closed and frozen. Deployment

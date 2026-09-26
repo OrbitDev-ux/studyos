@@ -10,7 +10,7 @@ import {
   polarProductIdForPlan,
   updatePolarSubscription,
 } from "@/features/billing/polar-client";
-import { activeBillingProvider } from "@/features/billing/providers";
+import { activeBillingProvider, FREE_ONLY_MODE } from "@/features/billing/providers";
 import { capture } from "@/features/analytics/capture";
 import { isGuestEmail } from "@/features/ai/quota";
 import { isPlan } from "@/features/billing/plans";
@@ -33,6 +33,9 @@ export async function getBillingAuthConfig(
   plan: string,
 ): Promise<{ ok: true; config: BillingAuthConfig } | { ok: false; error: string }> {
   const user = await requireCurrentUser();
+  if (FREE_ONLY_MODE) {
+    return { ok: false, error: "StudyOS에서는 새 결제를 받지 않습니다." };
+  }
   // Launch policy: only PRO is for sale; PREMIUM is not-for-sale → fail closed
   // regardless of any leftover configuration.
   if (!isPlan(plan)) {
@@ -82,6 +85,9 @@ export type CheckoutStart =
  */
 export async function startCheckout(plan: string): Promise<CheckoutStart> {
   const user = await requireCurrentUser();
+  if (FREE_ONLY_MODE) {
+    return { ok: false, error: "StudyOS에서는 새 결제를 받지 않습니다." };
+  }
   // Launch policy: PRO ($9.99 / month) is the only purchasable plan. PREMIUM
   // (not-for-sale) and anything else never open a checkout — fail closed.
   if (!isPlan(plan)) {

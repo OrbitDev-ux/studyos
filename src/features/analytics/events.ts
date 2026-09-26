@@ -33,6 +33,7 @@ export type AnalyticsEvent =
       props: { count: number; subject: string; type: string };
     }
   | { name: "demo_started"; props: Record<string, never> }
+  | { name: "study_session_completed"; props: { durationSec: number } }
   | {
       name: "charge_succeeded";
       props: { plan: string; amount: number; currency: string; provider: string };
@@ -57,6 +58,7 @@ export const EVENT_DESCRIPTIONS = {
   login_completed: "A user successfully signed in (any provider).",
   problems_generated: "AI problems were generated and persisted for a user.",
   demo_started: "A visitor entered the public demo (fires once per tab session).",
+  study_session_completed: "An authenticated learner completed a tracked study session.",
   charge_succeeded: "A successful charge granted (or kept) plan access. Fired on every successful charge event — new purchases and renewals are not distinguished here, that classification is the sink's job.",
   subscription_canceled: "The user chose to cancel at period end.",
   subscription_expired: "A subscription lapsed and plan access reverted to TRIAL (cancel-at-period-end, or charge-failure past the grace window).",

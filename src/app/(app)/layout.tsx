@@ -14,6 +14,7 @@ import { getCurrentAdmin } from "@/lib/admin/context";
 import { getMaintenance } from "@/lib/maintenance";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getActiveThemeEvent } from "@/features/theme-events/theme-event";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -37,14 +38,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     getHeaderNotifications(session.user.id),
   ]);
 
-  // Show the upgrade CTA to everyone except PREMIUM. Cheap PK lookup.
-  const planRow = await prisma.user.findUnique({
+  const localeRow = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { plan: true, locale: true },
+    select: { locale: true },
   });
-  const showUpgrade = planRow?.plan !== "PREMIUM";
   // Central locale resolution (user choice → cookie → browser → IP → default).
-  const locale = await getServerLocale(planRow?.locale);
+  const locale = await getServerLocale(localeRow?.locale);
+  const themeEvent = getActiveThemeEvent();
 
   return (
     // App-wide toast context. Without it, any client component that calls
@@ -58,10 +58,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <AppSidebar
             user={session.user}
             socialCount={socialCount}
-            showUpgrade={showUpgrade}
           />
           <SidebarInset>
-            <Header notifications={notifications} />
+            <Header
+              notifications={notifications}
+              themeEventActive={themeEvent !== null}
+              themeEventEndsAt={themeEvent?.endsAt.toISOString()}
+            />
             <main className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col gap-5 p-4 pb-24 md:gap-6 md:p-6 md:pb-6">
               {children}
             </main>

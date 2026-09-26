@@ -23,9 +23,6 @@ import {
   getWeeklyStatistics,
 } from "@/features/statistics/queries";
 import { getStreakStats } from "@/features/study-sessions/queries";
-import { UpgradeNotice } from "@/features/billing/components/upgrade-notice";
-import { accessStateFor } from "@/features/billing/access";
-import { canUseFeature } from "@/features/billing/entitlements";
 import { getMessages } from "@/features/i18n/messages";
 import { getServerLocale } from "@/features/i18n/server";
 import { formatDuration } from "@/lib/format";
@@ -70,7 +67,6 @@ export default async function StatsPage() {
   const completedTodos = todoCounts.find((c) => c.completed)?._count._all ?? 0;
   const totalTodos = todoCounts.reduce((sum, c) => sum + c._count._all, 0);
 
-  const canAdvancedAnalytics = canUseFeature(accessStateFor(user), "ADVANCED_ANALYTICS");
   const locale = await getServerLocale(user.locale);
   const t = getMessages(locale).stats;
 
@@ -136,15 +132,7 @@ export default async function StatsPage() {
             <h2 className="text-muted-foreground text-sm font-semibold">
               {t.sectionMonth}
             </h2>
-            {canAdvancedAnalytics ? (
-              <MonthlyStatsCard stats={monthly} t={t} locale={locale} />
-            ) : (
-              <UpgradeNotice
-                title={t.proNoticeTitle}
-                message={t.proNoticeMessage}
-                cta={t.proNoticeCta}
-              />
-            )}
+            <MonthlyStatsCard stats={monthly} t={t} locale={locale} />
           </section>
 
           <section className="flex flex-col gap-3">
@@ -165,18 +153,10 @@ export default async function StatsPage() {
         <h2 className="text-muted-foreground text-sm font-semibold">
           {t.sectionAiAnalysis}
         </h2>
-        {canAdvancedAnalytics ? (
-          <div className="grid gap-5 lg:grid-cols-2">
-            <WeaknessSummaryCard initialContent={weaknessAnalysis?.content ?? null} />
-            <WeeklyReportCard initialContent={weeklyReport?.content ?? null} />
-          </div>
-        ) : (
-          <UpgradeNotice
-            title={t.proNoticeTitle}
-            message={t.proNoticeMessage}
-            cta={t.proNoticeCta}
-          />
-        )}
+        <div className="grid gap-5 lg:grid-cols-2">
+          <WeaknessSummaryCard initialContent={weaknessAnalysis?.content ?? null} />
+          <WeeklyReportCard initialContent={weeklyReport?.content ?? null} />
+        </div>
       </section>
     </div>
   );

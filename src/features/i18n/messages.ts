@@ -188,8 +188,8 @@ const ko = {
     createFirst: "첫 교재 만들기",
     usageLabel: "교재 생성",
     limitTitle: "이번 교재 생성 한도를 모두 사용했어요",
-    limitMessage: "상위 플랜으로 업그레이드하면 더 많은 교재를 만들 수 있어요.",
-    limitCta: "플랜 비교하기",
+    limitMessage: "이번 달 생성 한도에 도달했어요. 다음 달에 다시 이용할 수 있습니다.",
+    limitCta: "확인",
     emptyDesc:
       "아직 만든 교재가 없어요. 학습 목적과 스타일을 입력하면 StudyOS가 개념·예제·문제·해설이 담긴 나만의 교재를 만들어드려요.",
   },
@@ -215,9 +215,9 @@ const ko = {
   },
   stats: {
     title: "통계",
-    proNoticeTitle: "상세·고급 통계는 Pro 플랜에서 제공돼요",
+    proNoticeTitle: "학습 통계",
     proNoticeMessage: "단원별 정답률, 성적 추세, 학습 시간 분석 등을 확인할 수 있어요.",
-    proNoticeCta: "Pro 알아보기",
+    proNoticeCta: "통계 확인",
     todayStudyTime: "오늘 공부시간",
     timerStart: "시작",
     timerStop: "종료",
@@ -721,10 +721,10 @@ const ko = {
     paletteEmpty: "결과가 없습니다.",
     paletteGroupNavigate: "이동",
 
-    upgradeTitle: "Study OS Dev는 PRO 이상에서 제공돼요",
+    upgradeTitle: "아직 준비 중인 기능입니다",
     upgradeMessage:
       "격리된 나만의 Linux 개발 환경에서 실제 터미널·IDE를 사용할 수 있어요.",
-    upgradeCta: "플랜 비교하기",
+    upgradeCta: "기능 안내",
 
     errorNotFound: "Workspace를 찾을 수 없습니다.",
     reconnect: "재연결",
@@ -976,8 +976,8 @@ const en: Messages = {
     createFirst: "Create your first book",
     usageLabel: "Book generation",
     limitTitle: "You've used up this period's book creation limit",
-    limitMessage: "Upgrade to a higher plan to create more books.",
-    limitCta: "Compare plans",
+    limitMessage: "You have reached this month's generation limit. You can try again next month.",
+    limitCta: "Got it",
     emptyDesc:
       "No books yet. Tell StudyOS your goals and style, and it will build a book with concepts, examples, problems, and explanations.",
   },
@@ -1003,10 +1003,10 @@ const en: Messages = {
   },
   stats: {
     title: "Stats",
-    proNoticeTitle: "Detailed, advanced stats are available on the Pro plan",
+    proNoticeTitle: "Learning statistics",
     proNoticeMessage:
       "See per-unit accuracy, score trends, study-time analysis, and more.",
-    proNoticeCta: "Explore Pro",
+    proNoticeCta: "View stats",
     todayStudyTime: "Today's study time",
     timerStart: "Start",
     timerStop: "Stop",
@@ -1513,10 +1513,10 @@ const en: Messages = {
     paletteEmpty: "No results.",
     paletteGroupNavigate: "Navigate",
 
-    upgradeTitle: "Study OS Dev is available on PRO and above",
+    upgradeTitle: "This feature is not available yet",
     upgradeMessage:
       "Use a real terminal and IDE in your own isolated Linux dev environment.",
-    upgradeCta: "Compare plans",
+    upgradeCta: "Feature details",
 
     errorNotFound: "Couldn't find that workspace.",
     reconnect: "Reconnect",
@@ -1764,8 +1764,8 @@ const ja: Messages = {
     createFirst: "最初の教材を作成",
     usageLabel: "教材生成",
     limitTitle: "今回の教材作成上限に達しました",
-    limitMessage: "上位プランにアップグレードすると、より多くの教材を作成できます。",
-    limitCta: "プランを比較",
+    limitMessage: "今月の生成上限に達しました。来月また利用できます。",
+    limitCta: "確認",
     emptyDesc:
       "まだ教材がありません。学習の目的とスタイルを入力すると、StudyOSが概念・例題・問題・解説を含む教材を作成します。",
   },
@@ -1791,9 +1791,9 @@ const ja: Messages = {
   },
   stats: {
     title: "統計",
-    proNoticeTitle: "詳細・高度な統計はProプランでご利用いただけます",
+    proNoticeTitle: "学習統計",
     proNoticeMessage: "単元別の正答率、成績の推移、学習時間の分析などを確認できます。",
-    proNoticeCta: "Proを見る",
+    proNoticeCta: "統計を見る",
     todayStudyTime: "今日の学習時間",
     timerStart: "開始",
     timerStop: "終了",
@@ -2299,10 +2299,10 @@ const ja: Messages = {
     paletteEmpty: "結果がありません。",
     paletteGroupNavigate: "移動",
 
-    upgradeTitle: "Study OS DevはPro以上でご利用いただけます",
+    upgradeTitle: "この機能は準備中です",
     upgradeMessage:
       "自分だけの隔離されたLinux開発環境で、実際のターミナル・IDEを使えます。",
-    upgradeCta: "プランを比較",
+    upgradeCta: "機能について",
 
     errorNotFound: "ワークスペースが見つかりません。",
     reconnect: "再接続",
@@ -2549,8 +2549,8 @@ const zh: Messages = {
     createFirst: "创建第一本教材",
     usageLabel: "教材生成",
     limitTitle: "本期教材创建额度已用完",
-    limitMessage: "升级到更高的套餐即可创建更多教材。",
-    limitCta: "对比套餐",
+    limitMessage: "已达到本月生成上限，下个月可以继续使用。",
+    limitCta: "知道了",
     emptyDesc:
       "还没有教材。输入你的学习目标和风格，StudyOS 会生成包含概念、例题、题目和解析的教材。",
   },
@@ -2575,9 +2575,9 @@ const zh: Messages = {
   },
   stats: {
     title: "统计",
-    proNoticeTitle: "详细·高级统计在 Pro 套餐中提供",
+    proNoticeTitle: "学习统计",
     proNoticeMessage: "可查看各单元正确率、成绩趋势、学习时间分析等。",
-    proNoticeCta: "了解 Pro",
+    proNoticeCta: "查看统计",
     todayStudyTime: "今日学习时间",
     timerStart: "开始",
     timerStop: "结束",
@@ -3077,9 +3077,9 @@ const zh: Messages = {
     paletteEmpty: "没有结果。",
     paletteGroupNavigate: "导航",
 
-    upgradeTitle: "Study OS Dev 需要 Pro 及以上套餐",
+    upgradeTitle: "此功能尚未开放",
     upgradeMessage: "在专属隔离的 Linux 开发环境中使用真实终端和 IDE。",
-    upgradeCta: "对比套餐",
+    upgradeCta: "功能说明",
 
     errorNotFound: "未找到该工作区。",
     reconnect: "重新连接",

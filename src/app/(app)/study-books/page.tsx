@@ -2,8 +2,7 @@ import { BookMarked, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
-import { PlanStatusChip } from "@/features/billing/components/plan-status-chip";
-import { UpgradeNotice } from "@/features/billing/components/upgrade-notice";
+import { FairUseNotice } from "@/features/billing/components/fair-use-notice";
 import { getPlanSummary } from "@/features/billing/usage";
 import { CreateStudyBookDialog } from "@/features/study-books/components/create-study-book-dialog";
 import {
@@ -59,15 +58,13 @@ export default async function StudyBooksPage() {
           title={t.title}
           actions={<CreateStudyBookDialog trigger={createTrigger} />}
         />
-        <PlanStatusChip
-          summary={planSummary}
-          usage={bookUsage}
-          usageLabel={t.usageLabel}
-        />
+        <p className="text-muted-foreground text-xs">
+          이번 달 AI 교재 생성 {bookUsage.used}/{bookUsage.limit ?? "-"}회
+        </p>
       </div>
 
       {atLimit && (
-        <UpgradeNotice title={t.limitTitle} message={t.limitMessage} cta={t.limitCta} />
+        <FairUseNotice title={t.limitTitle} message={t.limitMessage} />
       )}
 
       {items.length === 0 ? (
