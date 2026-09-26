@@ -169,6 +169,22 @@ if (process.env.POLAR_SANDBOX && process.env.POLAR_DEV_SINGLE_PLAN) {
 const coreMissing = report.some(([, s, g]) => s === "MISSING" && g === "core");
 const requireBilling = FLAGS.has("--require-billing");
 const billingMissing = billingPresentCount < BILLING_REQUIRED.length;
+const sandboxContamination = Boolean(
+  process.env.POLAR_SANDBOX ||
+  process.env.POLAR_API_URL?.trim() ||
+  process.env.POLAR_DEV_SINGLE_PLAN?.trim() ||
+  process.env.POLAR_TEST_PRICE_ID?.trim() ||
+  process.env.POLAR_TEST_PRODUCT_ID?.trim(),
+);
+if (requireBilling && sandboxContamination) {
+  report.push(["POLAR sandbox/dev flags (FORBIDDEN)", "FAIL", "billing", false]);
+}
+const abandonedProviderNames = Object.keys(process.env).filter(
+  (name) => name.startsWith("LEMONSQUEEZY_") && process.env[name]?.trim(),
+);
+for (const name of abandonedProviderNames) {
+  report.push([`${name} (REMOVE FROM ACTIVE ENV)`, "FAIL", "billing", false]);
+}
 
 // Partial PREMIUM configuration (exactly one of price/product set) is never a
 // P0 for launch — but flag it so a half-made switch is caught before checkout.
@@ -197,6 +213,16 @@ if (requireBilling && billingMissing) {
   console.log(
     "  A full set keeps checkout fail-closed; a partial set 500s on live clicks.",
   );
+  process.exit(2);
+}
+
+if (abandonedProviderNames.length > 0) {
+  console.log("✗ BLOCKED: Lemon Squeezy variables remain in the active environment.");
+  process.exit(2);
+}
+
+if (requireBilling && sandboxContamination) {
+  console.log("✗ BLOCKED: Polar sandbox/dev-only settings are present in the production environment.");
   process.exit(2);
 }
 

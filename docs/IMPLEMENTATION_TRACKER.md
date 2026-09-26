@@ -1,5 +1,17 @@
 # Implementation Tracker — StudyOS
 
+## Polar Pre-Checkout Release Gate — 2026-09-26
+
+Lemon Squeezy runtime changes were removed selectively. Polar checkout,
+webhook, provider selection, env contract, and smoke harness are restored;
+historical Polar records and migration history remain untouched. Shared currency
+normalization and idempotent cumulative-refund handling are retained. Production
+Polar configuration is now closed/frozen: deployed runtime verified the token,
+`STUDYOS` organization, $9.99 USD/month PRO mapping, and enabled webhook.
+Remaining gates are authenticated dashboard/AI smoke and a trusted canonical
+preflight; see `docs/PRODUCTION_CHECKLIST.md`. Earlier token/mapping failures
+remain below as historical evidence.
+
 Status of the phased rebuild. Each phase is "done" only when
 typecheck + lint + the full test suite are green (see `docs/HANDOFF.md`).
 
@@ -99,7 +111,7 @@ gate above is closed — what remains is recreating the local `:5433` cluster
   on this 8GB Mac (VZ/QEMU VMs OOM; Docker Desktop absent).
   `prisma migrate status` → up to date; `prisma migrate deploy` applied all 50
   migrations (local dev DB only). `DATABASE_URL`/`DIRECT_URL` =
-  `postgresql://studyos@127.0.0.1:5433/studyos`; `AUTH_SECRET` generated,
+  `<LOCAL_DATABASE_URL_REDACTED>`; `AUTH_SECRET` generated,
   `AUTH_URL=http://localhost:4000`.
 - Real-UI auth E2E (Playwright/Chromium): email/password signup →
   `/dashboard?welcome=1` with a working NextAuth session cookie.

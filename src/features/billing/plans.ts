@@ -67,7 +67,7 @@ export const PLAN_META: Record<Plan, PlanMeta> = {
     name: "Pro",
     priceMinor: 999,
     currency: "USD",
-    priceLabel: "$9.99 / 월",
+    priceLabel: "$9.99 USD / 월",
     priceKrw: 4900,
     tagline: "매일 공부하는 학생을 위한 플랜",
     order: 1,

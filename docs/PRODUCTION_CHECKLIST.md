@@ -4,9 +4,25 @@ Version pre-first-charge. Work the "Deploy" section first (migrations + build),
 then Polar, then observability. **Do not** open checkouts to real traffic until
 the sandbox step passes end-to-end.
 
+## Current Pre-Checkout State — 2026-09-26
+
+**POLAR CONFIGURATION CLOSED/FROZEN.** Production runtime verifies the intended
+`STUDYOS` organization, $9.99 USD/month PRO product/price, matching webhook
+secret, required events, and enabled canonical endpoint. Deployment
+`dpl_F479PGR5qiQ23XvDgdXExk1KMswJ` is READY. Public pricing/auth routes and
+unauthenticated admin denial passed. Local regression is 124 files / 893 tests;
+typecheck, lint, and local scratch-DB build passed. No real payment was made.
+
+Still open before first checkout: authenticated dashboard and harmless AI smoke,
+trusted canonical production preflight, and one hosted PRO checkout review.
+Vercel CLI masks sensitive values; its `env run` missing-value result is not
+evidence that Production secrets are missing. The preflight implementation only
+checks presence and does not print or compare secret values. Previous blocked
+Polar observations below are historical, superseded by this section.
+
 Legend: ☐ pending · ☑ verified · ⛔ blocked (reason at bottom).
 
-## Latest Production Recheck — 2026-09-23
+## Historical Production Recheck — 2026-09-23
 
 **BLOCKED.** Current evidence is in `docs/P0_CLOSURE.md`. The target is
 `yesungvibecodes-3119/studyos`; `studyos-teal-eta.vercel.app` is an alias of

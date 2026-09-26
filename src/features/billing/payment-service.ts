@@ -186,8 +186,8 @@ export async function applyPaymentEvent(input: PaymentEvent) {
       });
 
       // Revenue event, fired at the exact moment entitlement is granted. This
-      // covers all charge paths (Toss checkout, Toss renewal cron, Polar
-      // order.paid) since every one funnels through this grant branch. New
+      // covers Toss checkout/renewal and Polar order.paid paths since each funnels
+      // through this grant branch. New
       // purchases vs renewals are NOT distinguished here by design — see
       // events.ts for the classification rule.
       capture({
@@ -200,8 +200,8 @@ export async function applyPaymentEvent(input: PaymentEvent) {
         },
       });
 
-      // Only Toss-owned billing keys get deleted — a Polar externalId (the
-      // Polar subscription id) must never be DELETE'd against the Toss API.
+      // Only Toss-owned billing keys get deleted — provider subscription ids
+      // must never be sent to the Toss API.
       staleBillingKeys = staleActive
         .filter((s) => s.paymentProvider === "toss")
         .map((s) => s.externalId)
@@ -246,29 +246,43 @@ export async function applyRefundEvent(input: {
   revokeEntitlement?: boolean;
 }) {
   return prisma.$transaction(async (tx) => {
-    // Toss (and PGs generally) can redeliver the same webhook notification —
-    // without this guard, a redelivered CANCEL_STATUS_CHANGED would create a
-    // second Refund row and re-run the entitlement revert. externalRefundId
-    // is the PG's own unique id for this specific cancellation, so an exact
-    // match means we've already recorded it.
+    // Providers can redeliver refund notifications. Repeated amounts are a
+    // no-op; cumulative provider amounts only advance the existing record.
+    let refund: Awaited<ReturnType<typeof tx.refund.create>>;
     if (input.externalRefundId) {
       const already = await tx.refund.findUnique({
         where: { externalRefundId: input.externalRefundId },
       });
-      if (already) return already;
+      if (already && input.amount <= already.amount) return already;
+      refund = already
+        ? await tx.refund.update({
+            where: { id: already.id },
+            data: { amount: input.amount, status: input.status, processedAt: input.processedAt ?? already.processedAt },
+          })
+        : await tx.refund.create({
+            data: {
+              paymentId: input.paymentId,
+              amount: input.amount,
+              status: input.status,
+              reason: input.reason,
+              paymentProvider: input.provider,
+              externalRefundId: input.externalRefundId,
+              processedAt: input.processedAt,
+            },
+          });
+    } else {
+      refund = await tx.refund.create({
+        data: {
+          paymentId: input.paymentId,
+          amount: input.amount,
+          status: input.status,
+          reason: input.reason,
+          paymentProvider: input.provider,
+          externalRefundId: input.externalRefundId,
+          processedAt: input.processedAt,
+        },
+      });
     }
-
-    const refund = await tx.refund.create({
-      data: {
-        paymentId: input.paymentId,
-        amount: input.amount,
-        status: input.status,
-        reason: input.reason,
-        paymentProvider: input.provider,
-        externalRefundId: input.externalRefundId,
-        processedAt: input.processedAt,
-      },
-    });
 
     // Mirror the payment-success side: a completed refund must revoke the
     // entitlement it granted, not just record itself. Without this, a fully

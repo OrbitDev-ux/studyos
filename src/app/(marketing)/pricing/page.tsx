@@ -20,12 +20,12 @@ import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "요금제 — StudyOS",
-  description: "StudyOS Trial · Pro 플랜을 비교해보세요. Pro는 월 $9.99입니다.",
+  description: "StudyOS Trial · Pro 플랜을 비교해보세요. Pro는 월 $9.99 USD입니다.",
   alternates: { canonical: "/pricing" },
   openGraph: {
     title: "요금제 — StudyOS",
     description:
-      "7일 무료 체험 후 Pro(월 $9.99)로 업그레이드하세요. Premium은 준비 중입니다.",
+      "7일 무료 체험 후 Pro(월 $9.99 USD)로 업그레이드하세요. Premium은 준비 중입니다.",
     url: "/pricing",
     locale: "ko_KR",
     siteName: "StudyOS",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "요금제 — StudyOS",
-    description: "7일 무료 체험 후 Pro(월 $9.99)로 업그레이드하세요.",
+    description: "7일 무료 체험 후 Pro(월 $9.99 USD)로 업그레이드하세요.",
   },
 };
 

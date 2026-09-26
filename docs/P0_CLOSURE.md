@@ -1,5 +1,22 @@
 # STUDYOS — P0 FINAL LAUNCH GATE REPORT
 
+## Superseding Pre-Checkout Update — 2026-09-26
+
+Polar Production configuration was subsequently closed and frozen. Deployment
+`dpl_F479PGR5qiQ23XvDgdXExk1KMswJ` is READY; a strongly authenticated,
+temporary runtime check verified the Production token, `STUDYOS` organization,
+canonical $9.99 USD/month PRO product/price, matching webhook secret, and
+required event coverage. The canonical webhook is enabled. The temporary route
+and one-time key were removed before the final clean deployment. Local current
+tree verification: typecheck PASS, lint PASS with two existing warnings, 124
+files / 893 tests PASS, and build PASS on local scratch DB (`127.0.0.1:5433`,
+zero pending migrations). Public routes/pricing/auth endpoints and unauthenticated
+admin denial passed. Authenticated browser smoke and trusted full-env preflight
+remain open; no checkout or real payment was created. Vercel CLI's masked
+sensitive env output is not treated as Production evidence.
+
+## Historical Launch-Gate Report — 2026-09-23
+
 ## Latest Production Recheck — 2026-09-23
 
 **BLOCKED — do not deploy or create a production checkout.** This section is

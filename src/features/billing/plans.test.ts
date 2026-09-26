@@ -12,7 +12,7 @@ describe("PLAN_META — canonical pricing ($9.99 launch decision)", () => {
     const pro = PLAN_META.PRO;
     expect(pro.priceMinor).toBe(999);
     expect(pro.currency).toBe("USD");
-    expect(pro.priceLabel).toBe("$9.99 / 월");
+    expect(pro.priceLabel).toBe("$9.99 USD / 월");
     expect(isPlanForSale("PRO")).toBe(true);
   });
 

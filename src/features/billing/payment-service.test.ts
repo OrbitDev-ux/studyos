@@ -35,7 +35,7 @@ const { payment, user, subscription, refund, transaction } = vi.hoisted(() => {
     update: vi.fn(),
     upsert: vi.fn(),
   };
-  const refund = { findUnique: vi.fn(), create: vi.fn() };
+  const refund = { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() };
   return {
     payment,
     user,
@@ -360,7 +360,7 @@ describe("applyRefundEvent", () => {
   });
 
   it("is a no-op when the same externalRefundId has already been recorded (duplicate webhook redelivery)", async () => {
-    refund.findUnique.mockResolvedValue({ id: "refund-1" });
+    refund.findUnique.mockResolvedValue({ id: "refund-1", amount: 9900 });
 
     const result = await applyRefundEvent({
       paymentId: "pay-1",
@@ -369,8 +369,24 @@ describe("applyRefundEvent", () => {
       externalRefundId: "toss-cancel-1",
     });
 
-    expect(result).toEqual({ id: "refund-1" });
+    expect(result).toEqual({ id: "refund-1", amount: 9900 });
     expect(refund.create).not.toHaveBeenCalled();
     expect(payment.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("updates cumulative provider refund amount and revokes only when the cumulative amount is full", async () => {
+    refund.findUnique.mockResolvedValue({ id: "refund-cumulative", amount: 200 });
+    refund.update.mockResolvedValue({ id: "refund-cumulative", amount: 999 });
+    payment.findUnique.mockResolvedValue({ userId: "user-1", subscriptionId: "sub-1" });
+    subscription.findFirst.mockResolvedValue({ id: "sub-1" });
+
+    await applyRefundEvent({
+      paymentId: "pay-1", amount: 999, status: "SUCCEEDED",
+      externalRefundId: "provider:order:order-1:refund-total", revokeEntitlement: true,
+    });
+
+    expect(refund.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ amount: 999 }) }));
+    expect(subscription.update).toHaveBeenCalledWith({ where: { id: "sub-1" }, data: { status: "CANCELED" } });
+    expect(user.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ plan: "TRIAL" }) }));
   });
 });

@@ -78,6 +78,23 @@ describe("getBillingMetrics", () => {
     expect(metrics.asOf).toBe("2026-09-21T10:00:00.000Z");
   });
 
+  it("normalizes historical lowercase provider currency codes without converting amounts", async () => {
+    payment.findMany.mockResolvedValueOnce([
+      { amount: 999, currency: "usd" },
+      { amount: 999, currency: "USD" },
+      { amount: 4900, currency: "KRW" },
+    ]).mockResolvedValueOnce([]);
+    refund.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    subscription.count.mockResolvedValue(0);
+    payment.groupBy.mockResolvedValue([]);
+
+    const result = await getBillingMetrics({ now: new Date("2026-09-26T12:00:00Z") });
+    expect(result.succeededPaymentsAllTime).toEqual({
+      USD: { count: 2, amountTotal: 1998 },
+      KRW: { count: 1, amountTotal: 4900 },
+    });
+  });
+
   it("never produces a mixed-currency total (USD and KRW amounts are never summed together)", async () => {
     subscription.count.mockResolvedValueOnce(1).mockResolvedValueOnce(0);
     payment.findMany.mockResolvedValue([

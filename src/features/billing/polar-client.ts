@@ -12,11 +12,10 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * charge-on-a-cron counterpart — this client only creates checkouts, reads
  * state, and flips subscription cancel flags.
  *
- * Integration status: NO Polar credentials exist in the repo, so nothing here
- * has been exercised against the live/sandbox API yet — the shapes follow the
- * published OpenAPI (checkouts /v1/checkouts, subscriptions PATCH
- * /v1/subscriptions/{id}) and MUST be smoke-tested against the Polar sandbox
- * before going live (see docs/BILLING_POLAR.md).
+ * Production credentials are supplied only through protected ignored
+ * environments. The API contract was previously verified against Polar's
+ * sandbox; current production token/catalog/webhook evidence is tracked in
+ * docs/PRODUCTION_CHECKLIST.md and must be rechecked before enabling sales.
  */
 
 const POLAR_API_BASE =

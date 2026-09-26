@@ -30,7 +30,7 @@ emits, where they're fired, and how to add one. Code lives in
 | `login_completed` | `lib/auth.ts` NextAuth `events.signIn` (all providers) | `method: "credentials" \| "google" \| "unknown"` |
 | `problems_generated` | `features/problems/actions.ts` — `generateProblems`, after the ProblemSet transaction commits | `count, subject, type` |
 | `demo_started` | `features/analytics/components/demo-start-tracker.tsx` in the demo layout, once per tab session | — |
-| `charge_succeeded` | `features/billing/payment-service.ts` grant branch — every successful charge (Toss checkout, Toss renewal, Polar `order.paid`) | `plan, amount, currency, provider` |
+| `charge_succeeded` | `features/billing/payment-service.ts` grant branch — every successful charge (Toss checkout/renewal, Polar `order.paid`) | `plan, amount, currency, provider` |
 | `subscription_canceled` | `features/billing/checkout-actions.ts` — `cancelSubscription` after the flag is set | `plan, atPeriodEnd` |
 | `subscription_expired` | `features/billing/renewal.ts` — cancel-at-period-end branch and grace-expiry branch | `plan, reason: "grace" \| "cancel"` |
 | `checkout_started` | `features/billing/checkout-actions.ts` — `startCheckout`, only after the checkout session was actually created | `plan, provider: "polar" \| "toss"` |

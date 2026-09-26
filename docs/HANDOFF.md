@@ -4,6 +4,27 @@ State of the project for anyone (human or agent) picking up next. Read
 `README.md` and `DEVELOPMENT.md`-style notes in `docs/` for depth; this is the
 short version.
 
+## Final Pre-Checkout Closure — 2026-09-26
+
+Polar checkout, webhook, cancellation, and sandbox harness are restored from the
+verified launch candidate. PRO is $9.99 USD/month; PREMIUM is not for sale.
+Currency-label normalization and cumulative refund idempotency improvements
+remain. Vercel Production runtime verified the `STUDYOS` organization, token,
+PRO product/price mapping, and webhook signing secret/event coverage; the
+canonical endpoint is enabled. Deployment `dpl_F479PGR5qiQ23XvDgdXExk1KMswJ`
+is READY on `studyos-teal-eta.vercel.app`, built from base `d531fe8` plus the
+launch-candidate working-tree changes. Local verification: 124 files / 893
+tests, typecheck, lint, and build passed; local build used only the `:5433`
+scratch DB and had zero pending migrations. Public/auth endpoints, pricing, and
+unauthenticated admin denial passed. No authenticated browser surface/session
+was available, so dashboard/AI/checkout remain unverified. The canonical
+preflight script is value-presence-only and secret-safe; a trusted full-env
+execution remains outstanding because Vercel CLI env-run masks sensitive vars.
+HTTP-only one-shot response timing (not browser render timing): landing 2,306 ms
+to headers / 2,313 ms total; dashboard auth redirect 201/202 ms; study-entry
+auth redirect 126/128 ms; pricing 2,374/2,380 ms. No checkout or real payment
+was created. Billing configuration is frozen.
+
 ## Stack
 
 Next.js App Router · React · TypeScript · Prisma/PostgreSQL (Supabase) ·

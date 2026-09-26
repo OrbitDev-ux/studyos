@@ -255,19 +255,17 @@ before go-live.
 > Any PRICE below is verified in minor units of the product's OWN currency and
 > never converted.
 
-### Latest production API observation — 2026-09-23
+### Latest production configuration observation — 2026-09-26
 
-The credential in the git-ignored `.env.production` authenticated to
-`api.polar.sh` (sandbox host rejected it). A read-only catalog request found an
-active `StudyOS PRO` product at 999 USD cents/month, matching the launch plan.
-The Vercel Production env list contains both PRO ID variable names, but its
-sensitive values could not be read locally, so their exact mapping is NOT
-VERIFIED. The existing Polar webhook endpoint was corrected to the configured
-Production route without creating a duplicate; its signing secret matches the
-local Production secret and required events are enabled. The deployed route
-returned 401 for unsigned input and 200 for a signed synthetic no-op. A real
-Polar-originated event delivery remains NOT VERIFIED. No payment or billing
-record was created or changed.
+The `STUDYOS` organization, active `StudyOS PRO` product, and sole recurring
+999 USD-cent/month price were verified through the deployed Production runtime.
+Vercel Production Polar token, product/price mapping, and webhook signing secret
+matched; the existing endpoint at
+`https://studyos-teal-eta.vercel.app/api/webhooks/polar` has required event
+coverage and is enabled. No checkout or payment was created. Public route smoke
+passed. Authenticated dashboard/AI/checkout smoke and a canonical preflight in a
+trusted environment remain unverified; Vercel CLI env-run masks sensitive
+values, so its missing-value output is not treated as Production evidence.
 
 ## Must verify before go-live (live credentials exist only in git-ignored env)
 

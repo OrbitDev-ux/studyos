@@ -76,7 +76,9 @@ type AmountRow = { amount: number; currency?: string | null };
 function aggregateCurrencyTotals(rows: AmountRow[]): CurrencyBreakdown {
   const byCurrency: CurrencyBreakdown = {};
   for (const row of rows) {
-    const currency = row.currency ?? "KRW";
+    // Historical Polar rows used lowercase ISO codes (e.g. "usd"). Normalize
+    // the label only so they share the USD bucket without changing any amount.
+    const currency = (row.currency ?? "KRW").toUpperCase();
     const bucket = byCurrency[currency] ?? { count: 0, amountTotal: 0 };
     bucket.count += 1;
     bucket.amountTotal += row.amount;
