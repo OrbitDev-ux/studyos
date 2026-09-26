@@ -156,12 +156,12 @@ html[data-study-event="midnight"] body {
   background-size: 137px 119px, 181px 157px, auto;
 }
 
-.event-midnight {
+html[data-study-event="midnight"] .event-midnight {
   border-color: color-mix(in oklch, var(--primary) 24%, var(--border));
   background-color: color-mix(in oklch, var(--card) 92%, #263653);
 }
 
-.event-moon-mark {
+html[data-study-event="midnight"] .event-moon-mark {
   color: #d9e5ff;
   background: #344461;
 }
