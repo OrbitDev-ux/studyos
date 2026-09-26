@@ -25,6 +25,30 @@ to headers / 2,313 ms total; dashboard auth redirect 201/202 ms; study-entry
 auth redirect 126/128 ms; pricing 2,374/2,380 ms. No checkout or real payment
 was created. Billing configuration is frozen.
 
+## Product Experience Pass — 2026-09-26
+
+Polar/billing remains untouched. Landing copy and vertical rhythm were
+tightened so the product example appears earlier, the example is explicitly
+labelled, and the demo action uses a consistent icon. The first real
+dashboard continuation item now has stronger visual priority. Tutor chat
+height accounts for mobile app chrome; transient AI status is announced, and
+its cursor motion respects reduced-motion preferences.
+
+Browser QA used Playwright Chromium on the optimized local build at 1440x900,
+768x1024, and 390x844. `/`, `/pricing`, and the explicitly labelled
+`/demo/dashboard`, `/demo/problems`, and `/demo/tutor` returned 200 without
+page errors or horizontal overflow; measured CLS was 0. Authenticated
+Production dashboard and study routes were not tested in this pass. The local
+demo dashboard uses labelled sample data.
+
+Performance sample (desktop 1440x900, same Chromium procedure): Production
+before: landing TTFB 103 ms / FCP=LCP 1,328 ms / CLS 0; pricing 75 ms /
+732 ms / CLS 0. Optimized local after: landing 85 ms / 236 ms / CLS 0; pricing
+41 ms / 96 ms / CLS 0. These environments differ, so the figures are not a
+valid before/after attribution; measure again on the same Production target
+after a deliberate deployment. Local scratch DB remained at 47/47 migrations,
+zero pending.
+
 ## Stack
 
 Next.js App Router · React · TypeScript · Prisma/PostgreSQL (Supabase) ·

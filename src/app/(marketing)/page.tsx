@@ -4,6 +4,7 @@ import {
   BookMarked,
   ClipboardCheck,
   Dna,
+  Eye,
   Sparkles,
   Target,
   Users,
@@ -46,32 +47,34 @@ const FEATURE_ICONS: Record<string, LucideIcon> = {
 export default function LandingPage() {
   return (
     <main className="flex flex-1 flex-col">
-      <section className="mx-auto flex w-full max-w-5xl flex-col items-center gap-6 px-4 py-24 text-center sm:px-6 sm:py-32">
+      <section className="mx-auto flex w-full max-w-5xl flex-col items-center gap-5 px-4 pt-12 pb-12 text-center sm:px-6 sm:pt-16 sm:pb-16">
         <span className="text-muted-foreground bg-muted inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium">
           <Sparkles className="size-3.5" />
           AI 학습 플랫폼
         </span>
-        <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-          {siteConfig.name}, 학생을 위한
+        <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+          {siteConfig.name}
           <br />
-          AI 올인원 학습 플랫폼
+          오늘의 공부를 이어가는 AI 학습 공간
         </h1>
         <p className="text-muted-foreground max-w-xl text-base text-balance sm:text-lg">
-          {siteConfig.name}는 Todo·목표·통계 같은 기본 공부 관리부터 AI 문제 생성,
-          오답노트, 모의고사, 친구와의 랭킹·배틀까지 한 곳에서 관리하는 학생용 올인원
-          플랫폼입니다.
+          문제를 풀고, 모르는 개념을 묻고, 다음 복습까지. 필요한 학습 도구를 한곳에서
+          이어서 사용하세요.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg" className="px-6 text-base">
             <Link href="/signup">무료로 시작하기</Link>
           </Button>
           <Button asChild size="lg" variant="outline" className="px-6 text-base">
-            <Link href="/demo">👀 로그인 없이 둘러보기</Link>
+            <Link href="/demo">
+              <Eye className="size-4" aria-hidden />
+              로그인 없이 둘러보기
+            </Link>
           </Button>
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-5xl px-4 pb-16 sm:px-6 sm:pb-20">
+      <section className="landing-preview mx-auto w-full max-w-5xl px-4 pb-16 sm:px-6 sm:pb-20">
         <ProductPreview />
       </section>
 
@@ -160,7 +163,10 @@ export default function LandingPage() {
             <Link href="/signup">무료로 시작하기</Link>
           </Button>
           <Button asChild size="lg" variant="outline" className="px-6 text-base">
-            <Link href="/demo">👀 로그인 없이 둘러보기</Link>
+            <Link href="/demo">
+              <Eye className="size-4" aria-hidden />
+              로그인 없이 둘러보기
+            </Link>
           </Button>
         </div>
       </section>

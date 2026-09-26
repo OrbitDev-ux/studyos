@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Menu, Send } from "lucide-react";
+import { ArrowLeft, GraduationCap, Menu, Send } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { MathText } from "@/components/ui/math-text";
@@ -187,7 +187,7 @@ export function TutorChat({
   const isAwaitingFirstChunk = pending && !messages.some((m) => m.streaming);
 
   return (
-    <div className="mx-auto flex h-[calc(100dvh-6rem)] w-full max-w-3xl flex-col">
+    <div className="mx-auto flex h-[calc(100dvh-14rem)] min-h-72 w-full max-w-3xl flex-col md:h-[calc(100dvh-8rem)]">
       {/* Header */}
       <div className="flex items-center justify-between gap-2 border-b pb-3">
         <div className="flex items-center gap-2">
@@ -198,7 +198,8 @@ export function TutorChat({
           </Button>
           <div>
             <p className="flex items-center gap-1.5 text-sm font-semibold">
-              🧑‍🏫 StudyOS AI 선생님
+              <GraduationCap className="text-primary size-4" aria-hidden />
+              StudyOS AI 선생님
             </p>
             <p className="text-muted-foreground text-xs">
               {tutorSubjectLabel(conversation.subject)} ·{" "}
@@ -266,7 +267,12 @@ export function TutorChat({
                   // complete (m.streaming cleared on the "done"/"error" event).
                   <span className="whitespace-pre-wrap">
                     {m.content}
-                    <span className="animate-pulse">▍</span>
+                    <span
+                      className="animate-pulse motion-reduce:animate-none"
+                      aria-hidden
+                    >
+                      ▍
+                    </span>
                   </span>
                 ) : (
                   <MathText className={isUser ? "text-primary-foreground" : ""}>
@@ -279,8 +285,15 @@ export function TutorChat({
         })}
         {isAwaitingFirstChunk && (
           <div className="flex justify-start">
-            <div className="bg-muted text-muted-foreground rounded-2xl px-3.5 py-2.5 text-sm">
-              선생님이 입력 중<span className="animate-pulse">…</span>
+            <div
+              className="bg-muted text-muted-foreground rounded-2xl px-3.5 py-2.5 text-sm"
+              role="status"
+              aria-live="polite"
+            >
+              답변을 준비하고 있어요
+              <span className="animate-pulse motion-reduce:animate-none" aria-hidden>
+                …
+              </span>
             </div>
           </div>
         )}

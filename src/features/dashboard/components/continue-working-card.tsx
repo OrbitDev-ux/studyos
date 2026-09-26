@@ -48,20 +48,27 @@ export function ContinueWorkingCard({
         </Link>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((item) => (
+          {items.map((item, index) => (
             <Link
               key={item.key}
               href={item.href}
-              className="border-border hover:border-primary/30 hover:bg-muted/40 focus-visible:ring-ring group flex items-start gap-3 rounded-xl border p-4 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              className={`border-border hover:border-primary/30 hover:bg-muted/40 focus-visible:ring-ring group flex min-h-24 items-start gap-3 rounded-xl border p-4 transition-colors focus-visible:ring-2 focus-visible:outline-none ${index === 0 ? "bg-primary/5 sm:col-span-2 lg:col-span-1" : ""}`}
             >
-              <span className="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-lg">
-                <item.icon className="size-4.5" />
+              <span
+                className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${index === 0 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+              >
+                <item.icon className="size-4.5" aria-hidden />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold">{item.title}</span>
-                <span className="text-muted-foreground block truncate text-xs">{item.desc}</span>
+                <span className="text-muted-foreground mt-1 block truncate text-xs">
+                  {item.desc}
+                </span>
               </span>
-              <ArrowRight className="text-muted-foreground group-hover:text-foreground mt-1 size-4 shrink-0 transition-transform group-hover:translate-x-0.5" />
+              <ArrowRight
+                className="text-muted-foreground group-hover:text-foreground mt-1 size-4 shrink-0 transition-transform group-hover:translate-x-0.5"
+                aria-hidden
+              />
             </Link>
           ))}
         </div>

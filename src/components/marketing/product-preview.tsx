@@ -20,7 +20,7 @@ const MOCK_CHOICES = [
 
 export function ProductPreview() {
   return (
-    <div className="relative mx-auto w-full max-w-2xl">
+    <figure className="relative mx-auto w-full max-w-3xl">
       <div className="overflow-hidden rounded-xl border shadow-2xl shadow-black/10">
         {/* browser chrome */}
         <div className="bg-muted flex items-center gap-2 border-b px-4 py-2.5">
@@ -30,7 +30,7 @@ export function ProductPreview() {
             <span className="size-2.5 rounded-full bg-green-400" />
           </div>
           <div className="bg-background text-muted-foreground mx-auto flex w-fit items-center rounded-md px-3 py-0.5 text-xs">
-            studyos.app/problems
+            StudyOS · 문제 풀이 예시
           </div>
         </div>
 
@@ -77,7 +77,10 @@ export function ProductPreview() {
       </div>
 
       {/* fade into page background */}
-      <div className="from-background pointer-events-none absolute inset-x-0 -bottom-1 h-24 bg-gradient-to-t to-transparent" />
-    </div>
+      <div className="from-background pointer-events-none absolute inset-x-0 -bottom-1 h-16 bg-gradient-to-t to-transparent" />
+      <figcaption className="text-muted-foreground mt-3 text-center text-xs">
+        화면 예시 · 실제 학습 기능은 로그인 후 이용할 수 있어요.
+      </figcaption>
+    </figure>
   );
 }
