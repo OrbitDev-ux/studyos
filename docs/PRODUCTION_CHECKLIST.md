@@ -1,15 +1,22 @@
 # Production Revenue Readiness — Go-Live Checklist
 
-## Superseding Product Policy — 2026-09-27 (Local, Not Deployed)
+## Superseding Product Policy — 2026-09-27 (Production; follow-up closure candidate)
 
 The current product direction is FREE ONLY, not a paid launch. New checkout is
 disabled in application code; the Toss renewal cron is gated off; billing rows,
 migrations, and webhook/history compatibility are preserved. Polar external
 configuration was not changed. Do not use the historical paid-launch checklist
 below to re-enable checkout. Before claiming the free release is legally
-complete, review the existing paid-service Terms/Privacy text and unresolved
-placeholders with the responsible operator/legal reviewer. This section is a
-local code-state note, not evidence of a Production deployment.
+complete, review the historical paid-service clauses and unresolved legal/data
+processing placeholders with the responsible operator/legal reviewer. New app
+checkout remains disabled; no provider-side legacy status is inferred here.
+The current event window is fixed to 2026-09-27 08:59:58 through 2026-10-04
+08:59:58 KST and must not be extended by a code deployment.
+
+Production commit `b26b5be` is live. Public route/browser smoke passed at three
+viewports, while authenticated dashboard/AI smoke remains not verified without
+a valid existing browser session. Do not submit legal consent or create a new
+Production account as part of smoke testing.
 
 Version pre-first-charge. Work the "Deploy" section first (migrations + build),
 then Polar, then observability. **Do not** open checkouts to real traffic until

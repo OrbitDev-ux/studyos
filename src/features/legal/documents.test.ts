@@ -58,4 +58,13 @@ describe("legal documents", () => {
       .join("\n");
     expect(privacyText).toContain("[추후 입력]");
   });
+
+  it("states the free-only product policy and labels paid terms as historical", () => {
+    expect(LEGAL_DOCUMENTS.terms.sections[0]?.paragraphs?.[1]).toContain("현재 무료 전용");
+    expect(LEGAL_DOCUMENTS.terms.sections[0]?.paragraphs?.[1]).toContain("새 유료 요금제나 결제");
+    expect(LEGAL_DOCUMENTS.subscription.intro).toContain("현재 FREE ONLY");
+    expect(LEGAL_DOCUMENTS.subscription.intro).toContain("과거 요금제");
+    expect(LEGAL_DOCUMENTS.refund.intro).toContain("현재 FREE ONLY");
+    expect(LEGAL_DOCUMENTS.refund.intro).toContain("법률 검토가 필요합니다");
+  });
 });

@@ -10,6 +10,11 @@
  * 본문은 StudyOS가 "실제로" 구현/수집/처리하는 것만 반영한다. 아래는 코드
  * 분석으로 확인한 사실이며, 확정되지 않은 정보는 `[추후 입력]` 으로 남겼다.
  *
+ * Current release facts (2026-09-27): StudyOS is FREE ONLY and app checkout
+ * creation is disabled. Historical plan enums, billing records, migrations,
+ * and provider compatibility remain. This does not establish whether any
+ * provider-side legacy billing activity exists; that requires operator review.
+ *
  * 확인된 사실:
  *  - 로그인: Google OAuth(@auth/prisma-adapter) + 이메일/비밀번호(bcrypt 해시)
  *    + 게스트 계정. (features/auth/actions.ts)
@@ -25,21 +30,19 @@
  *  - 설정된 AI provider(Groq 또는 Google Gemini)에는 학습 컨텍스트(과목/단원/문제/학생답/정답/
  *    난이도/취약개념)만 전달된다. 이메일·비밀번호·토큰·세션·IP·내부 식별자·
  *    결제정보는 전달되지 않는다. (features/ai/prompts/*)
- *  - 구독: Plan(TRIAL/PRO/PREMIUM) + 상태/체험 기간은 User 컬럼으로 존재.
- *    유료 결제는 결제대행사 Polar를 통해 PRO 요금제($9.99 USD/월, 자동 갱신)에
- *    적용된다. PREMIUM은 현재 판매하지 않는 플랜(not-for-sale)이며 코드/DB에
- *    이력은 유지된다. (features/billing/*)
+ *  - Plan(TRIAL/PRO/PREMIUM) is retained for historical records. New paid plans
+ *    and app checkout are currently disabled. Provider-side data processing,
+ *    any legacy recurring activity, and processor terms require confirmation.
  *
- * REVIEW(상용 출시 전 법률/개인정보 전문가 검토 필요):
- *  - 운영 주체: 2026-08-19 기준 사업자 등록 없는 개인 운영으로 출시(트라이얼만
- *    제공, 실제 유상 결제 없음). 사업자 정보(상호·대표자·사업자등록번호·주소·
- *    통신판매업신고번호)는 사업자 등록 및 유료 결제 개시 시점에 채운다 —
- *    무상 서비스 상태에서는 통신판매업 신고 대상이 아닌 것으로 보이나 이는
- *    법률 자문이 아니므로 유료화 전 실제 검토가 필요하다.
+ * HUMAN_LEGAL_REVIEW_REQUIRED:
+ *  - 운영 주체 및 사업자 정보(상호·대표자·사업자등록번호·주소·신고 여부)는
+ *    현재 확인되지 않았다. 사실과 적용 의무를 운영자/전문가가 확인하기 전
+ *    추정하거나 대체 정보를 채우지 않는다.
  *  - 개인정보 처리위탁/국외이전 계약의 정식 고지 문구 및 수탁사 리스트 확정.
  *  - 미성년자(법정대리인 동의) 처리 절차 — 현재 연령 수집/게이트 없음.
- *  - 결제 관련: 결제대행사 Polar의 정식 위탁 고지, 전자상거래법상 청약철회·환불
- *    세부 적용은 상용 출시 전 법률 검토 필요(본 문서는 법률 자문 결과가 아님).
+ *  - 과거 Polar 결제 데이터의 현재 처리/수탁 범위와 과거 transaction에 대한
+ *    환불·청약철회 문구의 적용은 확인되지 않았으며 법률 검토가 필요하다.
+ *  - 개인정보 보유기간, 광고/분석 cookies, 국외 이전 국가·시점·근거는 확인 필요.
  *  - 본 문서들은 법률 자문을 받은 결과가 아니다.
  */
 
@@ -95,9 +98,9 @@ const terms: LegalDocument = {
   title: "이용약관",
   navLabel: "이용약관",
   summary: "StudyOS 서비스 이용에 관한 기본 약관",
-  version: "1.0",
+  version: "1.1",
   effectiveDate: COMMON_EFFECTIVE,
-  lastUpdated: COMMON_EFFECTIVE,
+  lastUpdated: "2026-09-27",
   intro:
     '본 약관은 StudyOS(이하 "서비스")를 이용하는 회원과 서비스 운영자 사이의 권리·의무 및 책임사항을 규정합니다. 본 약관은 상용 출시 전 법률 전문가의 최종 검토가 필요한 초기 버전입니다.',
   sections: [
@@ -106,7 +109,7 @@ const terms: LegalDocument = {
       title: "제1조 (서비스의 정의)",
       paragraphs: [
         "StudyOS는 학생의 학습 관리를 돕는 온라인 플랫폼으로, 학습 기록 관리, AI 기반 문제·교재 생성, 오답·약점 분석, 모의고사, 친구·채팅·학습 배틀 등 학습 관련 기능을 제공합니다.",
-        "서비스는 무료 기능과 유료 정기구독(PRO/PREMIUM)으로 구성됩니다. 유료 구독에 관한 세부 사항은 「유료서비스 이용약관」을 따릅니다.",
+        "StudyOS는 현재 무료 전용(FREE ONLY)으로 운영되며 앱에서 새 유료 요금제나 결제를 제공하지 않습니다. 과거 요금제 및 결제 기록은 호환성을 위해 보존될 수 있으며, 관련 문서는 과거 결제 기록에 관한 참고 자료입니다.",
       ],
     },
     {
@@ -129,7 +132,7 @@ const terms: LegalDocument = {
       id: "free",
       title: "제4조 (무료 서비스)",
       paragraphs: [
-        "서비스는 학습 기록, 통계, 기본 AI 기능 등 다수의 기능을 무료 또는 무료 체험(Trial) 형태로 제공합니다. 무료로 제공되는 기능의 종류와 이용 한도는 운영상 필요에 따라 변경될 수 있습니다.",
+        "현재 StudyOS의 핵심 학습 기능은 유료 요금제 없이 이용할 수 있습니다. AI 기능에는 서비스 안정성과 남용 방지를 위한 서버 측 공정 사용 한도가 적용됩니다. 제공 범위와 한도는 운영상 필요에 따라 변경될 수 있습니다.",
       ],
     },
     {
@@ -137,7 +140,7 @@ const terms: LegalDocument = {
       title: "제5조 (AI 문제 생성)",
       paragraphs: [
         "서비스는 AI를 이용해 객관식·단답형·서술형 문제를 생성하는 기능을 제공합니다. AI가 생성한 문제와 정답·해설에는 오류가 포함될 수 있으므로 학습 참고용으로만 활용해야 합니다.",
-        "AI 생성 기능은 요금제별 이용 한도(무료 체험/PRO/PREMIUM)가 적용되며, 서버에서 사용량을 검증합니다.",
+        "AI 생성 기능은 현재 유료 등급이 아니라 서버 측 공정 사용 한도와 남용 방지 검사를 적용합니다.",
       ],
     },
     {
@@ -280,9 +283,9 @@ const privacy: LegalDocument = {
   title: "개인정보 처리방침",
   navLabel: "개인정보 처리방침",
   summary: "StudyOS가 수집·이용하는 개인정보의 처리 기준",
-  version: "1.0",
+  version: "1.1",
   effectiveDate: COMMON_EFFECTIVE,
-  lastUpdated: COMMON_EFFECTIVE,
+  lastUpdated: "2026-09-27",
   intro:
     'StudyOS(이하 "서비스")는 이용자의 개인정보를 중요하게 생각하며, 본 방침은 서비스가 실제로 수집·이용·처리하는 정보를 기준으로 작성되었습니다. 본 방침은 상용 출시 전 개인정보 전문가의 검토가 필요한 초기 버전입니다.',
   sections: [
@@ -311,7 +314,7 @@ const privacy: LegalDocument = {
         "학습 데이터 저장·조회 및 통계·개인화 학습 정보 제공",
         "AI 문제·교재 생성, 오답·약점 분석 등 AI 기반 기능 제공",
         "친구·채팅·학습 배틀 등 소셜 기능 제공",
-        "유료 구독 상태 확인 및 이용 한도 관리",
+        "현재 학습 기능의 공정 사용 한도 관리 및 과거 billing record 호환성 처리",
         "부정 이용·남용 방지, 서비스 안정성 확보 및 보안",
         "공지 및 문의 응대",
       ],
@@ -348,9 +351,9 @@ const privacy: LegalDocument = {
         "Google LLC — Google 계정 로그인(OAuth) 및 Google Gemini를 선택한 경우의 AI 처리",
         "Groq, Inc. — Groq를 선택한 경우의 AI 처리. 실제 계약·리전·보유기간: " +
           PLACEHOLDER,
-        `데이터베이스·호스팅 인프라 제공(예: Supabase, Vercel) — 데이터 저장 및 서비스 운영. 정식 수탁사·계약 정보: ${PLACEHOLDER}`,
+        `데이터베이스·호스팅 인프라 제공(예: Supabase, Vercel) — 데이터 저장 및 서비스 운영. 실제 수탁사·처리 위치·계약 정보: ${PLACEHOLDER}`,
         `오류 모니터링·서비스 분석(예: Sentry, Vercel Analytics) — 실제 전송 항목·수탁사·계약 정보: ${PLACEHOLDER}`,
-        `결제대행·정기결제: Polar(Polar AB) — 유료 구독(PRO $9.99 USD/월)의 결제·자동 갱신·환불 처리를 위탁함. 정식 위탁계약 정보: ${PLACEHOLDER}`,
+        `과거 결제 연동: Polar(Polar AB) 관련 기록과 호환 코드가 보존되어 있습니다. 현재 앱은 새 checkout을 생성하지 않습니다. Polar가 현재 처리하는 정보·수탁 관계·계약 정보: ${PLACEHOLDER}`,
       ],
     },
     {
@@ -364,8 +367,8 @@ const privacy: LegalDocument = {
       id: "cookies-ads",
       title: "8. 쿠키(Cookie) 및 온라인 맞춤형 광고",
       paragraphs: [
-        "서비스는 무료 체험(Trial) 이용자에게 광고를 표시할 수 있으며, 이를 위해 Google AdSense 등 제3자 광고 서비스를 이용할 수 있습니다. 유료 구독(PRO/PREMIUM) 이용자에게는 광고가 표시되지 않습니다.",
-        "Google을 포함한 제3자 광고 사업자는 쿠키(Cookie)를 사용하여 이용자의 본 서비스 및 다른 웹사이트 방문 기록을 기반으로 맞춤형 광고를 제공할 수 있습니다. Google의 광고 쿠키는 이용자가 방문한 사이트 정보를 바탕으로 광고를 게재하는 데 사용됩니다.",
+        `현재 FREE ONLY 접근 정책에서는 앱의 광고 슬롯이 비활성화되어 있습니다. 실제 배포에서 제3자 광고·분석 요청이나 쿠키가 사용되는지, 사용된다면 사업자·항목·목적·선택 방법은 운영 환경 확인이 필요합니다: ${PLACEHOLDER}`,
+        `과거 Google 광고 안내의 현재 적용 여부와 광고 설정 링크는 확인되지 않았으므로 사용 전 운영자 검토가 필요합니다: ${PLACEHOLDER}`,
         "이용자는 Google 광고 설정(https://www.google.com/settings/ads)에서 맞춤형 광고를 비활성화할 수 있으며, https://www.aboutads.info 를 통해 제3자 사업자의 맞춤형 광고 쿠키 사용을 개별적으로 거부할 수 있습니다. 또한 웹 브라우저 설정을 통해 쿠키 저장을 거부하거나 삭제할 수 있으나, 이 경우 일부 서비스 이용에 제한이 있을 수 있습니다.",
         "Google의 광고 및 데이터 처리에 관한 자세한 내용은 Google 개인정보처리방침과 'Google 파트너 사이트나 앱 사용 시 Google의 정보 이용 방식' 안내를 참고하시기 바랍니다.",
       ],
@@ -437,19 +440,19 @@ const privacy: LegalDocument = {
 // ─── 3. 유료서비스 이용약관 ───────────────────────────────────────────────
 const subscription: LegalDocument = {
   slug: "subscription",
-  title: "유료서비스 이용약관",
-  navLabel: "유료서비스 이용약관",
-  summary: "PRO/PREMIUM 정기구독 및 무료 체험에 관한 약관",
-  version: "1.0",
+  title: "과거 유료서비스 이용약관",
+  navLabel: "과거 구독 약관",
+  summary: "과거 요금제·결제 기록을 위한 참고 문서; 현재 신규 판매 없음",
+  version: "1.1",
   effectiveDate: COMMON_EFFECTIVE,
-  lastUpdated: COMMON_EFFECTIVE,
+  lastUpdated: "2026-09-27",
   intro:
-    "본 약관은 StudyOS의 요금제·무료 체험(Trial) 및 유료 정기구독(PRO)에 적용됩니다. 유료 구독 결제와 자동 갱신은 결제대행사 Polar를 통해 제공됩니다(현재 판매 플랜: PRO $9.99 USD/월). PREMIUM은 현재 판매하지 않는 플랜입니다. 요금제 접근 한도는 현재 코드 정의를 기준으로 합니다.",
+    "StudyOS는 현재 FREE ONLY이며 새 PRO/PREMIUM 구독이나 앱 checkout을 제공하지 않습니다. 아래 요금·결제·해지 조항은 과거 요금제와 기록을 위해 보존된 내용이며 현재 판매 안내가 아닙니다. 과거 계약에 대한 적용 범위와 provider-side 기존 구독 상태는 운영자 및 법률 검토가 필요합니다.",
   sections: [
     {
       id: "plans",
       title: "1. 요금제 구성",
-      paragraphs: ["서비스는 다음 요금제를 제공합니다."],
+      paragraphs: ["다음은 과거 요금제 기록입니다. 현재 StudyOS는 무료 전용이며 신규 유료 플랜을 판매하지 않습니다."],
       list: [
         "Trial(무료 체험): 가입 시 7일간 제공. AI 문제 생성 1일 10회, 모의고사 생성 체험 기간 2회, 교재 생성 체험 기간 1회. 체험 기간에는 광고가 표시될 수 있습니다.",
         "PRO(월 $9.99 USD): AI 문제 생성 1일 50회, 모의고사 생성 월 10회, 교재 생성 월 5회, 상세/고급 통계·오답 DNA 등 제공, 광고 없음.",
@@ -540,13 +543,13 @@ const subscription: LegalDocument = {
 const refund: LegalDocument = {
   slug: "refund",
   title: "환불 및 청약철회 정책",
-  navLabel: "환불/청약철회 정책",
-  summary: "유료 구독 결제의 환불 및 청약철회 기준",
-  version: "1.0",
+  navLabel: "과거 환불 정책",
+  summary: "과거 결제 기록을 위한 환불 참고 문서; 현재 신규 판매 없음",
+  version: "1.1",
   effectiveDate: COMMON_EFFECTIVE,
-  lastUpdated: COMMON_EFFECTIVE,
+  lastUpdated: "2026-09-27",
   intro:
-    "본 정책은 결제대행사 Polar를 통해 진행하는 StudyOS 유료 구독(PRO $9.99 USD/월)의 구독 해지와 환불·청약철회 기준을 정합니다. 본 정책은 관련 법령에 따른 소비자의 권리를 제한하지 않습니다.",
+    "StudyOS는 현재 FREE ONLY이며 새 checkout을 제공하지 않습니다. 아래 환불·해지 문구는 과거 결제 기록을 위해 보존된 참고 내용이며 현재 판매 안내가 아닙니다. 과거 transaction에 대한 적용 범위, provider-side 기존 구독 상태 및 최신 법률 문구는 운영자·법률 검토가 필요합니다. 이 안내는 법률 판단을 대신하지 않습니다.",
   sections: [
     {
       id: "cancel-vs-refund",
@@ -601,7 +604,7 @@ const refund: LegalDocument = {
       id: "period",
       title: "8. 환불 처리 기간",
       paragraphs: [
-        "환불은 환불 사유가 확인된 후 관련 법령이 정한 기간 내에 처리합니다. 결제수단에 따라 실제 반환까지 소요되는 기간은 달라질 수 있으며, 처리 결과는 확인 이메일과 Polar 대시보드에서 안내합니다.",
+        `과거 결제의 실제 처리 채널·기간·provider dashboard 안내 여부는 거래별 확인이 필요합니다: ${PLACEHOLDER}`,
       ],
     },
     {

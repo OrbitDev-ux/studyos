@@ -1,8 +1,8 @@
 # StudyOS — Handoff Notes
 
-## Current Product Direction — 2026-09-27 (Local, Not Yet Deployed)
+## Current Product Direction — 2026-09-27 (Production; final closure candidate below)
 
-StudyOS is moving to **FREE ONLY**. User-facing plan/upgrade/pricing-tier
+StudyOS is **FREE ONLY**. User-facing plan/upgrade/pricing-tier
 surfaces are removed; `/pricing` remains as a free-product compatibility page.
 Server checkout actions and provider selection fail closed, and the legacy
 Toss renewal cron returns without charging. Historical Payment, Subscription,
@@ -11,24 +11,42 @@ controls for existing subscribers are retained. No production data or external
 Polar settings were changed. AI generation still has server-side fair-use and
 abuse limits (10 AI problems/day, 2 mock exams/month, 1 study book/month).
 
-The Major Update adds the `MIDNIGHT STUDY WEEK` event, enabled for exactly seven
-days from the deployment build timestamp (end is exclusive), an opt-out theme
-toggle, a small landing/dashboard treatment, and a challenge computed only from
-today's existing study-session/Todo state. Study answer submission now guards
-against concurrent duplicate grading; tutor answers include copy feedback.
-Release notes: improved today/continue dashboard hierarchy, safer answer
-submission, tutor answer copying, a free product path with fair-use limits, and
-the seven-day Midnight event.
+Production deployment `dpl_357LhAQF19dbVnupMs96ReVsGMiJ` at
+`studyos-teal-eta.vercel.app` contains commit `b26b5be`. Public browser QA,
+the demo problem flow, and warm landing/pricing performance were verified. An
+authenticated Production session was not available, so Dashboard/AI account
+smokes remain blocked. See the latest closure entry below for the follow-up
+candidate.
 
-This tree is local work and has not been committed, pushed, or deployed yet.
-Production browser QA/performance and authenticated flows remain unverified.
-Existing legal documents still describe paid plans and contain review
-placeholders; do not treat this code change as legal approval. Operator/legal
-review is required before representing those documents as current.
+`MIDNIGHT STUDY WEEK` is an optional live-content exception to the StudyOS core
+release freeze. Its fixed schedule is 2026-09-27 08:59:58 KST to 2026-10-04
+08:59:58 KST (end exclusive); later deploys must not reset it. Future events
+should use the event registry, theme tokens/assets, copy, and existing-data
+missions without requiring core architecture or per-event database changes.
+Do not force participation, interrupt study actions, add paid/random rewards,
+or use false countdowns.
+
+The final closure candidate labels old paid-plan Terms/Privacy material as
+historical and updates obvious FREE ONLY copy. Operator/legal review remains
+required for unresolved business details, processor scope, retention, transfers,
+advertising/cookies, and the legal application of historical billing clauses.
+Do not interpret this product copy update as legal approval.
+
+Release freeze: StudyOS core is limited to P0/P1 fixes, security, and
+observability; Theme Events remain open for optional live content under the
+rules above. Next operating phase is Growth + Content + Operations.
 
 State of the project for anyone (human or agent) picking up next. Read
 `README.md` and `DEVELOPMENT.md`-style notes in `docs/` for depth; this is the
 short version.
+
+## Final Release Closure Candidate — 2026-09-27
+
+This follow-up clarifies the fixed Midnight schedule, generalizes the event
+dashboard card/config, labels historical billing legal pages, and adds Growth
+and Content handoffs. The production build and public/demo checks must be
+re-run for this candidate. No authenticated smoke account/session was available
+to this run; do not create one or submit legal consent to close that gate.
 
 ## Final Pre-Checkout Closure — 2026-09-26
 

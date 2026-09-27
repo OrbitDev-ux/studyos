@@ -17,7 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { FAQ_ITEMS } from "@/config/faq";
 import { FEATURES } from "@/config/features";
 import { CONTENT_UPDATED_AT, siteConfig } from "@/config/site";
-import { getActiveThemeEvent } from "@/features/theme-events/theme-event";
+import { getScheduledThemeEvent } from "@/features/theme-events/theme-event";
 import { ThemeEventBanner } from "@/features/theme-events/theme-event-banner";
 
 export const metadata: Metadata = {
@@ -46,7 +46,7 @@ const FEATURE_ICONS: Record<string, LucideIcon> = {
 // the CDN. The CTA points at /signup for everyone; a logged-in visitor is
 // redirected on to /dashboard by middleware, so the link still works for both.
 export default function LandingPage() {
-  const themeEvent = getActiveThemeEvent();
+  const themeEvent = getScheduledThemeEvent();
   return (
     <main className="flex flex-1 flex-col">
       <section className="mx-auto flex w-full max-w-5xl flex-col items-center gap-5 px-4 pt-12 pb-12 text-center sm:px-6 sm:pt-16 sm:pb-16">
@@ -78,6 +78,7 @@ export default function LandingPage() {
           <ThemeEventBanner event={{
             name: themeEvent.name,
             copy: themeEvent.copy,
+            theme: themeEvent.theme,
             startsAt: themeEvent.startsAt.toISOString(),
             endsAt: themeEvent.endsAt.toISOString(),
           }} />

@@ -40,7 +40,7 @@ import { formatLongDate } from "@/lib/date";
 import { getMessages } from "@/features/i18n/messages";
 import { getServerLocale } from "@/features/i18n/server";
 import { requireCurrentUser } from "@/lib/session";
-import { MidnightEventCard } from "@/features/theme-events/components/midnight-event-card";
+import { ThemeEventCard } from "@/features/theme-events/components/theme-event-card";
 import { getActiveThemeEvent } from "@/features/theme-events/theme-event";
 
 const CARD_PREVIEW_LIMIT = 3;
@@ -193,18 +193,23 @@ export default async function DashboardPage() {
 
       <ContinueWorkingCard items={continueItems} t={t} />
 
-      <MidnightEventCard
+      <ThemeEventCard
         event={
           activeThemeEvent
             ? {
                 name: activeThemeEvent.name,
                 copy: activeThemeEvent.copy,
                 endsAt: activeThemeEvent.endsAt.toISOString(),
+                theme: activeThemeEvent.theme,
+                missions: activeThemeEvent.missions,
+                action: activeThemeEvent.action,
               }
             : null
         }
-        studiedToday={todaySeconds > 0 || activeSession !== null}
-        completedFocus={todos.length > 0 && todos.every((todo) => todo.completed)}
+        missionState={{
+          "study-session": todaySeconds > 0 || activeSession !== null,
+          "today-focus": todos.length > 0 && todos.every((todo) => todo.completed),
+        }}
       />
 
       {/* ── Main(2/3) + Sidebar(1/3): 세로 스택 대신 병렬 컬럼으로 배치해

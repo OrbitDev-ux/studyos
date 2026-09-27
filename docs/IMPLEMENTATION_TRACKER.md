@@ -1,17 +1,21 @@
 # Implementation Tracker — StudyOS
 
-## FREE ONLY + Major Update — 2026-09-27 (Local, Not Deployed)
+## FREE ONLY + Major Update — 2026-09-27 (Production `b26b5be`; closure candidate pending)
 
 Current target product policy supersedes the Polar pre-checkout notes below:
 FREE ONLY; PRO/PREMIUM inactive; new checkout/provider selection disabled;
 legacy billing rows, webhook/history support, and migrations preserved; Toss
 renewal cron blocked from charges. Fair-use generation limits and existing
 auth, ownership, AI quota, and admin checks remain server-side. Major Update
-adds a build-timestamp-based seven-day `MIDNIGHT STUDY WEEK`, user opt-out,
+adds a fixed-schedule seven-day `MIDNIGHT STUDY WEEK`, user opt-out,
 landing/dashboard treatments based on actual data, duplicate-grading defense,
-and tutor answer copy feedback. Local regression/build/browser status must be
-recorded before push. Public legal text still has obsolete paid-plan wording and
-placeholders, pending human review.
+and tutor answer copy feedback. Follow-up closure candidate makes event config
+independent of deployment time, genericizes its dashboard card, labels paid
+terms as archival, and adds marketing handoffs. Public/legal human review is
+still required for unresolved business and data-processing facts. Authenticated
+dashboard/AI Production smoke is blocked unless the existing user supplies a
+valid session through the supported browser surface; do not create an account
+or agree to terms on their behalf.
 
 ## Polar Pre-Checkout Release Gate — 2026-09-26
 
