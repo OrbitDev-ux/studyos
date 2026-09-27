@@ -13,10 +13,16 @@ checkout remains disabled; no provider-side legacy status is inferred here.
 The current event window is fixed to 2026-09-27 08:59:58 through 2026-10-04
 08:59:58 KST and must not be extended by a code deployment.
 
-Production commit `b26b5be` is live. Public route/browser smoke passed at three
-viewports, while authenticated dashboard/AI smoke remains not verified without
-a valid existing browser session. Do not submit legal consent or create a new
-Production account as part of smoke testing.
+Production commit `372384aa09a90e6cb4a2b2ba9fc8b58bdcf9e481` is live in
+deployment `dpl_815rYukjHAarTyRQ2THdYsFooLqL` at the canonical StudyOS domain.
+Public/legal routes and the desktop/mobile demo problem flow passed at three
+viewports; sampled Landing LCP was 456/760/844ms and Pricing LCP 416/380/428ms,
+with zero browser console errors, same-origin request failures, and recent HTTP
+500 logs. Authenticated dashboard/AI smoke remains `BLOCKED_NO_SESSION` because
+no browser session was exposed to this run. Do not submit legal consent or
+create a new Production account as part of smoke testing. Legal/operator review
+remains required for unresolved legal/data-processing facts. Core release is
+frozen; optional Theme Event live content is still allowed.
 
 Version pre-first-charge. Work the "Deploy" section first (migrations + build),
 then Polar, then observability. **Do not** open checkouts to real traffic until

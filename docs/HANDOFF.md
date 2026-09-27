@@ -44,9 +44,21 @@ short version.
 
 This follow-up clarifies the fixed Midnight schedule, generalizes the event
 dashboard card/config, labels historical billing legal pages, and adds Growth
-and Content handoffs. The production build and public/demo checks must be
-re-run for this candidate. No authenticated smoke account/session was available
-to this run; do not create one or submit legal consent to close that gate.
+and Content handoffs. Commit `372384aa09a90e6cb4a2b2ba9fc8b58bdcf9e481` is
+deployed as `dpl_815rYukjHAarTyRQ2THdYsFooLqL`. Local typecheck, lint, 898 tests,
+and production build passed; 47 migrations were current on the local scratch
+database. Production public/legal routes and the desktop/mobile demo problem
+flow passed. The sampled Production landing LCPs were 456/760/844ms and Pricing
+LCPs 416/380/428ms; CLS was at most 0.021. Zero browser console errors,
+same-origin request failures, and recent HTTP 500 logs were observed.
+
+No authenticated browser session was available in CUA, so Dashboard/AI
+Production smoke is `BLOCKED_NO_SESSION`; do not create an account or submit
+legal consent to close that gate. Public legal copy now labels paid terms as
+historical, but operator/legal review remains required for unknown processor,
+retention, transfer, advertising, and historical-contract facts. Analytics
+funnel evidence remains partial. StudyOS core is release-frozen; Theme Events
+remain the optional live-content exception.
 
 ## Final Pre-Checkout Closure — 2026-09-26
 

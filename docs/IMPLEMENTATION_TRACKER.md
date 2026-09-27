@@ -9,13 +9,16 @@ renewal cron blocked from charges. Fair-use generation limits and existing
 auth, ownership, AI quota, and admin checks remain server-side. Major Update
 adds a fixed-schedule seven-day `MIDNIGHT STUDY WEEK`, user opt-out,
 landing/dashboard treatments based on actual data, duplicate-grading defense,
-and tutor answer copy feedback. Follow-up closure candidate makes event config
-independent of deployment time, genericizes its dashboard card, labels paid
-terms as archival, and adds marketing handoffs. Public/legal human review is
-still required for unresolved business and data-processing facts. Authenticated
-dashboard/AI Production smoke is blocked unless the existing user supplies a
-valid session through the supported browser surface; do not create an account
-or agree to terms on their behalf.
+and tutor answer copy feedback. Release closure commit
+`372384aa09a90e6cb4a2b2ba9fc8b58bdcf9e481` is live as deployment
+`dpl_815rYukjHAarTyRQ2THdYsFooLqL`. Final local regression: 127 files / 898
+tests; typecheck, lint, and build passed. Production public/legal routes and
+desktop/mobile demo problem E2E passed with no browser console or same-origin
+network errors. Authenticated dashboard/AI Production smoke remains
+`BLOCKED_NO_SESSION`; no account or legal consent was created/submitted.
+Legal/operator review remains required for unresolved business and
+data-processing facts. Core is release-frozen; Theme Events remain a live
+content exception. Growth and Content handoffs are in `marketing/`.
 
 ## Polar Pre-Checkout Release Gate — 2026-09-26
 
